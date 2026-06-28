@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { invoke } from '@tauri-apps/api/core'
 import { useStore } from './store'
 import { Sidebar } from './components/Sidebar'
 import { ChatView } from './components/ChatView'
@@ -8,6 +9,7 @@ import { AskView } from './components/AskView'
 import { CharacterEditor } from './components/CharacterEditor'
 import { PersonaEditor } from './components/PersonaEditor'
 import { SettingsPanel } from './components/SettingsPanel'
+import { SetupWizard } from './components/SetupWizard'
 import type { Character } from './types'
 
 export default function App() {
@@ -15,6 +17,14 @@ export default function App() {
   const [editingChar, setEditingChar] = useState<Character | 'new' | null>(null)
   const [showPersona, setShowPersona] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [needsSetup, setNeedsSetup] = useState(false)
+
+  // First run: if no model has been downloaded yet, show the setup wizard.
+  useEffect(() => {
+    invoke<string[]>('list_models')
+      .then((models) => setNeedsSetup(models.length === 0))
+      .catch(() => setNeedsSetup(false)) // not running under Tauri (browser dev) — skip
+  }, [])
 
   return (
     <div className="app">
@@ -33,6 +43,8 @@ export default function App() {
       {editingChar && <CharacterEditor editing={editingChar} onClose={() => setEditingChar(null)} />}
       {showPersona && <PersonaEditor onClose={() => setShowPersona(false)} />}
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
+
+      {needsSetup && <SetupWizard onReady={() => setNeedsSetup(false)} />}
     </div>
   )
 }
