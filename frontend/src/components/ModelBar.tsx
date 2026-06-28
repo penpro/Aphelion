@@ -18,7 +18,7 @@ export function ModelBar() {
     let alive = true
     const tick = async () => {
       const models = await getLoadedModels(baseUrl)
-      if (alive) setLoaded(models.some((m) => m.split(':')[0] === base))
+      if (alive) setLoaded(models.length > 0)
     }
     tick()
     const id = setInterval(tick, 6000)

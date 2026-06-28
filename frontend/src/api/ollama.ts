@@ -49,11 +49,12 @@ export async function reloadModel(baseUrl: string, model: string, keepAlive: num
 
 /** Which models are currently loaded (native /api/ps). */
 export async function getLoadedModels(baseUrl: string): Promise<string[]> {
+  // llama.cpp reports readiness on /health once the model is loaded.
   try {
-    const r = await fetch(`${nativeRoot(baseUrl)}/api/ps`)
+    const r = await fetch(`${nativeRoot(baseUrl)}/health`)
     if (!r.ok) return []
-    const d = await r.json()
-    return (d.models ?? []).map((m: { name: string }) => m.name)
+    const d = await r.json().catch(() => ({}))
+    return d.status === 'ok' ? ['loaded'] : []
   } catch {
     return []
   }
@@ -163,19 +164,18 @@ export interface NativeStreamOptions {
  * reasoning balloons to ~10k tokens/turn as context grows).
  */
 export async function streamChatNative(opts: NativeStreamOptions): Promise<{ content: string; reasoning: string }> {
-  const resp = await fetch(`${nativeRoot(opts.baseUrl)}/api/chat`, {
+  // llama.cpp's OpenAI-compatible streaming endpoint (replaces Ollama's /api/chat).
+  // Reasoning is controlled server-side via --reasoning; when on, the trace arrives
+  // in delta.reasoning_content. think/numCtx are kept for call-site compatibility.
+  const resp = await fetch(`${opts.baseUrl}/chat/completions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: opts.model,
       messages: opts.messages,
+      temperature: opts.temperature,
+      top_p: opts.topP,
       stream: true,
-      think: opts.think,
-      options: {
-        temperature: opts.temperature,
-        top_p: opts.topP,
-        ...(opts.numCtx ? { num_ctx: opts.numCtx } : {}),
-      },
     }),
     signal: opts.signal,
   })
@@ -194,25 +194,27 @@ export async function streamChatNative(opts: NativeStreamOptions): Promise<{ con
     const { done, value } = await reader.read()
     if (done) break
     buffer += decoder.decode(value, { stream: true })
-    // Native streaming is newline-delimited JSON objects (not SSE).
     const lines = buffer.split('\n')
     buffer = lines.pop() ?? ''
     for (const line of lines) {
-      const t = line.trim()
-      if (!t) continue
+      const trimmed = line.trim()
+      if (!trimmed.startsWith('data:')) continue
+      const data = trimmed.slice(5).trim()
+      if (data === '[DONE]') continue
       try {
-        const obj = JSON.parse(t)
-        const msg = obj.message
-        if (msg?.thinking) {
-          reasoning += msg.thinking
-          opts.handlers?.onReasoning?.(msg.thinking)
+        const json = JSON.parse(data)
+        const delta = json.choices?.[0]?.delta ?? {}
+        const r = delta.reasoning_content ?? delta.reasoning
+        if (r) {
+          reasoning += r
+          opts.handlers?.onReasoning?.(r)
         }
-        if (msg?.content) {
-          content += msg.content
-          opts.handlers?.onContent?.(msg.content)
+        if (delta.content) {
+          content += delta.content
+          opts.handlers?.onContent?.(delta.content)
         }
       } catch {
-        // ignore partial line
+        // ignore partial/non-JSON frames
       }
     }
   }

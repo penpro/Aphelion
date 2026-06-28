@@ -537,6 +537,11 @@ export const useStore = create<AppState>()(
             updatedAt: (any.updatedAt as number) ?? now(),
           } as Ask
         })
+        const mergedSettings = { ...current.settings, ...((p.settings ?? {}) as Partial<Settings>) }
+        // Migrate the old Ollama dev-proxy URL to the bundled llama.cpp engine.
+        if (!mergedSettings.baseUrl || mergedSettings.baseUrl.startsWith('/ollama')) {
+          mergedSettings.baseUrl = current.settings.baseUrl
+        }
         return {
           ...current,
           ...p,
@@ -544,7 +549,7 @@ export const useStore = create<AppState>()(
           chats,
           experts,
           asks,
-          settings: { ...current.settings, ...(p.settings ?? {}) },
+          settings: mergedSettings,
           persona: { ...current.persona, ...(p.persona ?? {}) },
         }
       },

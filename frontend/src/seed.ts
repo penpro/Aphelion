@@ -23,7 +23,7 @@ export const defaultPersona: Persona = {
 }
 
 export const defaultSettings: Settings = {
-  baseUrl: '/ollama/v1',
+  baseUrl: 'http://127.0.0.1:11435/v1',
   model: 'supergemma4-unc',
   temperature: 0.8,
   topP: 0.95,
