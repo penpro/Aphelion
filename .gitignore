@@ -1,0 +1,13 @@
+﻿node_modules/
+dist/
+build/
+.DS_Store
+*.log
+# Rust / Tauri build output
+target/
+src-tauri/target/
+frontend/src-tauri/target/
+# Models & large binaries — never commit these
+*.gguf
+*.bin
+models/

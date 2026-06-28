@@ -1,0 +1,16 @@
+# supergemma4-unc — model definition for the Local Model sandbox
+#
+# Do NOT add a TEMPLATE directive here. v2 ships a neutral chat template baked
+# into the GGUF specifically to fix the older routing bug where simple prompts
+# drifted into coding/tool-call mode. Let Ollama use the embedded template.
+FROM hf.co/Jiunsong/supergemma4-26b-uncensored-gguf-v2
+
+# Ollama defaults num_ctx to a few thousand tokens regardless of what the model
+# supports, and silently truncates. Set it explicitly or the agent layer later
+# will misbehave.
+#
+# Start at 32K (safe on a 24 GB 4090), confirm stability, then bump to 65536.
+# If you OOM at higher context, prefer flash attention + KV-cache quantization
+# (see setup/setup.ps1) over dropping context. The constraint here is
+# VRAM/context, never tok/s.
+PARAMETER num_ctx 32768
