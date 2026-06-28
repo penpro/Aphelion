@@ -24,3 +24,4 @@ log = "0.4"
 tauri = { version = "2.11.3", features = [] }
 tauri-plugin-log = "2"
 tauri-plugin-upload = "2"
+windows = { version = "0.61", features = ["Win32_Graphics_Dxgi", "Win32_Foundation"] }

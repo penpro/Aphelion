@@ -82,10 +82,34 @@ fn gpu_vram() -> Option<(u64, u64)> {
     Some((used, total))
 }
 
-/// Total VRAM (MiB) for model recommendation.
-/// TODO(distribution): swap to DXGI DedicatedVideoMemory for non-NVIDIA GPUs.
+/// Dedicated VRAM (MiB) of the largest GPU adapter via DXGI — works on ANY vendor
+/// (NVIDIA/AMD/Intel), unlike nvidia-smi.
+#[cfg(windows)]
+fn detect_vram_mb_dxgi() -> Option<u64> {
+    use windows::Win32::Graphics::Dxgi::{CreateDXGIFactory1, IDXGIFactory1};
+    unsafe {
+        let factory: IDXGIFactory1 = CreateDXGIFactory1().ok()?;
+        let mut best: usize = 0;
+        let mut i = 0u32;
+        while let Ok(adapter) = factory.EnumAdapters1(i) {
+            if let Ok(desc) = adapter.GetDesc1() {
+                if desc.DedicatedVideoMemory > best {
+                    best = desc.DedicatedVideoMemory;
+                }
+            }
+            i += 1;
+        }
+        (best > 0).then(|| (best / (1024 * 1024)) as u64)
+    }
+}
+
+/// Total VRAM (MiB) for model recommendation. DXGI first (universal), nvidia-smi fallback.
 #[tauri::command]
 fn vram_total_mb() -> Option<u64> {
+    #[cfg(windows)]
+    if let Some(mb) = detect_vram_mb_dxgi() {
+        return Some(mb);
+    }
     gpu_vram().map(|(_, total)| total)
 }
 
