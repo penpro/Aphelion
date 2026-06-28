@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { download } from '@tauri-apps/plugin-upload'
-import { MODEL_CATALOG, recommendModel } from '../models'
+import { MODEL_CATALOG, UNCENSORED_CATALOG, findModel, recommendModel, type ModelOption } from '../models'
 import { getEngineStatus } from '../api/ollama'
 import { useStore } from '../store'
 
@@ -12,6 +12,7 @@ export function SetupWizard({ onReady }: { onReady: () => void }) {
   const baseUrl = useStore((s) => s.settings.baseUrl)
   const [vramMb, setVramMb] = useState<number | null>(null)
   const [selected, setSelected] = useState('gemma3-4b')
+  const [showUncensored, setShowUncensored] = useState(false)
   const [phase, setPhase] = useState<Phase>('choose')
   const [pct, setPct] = useState(0)
   const [error, setError] = useState('')
@@ -27,7 +28,7 @@ export function SetupWizard({ onReady }: { onReady: () => void }) {
 
   const vramGb = vramMb ? vramMb / 1024 : null
   const recId = recommendModel(vramGb)
-  const model = MODEL_CATALOG.find((m) => m.id === selected)
+  const model = findModel(selected)
 
   const go = async () => {
     if (!model) return
@@ -53,6 +54,37 @@ export function SetupWizard({ onReady }: { onReady: () => void }) {
     }
   }
 
+  const renderModel = (m: ModelOption) => {
+    const fits = !vramGb || m.minVramGb <= vramGb
+    return (
+      <button
+        key={m.id}
+        onClick={() => setSelected(m.id)}
+        style={{
+          textAlign: 'left',
+          padding: '10px 12px',
+          borderRadius: 8,
+          cursor: 'pointer',
+          color: 'inherit',
+          border: selected === m.id ? '1px solid #7c5cff' : '1px solid #2a2f3a',
+          background: selected === m.id ? 'rgba(124,92,255,.12)' : 'transparent',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <strong>
+            {m.name}
+            {m.id === recId && <span style={{ color: '#3fb6a8', fontSize: 12 }}> ★ Recommended</span>}
+          </strong>
+          <span className="muted xs">{m.sizeGb.toFixed(1)} GB</span>
+        </div>
+        <div className="muted xs" style={{ marginTop: 2 }}>
+          {m.note}
+          {!fits && ` · needs ~${m.minVramGb} GB VRAM — will run, but slowly`}
+        </div>
+      </button>
+    )
+  }
+
   return (
     <div
       style={{
@@ -64,6 +96,7 @@ export function SetupWizard({ onReady }: { onReady: () => void }) {
         justifyContent: 'center',
         zIndex: 1000,
         padding: 20,
+        overflow: 'auto',
       }}
     >
       <div
@@ -73,7 +106,9 @@ export function SetupWizard({ onReady }: { onReady: () => void }) {
           borderRadius: 12,
           padding: 24,
           width: '100%',
-          maxWidth: 560,
+          maxWidth: 580,
+          maxHeight: '92vh',
+          overflow: 'auto',
           boxShadow: '0 20px 60px rgba(0,0,0,.5)',
         }}
       >
@@ -88,41 +123,55 @@ export function SetupWizard({ onReady }: { onReady: () => void }) {
         {phase === 'choose' && (
           <>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, margin: '14px 0' }}>
-              {MODEL_CATALOG.map((m) => {
-                const fits = !vramGb || m.minVramGb <= vramGb
-                return (
-                  <button
-                    key={m.id}
-                    onClick={() => setSelected(m.id)}
-                    style={{
-                      textAlign: 'left',
-                      padding: '10px 12px',
-                      borderRadius: 8,
-                      cursor: 'pointer',
-                      color: 'inherit',
-                      border: selected === m.id ? '1px solid #7c5cff' : '1px solid #2a2f3a',
-                      background: selected === m.id ? 'rgba(124,92,255,.12)' : 'transparent',
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                      <strong>
-                        {m.name}
-                        {m.id === recId && <span style={{ color: '#3fb6a8', fontSize: 12 }}> ★ Recommended</span>}
-                      </strong>
-                      <span className="muted xs">{m.sizeGb.toFixed(1)} GB</span>
-                    </div>
-                    <div className="muted xs" style={{ marginTop: 2 }}>
-                      {m.note}
-                      {!fits && ` · needs ~${m.minVramGb} GB VRAM — will run, but slowly on yours`}
-                    </div>
-                  </button>
-                )
-              })}
+              {MODEL_CATALOG.map(renderModel)}
             </div>
-            {error && <div className="error-line">{error}</div>}
-            <button className="btn" onClick={go} disabled={!model}>
-              Download &amp; start{model ? ` (${model.sizeGb.toFixed(1)} GB)` : ''}
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={showUncensored}
+                onChange={(e) => setShowUncensored(e.target.checked)}
+              />
+              <span className="xs">Show uncensored models</span>
+            </label>
+
+            {showUncensored && (
+              <div style={{ marginTop: 8 }}>
+                <div
+                  style={{
+                    background: 'rgba(229,83,75,.10)',
+                    border: '1px solid rgba(229,83,75,.4)',
+                    borderRadius: 8,
+                    padding: '8px 10px',
+                    marginBottom: 8,
+                  }}
+                >
+                  <span className="xs" style={{ color: '#e98b85' }}>
+                    ⚠️ These models have their safety guardrails removed. They can produce content that is offensive,
+                    explicit, false, or illegal. Use at your own risk.
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {UNCENSORED_CATALOG.map(renderModel)}
+                </div>
+              </div>
+            )}
+
+            {error && (
+              <div className="error-line" style={{ marginTop: 10 }}>
+                {error}
+              </div>
+            )}
+
+            <button className="btn" onClick={go} disabled={!model} style={{ marginTop: 14, width: '100%' }}>
+              Download &amp; start{model ? ` — ${model.name} (${model.sizeGb.toFixed(1)} GB)` : ''}
             </button>
+
+            <p className="muted" style={{ fontSize: 11, marginTop: 14, lineHeight: 1.5 }}>
+              All text and images are generated by the AI model itself, not by this application, and may be inaccurate,
+              offensive, or otherwise objectionable. LocalLLM Studio and its developers accept no responsibility or
+              liability for any content the model produces or for how it is used.
+            </p>
           </>
         )}
 

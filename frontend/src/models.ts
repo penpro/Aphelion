@@ -9,7 +9,7 @@ export interface ModelOption {
   note: string
 }
 
-/** Curated, verified GGUFs across VRAM tiers (all single-file Q4_K_M). */
+/** Standard (safety-tuned) models — the default, recommended tier. */
 export const MODEL_CATALOG: ModelOption[] = [
   {
     id: 'gemma3-4b',
@@ -38,22 +38,61 @@ export const MODEL_CATALOG: ModelOption[] = [
     minVramGb: 20,
     note: 'Most capable Gemma. Needs a high-VRAM GPU.',
   },
+]
+
+/** Uncensored ("abliterated"/finetuned) models — guardrails removed. Opt-in only. */
+export const UNCENSORED_CATALOG: ModelOption[] = [
+  {
+    id: 'gemma3-4b-unc',
+    name: 'Gemma 3 · 4B (uncensored)',
+    filename: 'gemma-3-4b-it-abliterated.q4_k_m.gguf',
+    url: 'https://huggingface.co/mlabonne/gemma-3-4b-it-abliterated-GGUF/resolve/main/gemma-3-4b-it-abliterated.q4_k_m.gguf',
+    sizeGb: 2.32,
+    minVramGb: 6,
+    uncensored: true,
+    note: 'Abliterated 4B — light and unfiltered.',
+  },
+  {
+    id: 'gemma3-12b-unc',
+    name: 'Gemma 3 · 12B (uncensored)',
+    filename: 'gemma-3-12b-it-abliterated.q4_k_m.gguf',
+    url: 'https://huggingface.co/mlabonne/gemma-3-12b-it-abliterated-GGUF/resolve/main/gemma-3-12b-it-abliterated.q4_k_m.gguf',
+    sizeGb: 6.8,
+    minVramGb: 12,
+    uncensored: true,
+    note: 'Abliterated 12B — unfiltered mid-range.',
+  },
+  {
+    id: 'gemma3-27b-unc',
+    name: 'Gemma 3 · 27B (uncensored)',
+    filename: 'gemma-3-27b-it-abliterated.q4_k_m.gguf',
+    url: 'https://huggingface.co/mlabonne/gemma-3-27b-it-abliterated-GGUF/resolve/main/gemma-3-27b-it-abliterated.q4_k_m.gguf',
+    sizeGb: 15.41,
+    minVramGb: 20,
+    uncensored: true,
+    note: 'Abliterated 27B — unfiltered flagship.',
+  },
   {
     id: 'supergemma4',
-    name: 'SuperGemma4 · 26B (uncensored)',
+    name: 'SuperGemma4 · 26B',
     filename: 'supergemma4-26b-uncensored-fast-v2-Q4_K_M.gguf',
     url: 'https://huggingface.co/Jiunsong/supergemma4-26b-uncensored-gguf-v2/resolve/main/supergemma4-26b-uncensored-fast-v2-Q4_K_M.gguf',
     sizeGb: 15.64,
     minVramGb: 20,
     uncensored: true,
-    note: 'Uncensored roleplay finetune. Needs a high-VRAM GPU.',
+    note: 'Uncensored roleplay finetune.',
   },
 ]
 
-/** Pick the best model for the detected VRAM (minVramGb bakes in context headroom). */
+export const ALL_MODELS: ModelOption[] = [...MODEL_CATALOG, ...UNCENSORED_CATALOG]
+
+export function findModel(id: string): ModelOption | undefined {
+  return ALL_MODELS.find((m) => m.id === id)
+}
+
+/** Recommend a STANDARD (safe-default) model for the detected VRAM. */
 export function recommendModel(vramGb: number | null): string {
   if (!vramGb) return 'gemma3-4b'
-  if (vramGb >= 20) return 'supergemma4' // favor the uncensored flagship when there's room
   const fits = MODEL_CATALOG.filter((m) => m.minVramGb <= vramGb).sort((a, b) => b.minVramGb - a.minVramGb)
   return fits[0]?.id ?? 'gemma3-4b'
 }
