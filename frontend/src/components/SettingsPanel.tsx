@@ -34,7 +34,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
     >
       <div className="form">
         <label className="field">
-          <span>Ollama base URL (proxied through the dev server)</span>
+          <span>Engine API URL (bundled llama.cpp server)</span>
           <input value={settings.baseUrl} onChange={(e) => updateSettings({ baseUrl: e.target.value })} />
         </label>
 
@@ -101,7 +101,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
             value={settings.contextLength}
             onChange={(e) => updateSettings({ contextLength: Number(e.target.value) })}
           />
-          <em className="hint">Actually set in the Modelfile (num_ctx). The 4090 is shared — check VRAM before raising.</em>
+          <em className="hint">Sent to the engine as num_ctx and used to trim the rolling context. Check VRAM before raising.</em>
         </label>
 
         <label className="checkbox">
@@ -112,6 +112,19 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           />
           <span>Auto-expand reasoning panels</span>
         </label>
+
+        <label className="checkbox">
+          <input
+            type="checkbox"
+            checked={settings.proofread}
+            onChange={(e) => updateSettings({ proofread: e.target.checked })}
+          />
+          <span>Proofread replies (fix spelling &amp; grammar)</span>
+        </label>
+        <em className="hint">
+          Re-runs each finished reply through the model to fix typos and grammar without changing the content. Roughly
+          doubles generation time — off by default.
+        </em>
       </div>
     </Modal>
   )

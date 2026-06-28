@@ -31,6 +31,7 @@ export const defaultSettings: Settings = {
   contextLength: 32768,
   autoExpandReasoning: false,
   keepLoaded: false,
+  proofread: false,
 }
 
 export const defaultCharacters: Character[] = [

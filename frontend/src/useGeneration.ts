@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 import { useStore } from './store'
-import { streamChatNative, reloadModel } from './api/ollama'
+import { streamChatNative, reloadModel, proofread } from './api/ollama'
 import { buildApiMessages, estTokens } from './prompt'
 import { distillMessages, compactSummary, LIVE_WINDOW_TOKENS, KEEP_RECENT_TOKENS, SUMMARY_CAP_TOKENS } from './memory'
 import type { Character } from './types'
@@ -88,6 +88,25 @@ export function useGeneration() {
       }
       // Native endpoint only — it's the one that honours think:false.
       await streamChatNative({ ...common, think: chat.tuning.think === 'full' })
+
+      // Optional proofread pass: fix typos/grammar without changing the content.
+      if (st.settings.proofread) {
+        const cur = useStore
+          .getState()
+          .chats.find((c) => c.id === chatId)
+          ?.messages.find((m) => m.id === assistantId)
+        const raw = cur?.content ?? ''
+        if (raw.trim() && !cur?.error) {
+          setMemoryStatus('✍️ proofreading…')
+          try {
+            const fixed = await proofread(st.settings.baseUrl, st.settings.model, raw, ctrl.signal)
+            if (fixed.trim()) useStore.getState().updateMessage(chatId, assistantId, { content: fixed })
+          } catch {
+            /* keep the original reply if proofreading fails or is aborted */
+          }
+          setMemoryStatus('')
+        }
+      }
     } catch (e: unknown) {
       const err = e as { name?: string; message?: string }
       if (err?.name !== 'AbortError') {

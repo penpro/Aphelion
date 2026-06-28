@@ -70,6 +70,29 @@ export async function getEngineStatus(baseUrl: string): Promise<'down' | 'loadin
   }
 }
 
+const PROOFREAD_SYSTEM =
+  'You are a meticulous copy editor. Fix ONLY spelling, grammar, and punctuation errors in the text. ' +
+  'Do NOT rephrase, reword, add, remove, summarize, translate, or change meaning, tone, or voice. ' +
+  'Preserve all formatting EXACTLY: *asterisk actions*, "quoted speech", line breaks, markdown, emoji, and any ' +
+  '"Name:" speaker prefixes. Output only the corrected text — no preamble, no commentary, no surrounding quotes.'
+
+/** Re-run text through the model to fix spelling/grammar only, preserving content & formatting. */
+export async function proofread(baseUrl: string, model: string, text: string, signal?: AbortSignal): Promise<string> {
+  const { content } = await streamChatNative({
+    baseUrl,
+    model,
+    messages: [
+      { role: 'system', content: PROOFREAD_SYSTEM },
+      { role: 'user', content: text },
+    ],
+    temperature: 0.2,
+    topP: 0.9,
+    think: false,
+    signal,
+  })
+  return content.trim()
+}
+
 /** List model ids from the OpenAI-compatible /models endpoint. */
 export async function listModels(baseUrl: string): Promise<string[]> {
   try {

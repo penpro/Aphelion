@@ -75,6 +75,7 @@ export interface Settings {
   contextLength: number
   autoExpandReasoning: boolean
   keepLoaded: boolean // pin the model in VRAM (keep_alive -1) instead of idle-unloading
+  proofread: boolean // re-run each reply through the model to fix spelling/grammar
 }
 
 export type AppView = 'chat' | 'story' | 'tree' | 'ask'
