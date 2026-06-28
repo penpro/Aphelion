@@ -63,6 +63,27 @@ fn spawn_engine(app: &tauri::AppHandle) -> Option<Child> {
     }
 }
 
+/// Current GPU memory use, as (used_mib, total_mib), via nvidia-smi.
+/// Returns None when nvidia-smi is unavailable (non-NVIDIA / other OS).
+#[tauri::command]
+fn gpu_vram() -> Option<(u64, u64)> {
+    let mut cmd = Command::new("nvidia-smi");
+    cmd.args(["--query-gpu=memory.used,memory.total", "--format=csv,noheader,nounits"]);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    let out = cmd.output().ok()?;
+    let text = String::from_utf8_lossy(&out.stdout);
+    let line = text.lines().next()?;
+    let mut parts = line.split(',').map(|p| p.trim());
+    let used: u64 = parts.next()?.parse().ok()?;
+    let total: u64 = parts.next()?.parse().ok()?;
+    Some((used, total))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -88,6 +109,7 @@ pub fn run() {
                 }
             }
         })
+        .invoke_handler(tauri::generate_handler![gpu_vram])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

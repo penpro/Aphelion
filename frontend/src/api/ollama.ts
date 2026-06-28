@@ -60,6 +60,16 @@ export async function getLoadedModels(baseUrl: string): Promise<string[]> {
   }
 }
 
+/** Three-state engine readiness: down (not up yet) | loading (model loading) | ready. */
+export async function getEngineStatus(baseUrl: string): Promise<'down' | 'loading' | 'ready'> {
+  try {
+    const r = await fetch(`${nativeRoot(baseUrl)}/health`)
+    return r.ok ? 'ready' : 'loading' // llama.cpp returns 503 while still loading the model
+  } catch {
+    return 'down'
+  }
+}
+
 /** List model ids from the OpenAI-compatible /models endpoint. */
 export async function listModels(baseUrl: string): Promise<string[]> {
   try {

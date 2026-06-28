@@ -1,94 +1,74 @@
 import { useEffect, useState } from 'react'
 import { useStore } from '../store'
-import { setKeepAlive, reloadModel, getLoadedModels } from '../api/ollama'
+import { getEngineStatus } from '../api/ollama'
+import { gpuVram } from '../tauri'
 import { cx } from '../util'
 
+type Status = 'down' | 'loading' | 'ready'
+
+const LABEL: Record<Status, string> = {
+  down: 'Starting engine…',
+  loading: 'Loading model — please wait…',
+  ready: 'Model ready',
+}
+
+/** Engine/model status + live VRAM gauge. The bundled engine owns the model for the
+ *  app's whole lifetime, so there's nothing to load/unload — just show what's going on. */
 export function ModelBar() {
-  const settings = useStore((s) => s.settings)
-  const updateSettings = useStore((s) => s.updateSettings)
-  const { baseUrl, model, keepLoaded } = settings
+  const baseUrl = useStore((s) => s.settings.baseUrl)
+  const [status, setStatus] = useState<Status>('down')
+  const [vram, setVram] = useState<{ used: number; total: number } | null>(null)
 
-  const [loaded, setLoaded] = useState(false)
-  const [busy, setBusy] = useState<'' | 'reload' | 'unload'>('')
-
-  const base = model.split(':')[0]
-
-  // Poll load status.
   useEffect(() => {
     let alive = true
     const tick = async () => {
-      const models = await getLoadedModels(baseUrl)
-      if (alive) setLoaded(models.length > 0)
+      const [s, v] = await Promise.all([getEngineStatus(baseUrl), gpuVram()])
+      if (!alive) return
+      setStatus(s)
+      setVram(v)
     }
     tick()
-    const id = setInterval(tick, 6000)
+    const id = setInterval(tick, 2500)
     return () => {
       alive = false
       clearInterval(id)
     }
-  }, [baseUrl, base])
+  }, [baseUrl])
 
-  // Heartbeat: re-pin only while the toggle is *currently* on (read fresh from the
-  // store each tick) so a lingering interval can never re-pin after it's turned off.
-  useEffect(() => {
-    const id = setInterval(() => {
-      if (useStore.getState().settings.keepLoaded) setKeepAlive(baseUrl, model, -1)
-    }, 120000)
-    return () => clearInterval(id)
-  }, [baseUrl, model])
-
-  const toggle = async () => {
-    const next = !keepLoaded
-    updateSettings({ keepLoaded: next })
-    // On: pin (-1). Off: revert to normal idle-unload (5m) so it isn't stuck loaded.
-    await setKeepAlive(baseUrl, model, next ? -1 : '5m')
-    if (next) setLoaded(true)
-  }
-
-  const unload = async () => {
-    setBusy('unload')
-    updateSettings({ keepLoaded: false }) // also un-pin so it stays unloaded
-    await setKeepAlive(baseUrl, model, 0)
-    setLoaded(false)
-    setBusy('')
-  }
-
-  const reload = async () => {
-    setBusy('reload')
-    setLoaded(false)
-    await reloadModel(baseUrl, model, keepLoaded ? -1 : '5m')
-    setLoaded(true)
-    setBusy('')
-  }
+  const dotColor = status === 'ready' ? '#3fb6a8' : status === 'loading' ? '#f5a623' : '#777'
+  const usedGb = vram ? vram.used / 1024 : 0
+  const totalGb = vram ? vram.total / 1024 : 0
+  const pct = vram && vram.total > 0 ? Math.min(100, (vram.used / vram.total) * 100) : 0
 
   return (
     <div className="model-bar">
-      <button
-        className={cx('keep-toggle', keepLoaded && 'on')}
-        onClick={toggle}
-        title="Pin the model in VRAM so it doesn't unload between generations (Ollama keep_alive -1). Turn off to let it idle-unload again."
-      >
-        <span className={cx('dot', loaded ? 'on' : 'off')} />
-        {keepLoaded ? 'Model kept loaded' : 'Keep model loaded'}
-      </button>
-      <div className="model-bar-row">
-        <button
-          className="btn sm ghost grow"
-          onClick={reload}
-          disabled={!!busy}
-          title="Unload and reload the model fresh — flushes its VRAM/KV context. Your chats are kept."
-        >
-          {busy === 'reload' ? '…' : '↻ Reload'}
-        </button>
-        <button
-          className="btn sm ghost grow"
-          onClick={unload}
-          disabled={!!busy || !loaded}
-          title="Unload the model now — frees all its VRAM and turns off Keep-loaded. (Your chats are kept; the next generation will cold-load.)"
-        >
-          {busy === 'unload' ? '…' : '⏏ Unload'}
-        </button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span
+          style={{ width: 9, height: 9, borderRadius: '50%', background: dotColor, flex: '0 0 auto' }}
+          title={LABEL[status]}
+        />
+        <span className={cx('xs', status !== 'ready' && 'muted')}>{LABEL[status]}</span>
       </div>
+      {vram && (
+        <div style={{ marginTop: 6 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span className="muted xs">VRAM</span>
+            <span className="xs">
+              {usedGb.toFixed(1)} / {totalGb.toFixed(1)} GB
+            </span>
+          </div>
+          <div style={{ height: 4, background: '#2a2f3a', borderRadius: 2, overflow: 'hidden', marginTop: 3 }}>
+            <div
+              style={{
+                height: '100%',
+                width: pct + '%',
+                background: pct > 92 ? '#e5534b' : '#3fb6a8',
+                transition: 'width .4s ease',
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
