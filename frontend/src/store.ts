@@ -502,8 +502,14 @@ export const useStore = create<AppState>()(
             summarizedCount: typeof c.summarizedCount === 'number' ? c.summarizedCount : 0,
           }
         })
-        // Seed built-in experts on first run / older saves.
-        const experts = Array.isArray(p.experts) && p.experts.length ? p.experts : defaultExperts
+        // Seed built-in experts on first run; backfill any newly shipped built-ins
+        // (matched by id) into existing saves without disturbing the user's own
+        // experts or their edits. (A deleted built-in reappears on next load.)
+        const persistedExperts = Array.isArray(p.experts) ? p.experts : []
+        const seenExpertIds = new Set(persistedExperts.map((e) => e.id))
+        const experts = persistedExperts.length
+          ? [...persistedExperts, ...defaultExperts.filter((e) => !seenExpertIds.has(e.id))]
+          : defaultExperts
         // Migrate legacy single-shot asks ({prompt,response,reasoning}) into multi-turn threads.
         const asks = ((p.asks ?? current.asks) as unknown[]).map((raw) => {
           const any = (raw ?? {}) as Record<string, unknown>
