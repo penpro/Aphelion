@@ -117,7 +117,7 @@ For a fast dev loop: `npm run tauri dev`.
 
 ## 💜 Support Aphelion
 
-Aphelion is free and open source, and I'd like to keep it that way. The main recurring cost is a **code-signing certificate** — a monthly bill, and the only reason Windows still flashes that "protected your PC" warning. I'm covering things out of pocket for now; if that keeps growing I'd eventually have to start charging for the app. **If Aphelion is useful to you, a small donation helps keep it free** — and helps me sign it so the warning disappears. No pressure, ever; the app stays free either way.
+Aphelion is free and open source, and I'd like to keep it that way. It's currently **unsigned** — the only reason Windows flashes that "unknown publisher" warning — because a **code-signing certificate** is a recurring monthly cost, and I haven't paid for one. If donations start coming in, that's the first thing they'll go toward, and they help keep Aphelion free instead of me ever having to charge for it. **No pressure, ever** — the app stays free either way; donations just decide how fast the rough edges (like that warning) get smoothed out.
 
 - **Venmo:** [@drfaustus](https://venmo.com/u/drfaustus)
 - **Cash App:** [$penumbrapro](https://cash.app/$penumbrapro)

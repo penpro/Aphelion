@@ -192,9 +192,12 @@
   .pp-VW5MDGVLWWSJ8{text-align:center;border:none;border-radius:.5rem;min-width:11.625rem;padding:0 2rem;height:2.625rem;font-weight:bold;background-color:#FFD140;color:#000;font-family:var(--head);font-size:1rem;line-height:1.25rem;cursor:pointer}
   .pp-VW5MDGVLWWSJ8:hover{filter:brightness(1.06)}
   .pp-powered{font-size:.75rem;color:var(--faint)}
+  .donate-float{position:fixed;right:clamp(16px,3vw,28px);bottom:clamp(16px,3vw,28px);z-index:60;font-family:var(--head);font-weight:500;font-size:14px;color:var(--void-900);background:linear-gradient(100deg,var(--corona),var(--flare));padding:12px 20px;border-radius:999px;box-shadow:0 0 0 1px rgba(94,234,212,.4),0 10px 30px rgba(34,211,238,.4);transition:transform .15s ease,box-shadow .15s ease}
+  .donate-float:hover{transform:translateY(-2px);box-shadow:0 0 0 1px rgba(94,234,212,.65),0 16px 44px rgba(34,211,238,.55)}
 </style>
 </head>
 <body>
+  <a class="donate-float" href="#support">&#9829;&nbsp;Donate</a>
   <nav>
     <div class="brand">
       <svg class="mk" width="30" height="30" viewBox="0 0 256 256" aria-hidden="true">
@@ -371,7 +374,7 @@
   <section class="block" id="support">
     <div class="eyebrow-sm">SUPPORT</div>
     <h2 class="sec-title">Free — and staying that way.</h2>
-    <p class="sec-lead">Aphelion is free and open source. The main thing that costs real money is a code-signing certificate — a recurring <em>monthly</em> bill, and the only reason Windows still shows that "protected your PC" warning. I'm covering costs out of pocket for now; if that keeps growing, I'd eventually have to start charging for the app. If Aphelion is useful to you, a small donation helps keep it free — and helps me sign it so the warning disappears.</p>
+    <p class="sec-lead">Aphelion is free and open source. It's also <em>unsigned</em> — the only reason Windows shows that "unknown publisher" warning — because a code-signing certificate is a recurring monthly cost, and I haven't paid for one. If donations start coming in, that's the first thing they'll go toward. They also help keep Aphelion free: the more they offset what it costs to build and ship, the less chance I'd ever have to charge for it. No pressure — if it's useful to you, anything helps.</p>
     <div class="donate">
       <a class="dbtn" href="https://venmo.com/u/drfaustus">Venmo&nbsp;·&nbsp;@drfaustus</a>
       <a class="dbtn" href="https://cash.app/$penumbrapro">Cash App&nbsp;·&nbsp;$penumbrapro</a>
