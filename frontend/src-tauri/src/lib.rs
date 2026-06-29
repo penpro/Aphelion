@@ -10,7 +10,11 @@ struct Engine(Mutex<Option<Child>>);
 /// Caches ingested + chunked text per knowledge-folder path (re-read on app restart).
 struct KnowledgeCache(Mutex<HashMap<String, Vec<(String, String)>>>);
 
+/// Optional second engine serving a vision model (with an mmproj) on VISION_PORT.
+struct VisionEngine(Mutex<Option<Child>>);
+
 const LLAMA_PORT: u16 = 11435;
+const VISION_PORT: u16 = 11436;
 
 /// The app's own model directory (AppData/<id>/models), created if missing.
 fn model_dir(app: &tauri::AppHandle) -> Option<PathBuf> {
@@ -148,7 +152,8 @@ fn list_models(app: tauri::AppHandle) -> Vec<String> {
     if let Ok(entries) = std::fs::read_dir(&dir) {
         for e in entries.flatten() {
             let name = e.file_name().to_string_lossy().to_string();
-            if name.ends_with(".gguf") {
+            // Hide vision projectors — they aren't loadable as standalone text models.
+            if name.ends_with(".gguf") && !name.contains("mmproj") {
                 out.push(name);
             }
         }
@@ -536,6 +541,73 @@ fn save_typst_at(app: tauri::AppHandle, typ_path: String, source: String) -> Res
     }
 }
 
+// ---------- vision model (optional second engine with an mmproj) ----------
+
+/// Whether both files of a vision model are present in the model dir.
+#[tauri::command]
+fn vision_present(app: tauri::AppHandle, text_file: String, mmproj_file: String) -> bool {
+    match model_dir(&app) {
+        Some(dir) => dir.join(&text_file).exists() && dir.join(&mmproj_file).exists(),
+        None => false,
+    }
+}
+
+/// Start the vision engine (a second llama-server loaded with an mmproj) on VISION_PORT.
+/// If `stop_main` is set, the main engine is stopped first to free VRAM for a large model.
+#[tauri::command]
+fn start_vision(app: tauri::AppHandle, text_file: String, mmproj_file: String, stop_main: bool) -> Result<(), String> {
+    let dir = model_dir(&app).ok_or("no model dir")?;
+    let model = dir.join(&text_file);
+    let mmproj = dir.join(&mmproj_file);
+    if !model.exists() || !mmproj.exists() {
+        return Err("vision model files not found — download it in Settings".into());
+    }
+    if stop_main {
+        if let Some(mut old) = app.state::<Engine>().0.lock().unwrap().take() {
+            let _ = old.kill();
+        }
+    }
+    if let Some(mut old) = app.state::<VisionEngine>().0.lock().unwrap().take() {
+        let _ = old.kill();
+    }
+    let exe = llama_server_path(&app).ok_or("engine binary not found")?;
+    let port = VISION_PORT.to_string();
+    let mut cmd = Command::new(&exe);
+    cmd.arg("-m")
+        .arg(&model)
+        .arg("--mmproj")
+        .arg(&mmproj)
+        .arg("--host")
+        .arg("127.0.0.1")
+        .arg("--port")
+        .arg(&port)
+        .arg("-ngl")
+        .arg("999")
+        .arg("-c")
+        .arg("4096");
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    match cmd.spawn() {
+        Ok(child) => {
+            *app.state::<VisionEngine>().0.lock().unwrap() = Some(child);
+            Ok(())
+        }
+        Err(e) => Err(format!("failed to start vision engine: {e}")),
+    }
+}
+
+/// Stop the vision engine (frees its VRAM).
+#[tauri::command]
+fn stop_vision(app: tauri::AppHandle) {
+    if let Some(mut child) = app.state::<VisionEngine>().0.lock().unwrap().take() {
+        let _ = child.kill();
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -543,6 +615,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .manage(Engine(Mutex::new(None)))
         .manage(KnowledgeCache(Mutex::new(HashMap::new())))
+        .manage(VisionEngine(Mutex::new(None)))
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -575,6 +648,11 @@ pub fn run() {
                         let _ = child.kill();
                     }
                 }
+                if let Some(v) = window.app_handle().try_state::<VisionEngine>() {
+                    if let Some(mut child) = v.0.lock().unwrap().take() {
+                        let _ = child.kill();
+                    }
+                }
             }
         })
         .invoke_handler(tauri::generate_handler![
@@ -594,7 +672,10 @@ pub fn run() {
             write_temp_file,
             read_text_file,
             write_to_path,
-            save_typst_at
+            save_typst_at,
+            vision_present,
+            start_vision,
+            stop_vision
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -79,6 +79,7 @@ export interface Settings {
   proofread: boolean // re-run each reply through the model to fix spelling/grammar
   seenTutorial: boolean // the first-run tutorial has been shown
   theme: string // accent/void preset: penumbra | synthwave | cyber | ember | bloodmoon
+  visionModel: string // '' = off, else a VISION_MODELS id — a vision-capable model for image tasks
   // advanced sampling — defaults match llama.cpp, so behavior is unchanged until tuned
   topK: number
   minP: number

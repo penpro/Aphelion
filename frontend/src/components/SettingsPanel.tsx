@@ -3,6 +3,7 @@ import { Modal } from './Modal'
 import { useStore } from '../store'
 import { listModels } from '../api/ollama'
 import { defaultSettings } from '../seed'
+import { VisionSettings } from './VisionSettings'
 import { cx } from '../util'
 
 type Tip = { body: string; low?: string; high?: string }
@@ -224,6 +225,8 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
             <option value="bloodmoon">Bloodmoon · red</option>
           </select>
         </label>
+
+        <VisionSettings />
 
         <Control label="Temperature" value={settings.temperature.toFixed(2)} info={TIP.temperature}>
           <input
