@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { invoke } from '@tauri-apps/api/core'
 import { useStore } from '../store'
 import { streamChatNative, samplerFromSettings } from '../api/ollama'
 import { friendlyModelName } from '../models'
 import { Markdown } from './Markdown'
 import { MessageInput } from './MessageInput'
 import { ExpertEditor } from './ExpertEditor'
+import { FolderGrant } from './FolderGrant'
+import { DocumentModal } from './DocumentModal'
 import { cx } from '../util'
 
 // A roomy-but-safe context window for Q&A threads (the model/Modelfile default
@@ -26,6 +29,7 @@ export function AskView() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [managing, setManaging] = useState(false)
+  const [showDoc, setShowDoc] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -71,13 +75,25 @@ export function AskView() {
     // system message, then the whole thread (everything except the empty placeholder).
     const cur = useStore.getState().asks.find((a) => a.id === ask.id)
     const history = (cur?.messages ?? []).filter((m) => m.id !== assistantId && !m.error)
-    const messages = [{ role: 'system', content: sys }, ...history.map((m) => ({ role: m.role, content: m.content }))]
 
     const ctrl = new AbortController()
     abortRef.current = ctrl
     setBusy(true)
     setError('')
     try {
+      // Knowledge folder: fold the passages most relevant to this question into the system prompt.
+      let sysFull = sys
+      if (ask.knowledgeFolder) {
+        try {
+          const kb = await invoke<string>('retrieve_context', { path: ask.knowledgeFolder, query: text, maxChars: 6000 })
+          if (kb.trim()) {
+            sysFull = `${sys}\n\n# Reference material from the user's folder\nUse it to answer accurately and cite file names when relevant; if it doesn't cover the question, say so.\n\n${kb}`
+          }
+        } catch {
+          /* folder moved or unreadable — skip it */
+        }
+      }
+      const messages = [{ role: 'system', content: sysFull }, ...history.map((m) => ({ role: m.role, content: m.content }))]
       await streamChatNative({
         baseUrl: settings.baseUrl,
         model: settings.model,
@@ -149,6 +165,19 @@ export function AskView() {
             Reason
           </button>
         </div>
+        <div style={{ flex: 1 }} />
+        <FolderGrant
+          folder={ask.knowledgeFolder}
+          onSetFolder={(p) => updateAsk(ask.id, { knowledgeFolder: p ?? undefined })}
+          compact
+        />
+        <button
+          className="btn sm ghost"
+          onClick={() => setShowDoc(true)}
+          title="Generate a document (PDF or text / code) and save it to your folder"
+        >
+          📄 Document
+        </button>
       </div>
 
       <div className="messages" ref={scrollRef}>
@@ -203,6 +232,19 @@ export function AskView() {
       <MessageInput disabled={busy} streaming={busy} onSend={send} onStop={() => abortRef.current?.abort()} />
 
       {managing && <ExpertEditor onClose={() => setManaging(false)} />}
+      {showDoc && (
+        <DocumentModal
+          folder={ask.knowledgeFolder}
+          onSetFolder={(p) => updateAsk(ask.id, { knowledgeFolder: p ?? undefined })}
+          defaultTitle={ask.title || 'document'}
+          transcript={{
+            label: 'this conversation',
+            has: ask.messages.length > 0,
+            build: () => ask.messages.map((m) => `${m.role === 'user' ? 'You' : modelName}: ${m.content}`).join('\n\n'),
+          }}
+          onClose={() => setShowDoc(false)}
+        />
+      )}
     </div>
   )
 }

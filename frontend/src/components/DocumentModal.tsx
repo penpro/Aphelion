@@ -4,8 +4,6 @@ import { invoke } from '@tauri-apps/api/core'
 import { useStore } from '../store'
 import { Modal } from './Modal'
 import { generateTypstDoc, generateTextDoc, fixTypstDoc } from '../generators'
-import { substituteMacros } from '../prompt'
-import type { Chat } from '../types'
 
 const checkStyle: CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }
 const baseName = (p: string) => p.split(/[\\/]/).filter(Boolean).pop() || p
@@ -29,24 +27,26 @@ const FORMATS: Fmt[] = [
 ]
 
 /** Generate a document with the model — a PDF (via Typst) or a plain-text / code file —
- * and save it into the chat's granted folder (read + write), where it can be reopened. */
+ * and save it into a granted read/write folder where it can be reopened. Shared by the
+ * roleplay chat and the Ask view via generic props. */
 export function DocumentModal({
-  chat,
-  charName,
-  userName,
+  folder,
+  onSetFolder,
+  defaultTitle,
+  transcript,
   onClose,
 }: {
-  chat: Chat
-  charName: string
-  userName: string
+  folder?: string
+  onSetFolder: (path: string | null) => void
+  defaultTitle: string
+  transcript?: { label: string; has: boolean; build: () => string }
   onClose: () => void
 }) {
   const settings = useStore((s) => s.settings)
-  const updateChat = useStore((s) => s.updateChat)
   const [request, setRequest] = useState('')
   const [format, setFormat] = useState<Fmt>(FORMATS[0])
-  const [includeChat, setIncludeChat] = useState(chat.messages.length > 0)
-  const [includeFolder, setIncludeFolder] = useState(!!chat.knowledgeFolder)
+  const [includeChat, setIncludeChat] = useState(!!transcript?.has)
+  const [includeFolder, setIncludeFolder] = useState(!!folder)
   const [content, setContent] = useState('')
   const [docName, setDocName] = useState('') // set when a saved doc is reopened, so Save writes back to it
   const [busy, setBusy] = useState<'idle' | 'generating' | 'compiling'>('idle')
@@ -55,41 +55,31 @@ export function DocumentModal({
   const [docs, setDocs] = useState<string[]>([])
   const abortRef = useRef<AbortController | null>(null)
 
-  const refreshDocs = (folder?: string) => {
-    const f = folder ?? chat.knowledgeFolder
-    if (!f) {
+  const refreshDocs = (f?: string) => {
+    const dir = f ?? folder
+    if (!dir) {
       setDocs([])
       return
     }
-    invoke<string[]>('list_documents', { folder: f })
+    invoke<string[]>('list_documents', { folder: dir })
       .then(setDocs)
       .catch(() => setDocs([]))
   }
   useEffect(() => {
     refreshDocs()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chat.knowledgeFolder])
+  }, [folder])
 
   const buildContext = async (): Promise<string> => {
     const parts: string[] = []
-    if (includeChat && chat.messages.length) {
-      const lines: string[] = []
-      if (chat.summary.trim()) lines.push(`Story so far: ${chat.summary.trim()}`, '')
-      for (const m of chat.messages) {
-        const who = m.role === 'user' ? userName : m.role === 'assistant' ? charName : 'System'
-        lines.push(`${who}: ${substituteMacros(m.content, charName, userName)}`)
-      }
-      let t = lines.join('\n')
+    if (includeChat && transcript) {
+      let t = transcript.build()
       if (t.length > 7000) t = '… (earlier omitted) …\n' + t.slice(-7000)
-      parts.push(`Transcript of the current session:\n${t}`)
+      if (t.trim()) parts.push(`Transcript of ${transcript.label}:\n${t}`)
     }
-    if (includeFolder && chat.knowledgeFolder) {
+    if (includeFolder && folder) {
       try {
-        const kb = await invoke<string>('retrieve_context', {
-          path: chat.knowledgeFolder,
-          query: request,
-          maxChars: 4000,
-        })
+        const kb = await invoke<string>('retrieve_context', { path: folder, query: request, maxChars: 4000 })
         if (kb.trim()) parts.push(`From the folder:\n${kb}`)
       } catch {
         /* folder unavailable — skip */
@@ -126,16 +116,16 @@ export function DocumentModal({
   const stop = () => abortRef.current?.abort()
 
   const titleGuess =
-    (request.trim().split('\n')[0] || chat.title || 'document').replace(/[^\w -]+/g, '').trim().slice(0, 50) || 'document'
+    (request.trim().split('\n')[0] || defaultTitle || 'document').replace(/[^\w -]+/g, '').trim().slice(0, 50) || 'document'
   const saveTitle = docName || titleGuess
 
-  // Ensure the chat has a granted read/write folder, prompting to pick one if not.
+  // Ensure a granted read/write folder, prompting to pick one if not.
   const ensureFolder = async (): Promise<string | null> => {
-    if (chat.knowledgeFolder) return chat.knowledgeFolder
+    if (folder) return folder
     try {
       const dir = await open({ directory: true, multiple: false, title: 'Choose a folder for your documents' })
       if (typeof dir === 'string') {
-        updateChat(chat.id, { knowledgeFolder: dir })
+        onSetFolder(dir)
         return dir
       }
     } catch {
@@ -165,17 +155,17 @@ export function DocumentModal({
   // Persist into the granted folder, then open the result.
   const saveToFolder = async () => {
     if (!content.trim() || busy !== 'idle') return
-    const folder = await ensureFolder()
-    if (!folder) return
+    const dir = await ensureFolder()
+    if (!dir) return
     setError('')
     setBusy('compiling')
     try {
       const path = format.typst
-        ? await invoke<string>('save_document', { folder, title: saveTitle, source: content })
-        : await invoke<string>('save_text_document', { folder, title: saveTitle, ext: format.ext, content })
+        ? await invoke<string>('save_document', { folder: dir, title: saveTitle, source: content })
+        : await invoke<string>('save_text_document', { folder: dir, title: saveTitle, ext: format.ext, content })
       await invoke('open_path', { path })
-      setSavedTo(folder)
-      refreshDocs(folder)
+      setSavedTo(dir)
+      refreshDocs(dir)
     } catch (e) {
       const err = e as { message?: string }
       setError(typeof err?.message === 'string' ? err.message : String(e))
@@ -185,9 +175,9 @@ export function DocumentModal({
   }
 
   const reopen = async (name: string) => {
-    if (!chat.knowledgeFolder || busy !== 'idle') return
+    if (!folder || busy !== 'idle') return
     try {
-      const src = await invoke<string>('read_document', { folder: chat.knowledgeFolder, name })
+      const src = await invoke<string>('read_document', { folder, name })
       const ext = (name.split('.').pop() || '').toLowerCase()
       const fmt: Fmt =
         ext === 'typ'
@@ -233,7 +223,7 @@ export function DocumentModal({
     }
   }
 
-  const folderLabel = chat.knowledgeFolder ? baseName(chat.knowledgeFolder) : ''
+  const folderLabel = folder ? baseName(folder) : ''
 
   return (
     <Modal title="📄 Create a document" onClose={onClose} wide>
@@ -242,7 +232,7 @@ export function DocumentModal({
         code file an IDE can open. Saved documents go into your granted folder, where you can reopen them. It all runs locally.
       </p>
 
-      {chat.knowledgeFolder && docs.length > 0 && (
+      {folder && docs.length > 0 && (
         <div style={{ margin: '6px 0 10px' }}>
           <div className="field-label">
             <b>📁 In {folderLabel}</b> <span className="muted">— click to reopen</span>
@@ -275,19 +265,20 @@ export function DocumentModal({
         style={{ width: '100%', minHeight: 84, resize: 'vertical', fontFamily: 'inherit' }}
         placeholder={
           format.typst
-            ? 'e.g. A one-page recap of this session as a formatted handout… / A primer on photosynthesis with the key equation…'
-            : `e.g. A ${format.label} file that… (a character-sheet web page, a dice-roller class, a campaign data file…)`
+            ? 'e.g. A one-page recap as a formatted handout… / A primer on photosynthesis with the key equation…'
+            : `e.g. A ${format.label} file that… (a character-sheet web page, a dice-roller class, a data file…)`
         }
         value={request}
         onChange={(e) => setRequest(e.target.value)}
       />
       <div className="row gap wrap" style={{ margin: '8px 0', alignItems: 'center' }}>
-        {chat.messages.length > 0 && (
+        {transcript?.has && (
           <label style={checkStyle}>
-            <input type="checkbox" checked={includeChat} onChange={(e) => setIncludeChat(e.target.checked)} /> Include this chat
+            <input type="checkbox" checked={includeChat} onChange={(e) => setIncludeChat(e.target.checked)} /> Include{' '}
+            {transcript.label}
           </label>
         )}
-        {chat.knowledgeFolder && (
+        {folder && (
           <label style={checkStyle}>
             <input type="checkbox" checked={includeFolder} onChange={(e) => setIncludeFolder(e.target.checked)} /> Use folder as
             reference
@@ -323,7 +314,7 @@ export function DocumentModal({
               {busy === 'compiling' ? 'Working…' : format.typst ? '👁 Preview' : '↗ Open'}
             </button>
             <button className="btn sm" onClick={saveToFolder} disabled={!content.trim() || busy !== 'idle'}>
-              💾 {chat.knowledgeFolder ? `Save to ${folderLabel}` : 'Save to a folder…'}
+              💾 {folder ? `Save to ${folderLabel}` : 'Save to a folder…'}
             </button>
             {format.typst && error && (
               <button

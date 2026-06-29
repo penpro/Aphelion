@@ -122,6 +122,7 @@ export interface Ask {
   expertId: string | null
   messages: ChatMessage[]
   think: boolean
+  knowledgeFolder?: string // read/write folder: reference docs in, generated documents out
   createdAt: number
   updatedAt: number
 }

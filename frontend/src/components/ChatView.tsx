@@ -126,6 +126,28 @@ export function ChatView({ onEditCharacter }: { onEditCharacter: (c: Character) 
     </header>
   )
 
+  const docModal = showDoc ? (
+    <DocumentModal
+      folder={chat.knowledgeFolder}
+      onSetFolder={(p) => updateChat(chat.id, { knowledgeFolder: p ?? undefined })}
+      defaultTitle={chat.title}
+      transcript={{
+        label: 'this chat',
+        has: chat.messages.length > 0,
+        build: () => {
+          const lines: string[] = []
+          if (chat.summary.trim()) lines.push(`Story so far: ${chat.summary.trim()}`, '')
+          for (const m of chat.messages) {
+            const who = m.role === 'user' ? userName : m.role === 'assistant' ? dispName : 'System'
+            lines.push(`${who}: ${substituteMacros(m.content, character.name, userName)}`)
+          }
+          return lines.join('\n')
+        },
+      }}
+      onClose={() => setShowDoc(false)}
+    />
+  ) : null
+
   if (!chat.started) {
     return (
       <div className="chat-shell">
@@ -133,7 +155,7 @@ export function ChatView({ onEditCharacter }: { onEditCharacter: (c: Character) 
           {header}
           <ChatSetup chat={chat} character={character} persona={persona} onStart={() => begin(chat.id)} />
         </div>
-        {showDoc && <DocumentModal chat={chat} charName={dispName} userName={userName} onClose={() => setShowDoc(false)} />}
+        {docModal}
       </div>
     )
   }
@@ -175,7 +197,7 @@ export function ChatView({ onEditCharacter }: { onEditCharacter: (c: Character) 
         />
       </div>
       <ChatDials chat={chat} />
-      {showDoc && <DocumentModal chat={chat} charName={dispName} userName={userName} onClose={() => setShowDoc(false)} />}
+      {docModal}
       {showMemory && (
         <Modal title="🧠 Story memory" onClose={() => setShowMemory(false)} wide>
           <p className="muted xs">
