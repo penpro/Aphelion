@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../store'
 import { streamChatNative } from '../api/ollama'
+import { friendlyModelName } from '../models'
 import { Markdown } from './Markdown'
 import { MessageInput } from './MessageInput'
 import { ExpertEditor } from './ExpertEditor'
@@ -15,6 +16,7 @@ export function AskView() {
   const activeAskId = useStore((s) => s.activeAskId)
   const experts = useStore((s) => s.experts)
   const settings = useStore((s) => s.settings)
+  const loadedModel = useStore((s) => s.loadedModel)
   const createAsk = useStore((s) => s.createAsk)
   const updateAsk = useStore((s) => s.updateAsk)
   const deleteAsk = useStore((s) => s.deleteAsk)
@@ -34,11 +36,13 @@ export function AskView() {
     if (el) el.scrollTop = el.scrollHeight
   }, [ask?.messages, busy])
 
+  const modelName = friendlyModelName(loadedModel || settings.model)
+
   if (!ask) {
     return (
       <div className="chat empty-state">
         <div>
-          <h1>🪄 Ask Gemma</h1>
+          <h1>🪄 Ask {modelName}</h1>
           <p className="muted">
             A multi-turn expert assistant. Pick an "expert" rule set, ask anything, and keep the thread going — it
             remembers the conversation, so it can ask a clarifying question and you can answer.
@@ -106,7 +110,7 @@ export function AskView() {
   return (
     <div className="chat">
       <header className="chat-head">
-        <div className="chat-title">🪄 Ask Gemma</div>
+        <div className="chat-title">🪄 Ask {modelName}</div>
         <div className="row gap">
           <button className="btn sm ghost" onClick={() => createAsk()}>
             + New
@@ -120,7 +124,7 @@ export function AskView() {
         </div>
       </header>
 
-      <div className="row gap wrap" style={{ padding: '8px 14px', borderBottom: '1px solid #262b36', alignItems: 'center' }}>
+      <div className="row gap wrap" style={{ padding: '8px 14px', borderBottom: '1px solid var(--border)', alignItems: 'center' }}>
         <label className="muted xs">Expert</label>
         <select
           value={ask.expertId ?? experts[0]?.id ?? ''}
@@ -164,7 +168,7 @@ export function AskView() {
           const isLast = i === ask.messages.length - 1
           return (
             <div key={m.id} className={cx('msg', isUser ? 'msg-user' : 'msg-assistant', m.error && 'msg-error')}>
-              <div className="msg-avatar" style={{ background: isUser ? '#444b5a' : '#7c5cff' }}>
+              <div className="msg-avatar" style={{ background: isUser ? '#2a2342' : 'var(--accent)' }}>
                 {isUser ? '🧑' : expert?.emoji || '🪄'}
               </div>
               <div className="msg-body">

@@ -96,3 +96,22 @@ export function recommendModel(vramGb: number | null): string {
   const fits = MODEL_CATALOG.filter((m) => m.minVramGb <= vramGb).sort((a, b) => b.minVramGb - a.minVramGb)
   return fits[0]?.id ?? 'gemma3-4b'
 }
+
+/**
+ * Turn a raw model id / GGUF filename / path (as the engine reports it on
+ * /v1/models, or settings.model) into a friendly display label. Known catalog
+ * models use their curated name; anything else is derived by stripping the
+ * extension, quant tags, and common noise, then title-casing.
+ */
+export function friendlyModelName(idOrFile: string | null | undefined): string {
+  if (!idOrFile) return 'the model'
+  const base = idOrFile.split(/[\\/]/).pop() || idOrFile
+  const hit = ALL_MODELS.find((m) => m.id === idOrFile || m.filename === base || m.filename === idOrFile)
+  if (hit) return hit.name
+  let s = base.replace(/\.gguf$/i, '')
+  s = s.replace(/[._-](q\d[._a-z0-9]*|iq\d[._a-z0-9]*|f16|f32|bf16)\b/gi, '') // quant tags
+  s = s.replace(/[._-](it|instruct|chat|abliterated|uncensored|unc|fast|base|v\d+(?:\.\d+)*)\b/gi, '') // noise tags
+  s = s.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim()
+  if (!s) return base.replace(/\.gguf$/i, '')
+  return s.replace(/\b\w/g, (c) => c.toUpperCase())
+}

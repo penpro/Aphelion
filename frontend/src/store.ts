@@ -45,6 +45,10 @@ interface AppState {
   setPersona: (p: Persona) => void
   updateSettings: (patch: Partial<Settings>) => void
 
+  // live engine state (runtime-only, not persisted)
+  loadedModel: string | null
+  setLoadedModel: (m: string | null) => void
+
   // chats
   startChat: (characterId: string) => string
   openChat: (chatId: string) => void
@@ -154,6 +158,9 @@ export const useStore = create<AppState>()(
 
       setPersona: (p) => set({ persona: p }),
       updateSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
+
+      loadedModel: null,
+      setLoadedModel: (m) => set({ loadedModel: m }),
 
       startChat: (characterId) => {
         const character = get().characters.find((c) => c.id === characterId)
