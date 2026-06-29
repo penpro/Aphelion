@@ -32,6 +32,21 @@ export const defaultSettings: Settings = {
   autoExpandReasoning: false,
   keepLoaded: false,
   proofread: false,
+  // advanced sampling — llama.cpp defaults (behavior-preserving until changed)
+  topK: 40,
+  minP: 0.05,
+  typicalP: 1.0,
+  repeatPenalty: 1.0,
+  repeatLastN: 64,
+  presencePenalty: 0,
+  frequencyPenalty: 0,
+  mirostat: 0,
+  mirostatTau: 5.0,
+  mirostatEta: 0.1,
+  dryMultiplier: 0,
+  dryBase: 1.75,
+  dryAllowedLength: 2,
+  seed: -1,
 }
 
 export const defaultCharacters: Character[] = [

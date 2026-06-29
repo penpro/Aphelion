@@ -1,3 +1,5 @@
+import type { Settings } from '../types'
+
 export interface ApiMessage {
   role: string
   content: string
@@ -16,8 +18,68 @@ export interface StreamOptions {
   topP: number
   maxTokens: number
   reasoningEffort?: string // 'low' | 'medium' | 'high' — bounds the reasoning trace
+  sampler?: SamplerParams
   signal?: AbortSignal
   handlers?: StreamHandlers
+}
+
+/** Extra llama.cpp sampler knobs, snake_cased into the request body when present. */
+export interface SamplerParams {
+  topK?: number
+  minP?: number
+  typicalP?: number
+  repeatPenalty?: number
+  repeatLastN?: number
+  presencePenalty?: number
+  frequencyPenalty?: number
+  mirostat?: number
+  mirostatTau?: number
+  mirostatEta?: number
+  dryMultiplier?: number
+  dryBase?: number
+  dryAllowedLength?: number
+  seed?: number
+}
+
+/** Map camelCase sampler params to llama.cpp's snake_case request-body fields. */
+function samplerBody(s?: SamplerParams): Record<string, number> {
+  const b: Record<string, number> = {}
+  if (!s) return b
+  if (s.topK !== undefined) b.top_k = s.topK
+  if (s.minP !== undefined) b.min_p = s.minP
+  if (s.typicalP !== undefined) b.typical_p = s.typicalP
+  if (s.repeatPenalty !== undefined) b.repeat_penalty = s.repeatPenalty
+  if (s.repeatLastN !== undefined) b.repeat_last_n = s.repeatLastN
+  if (s.presencePenalty !== undefined) b.presence_penalty = s.presencePenalty
+  if (s.frequencyPenalty !== undefined) b.frequency_penalty = s.frequencyPenalty
+  if (s.mirostat !== undefined) b.mirostat = s.mirostat
+  if (s.mirostatTau !== undefined) b.mirostat_tau = s.mirostatTau
+  if (s.mirostatEta !== undefined) b.mirostat_eta = s.mirostatEta
+  if (s.dryMultiplier !== undefined) b.dry_multiplier = s.dryMultiplier
+  if (s.dryBase !== undefined) b.dry_base = s.dryBase
+  if (s.dryAllowedLength !== undefined) b.dry_allowed_length = s.dryAllowedLength
+  if (s.seed !== undefined && s.seed >= 0) b.seed = s.seed // -1 = let the engine randomize
+  return b
+}
+
+/** Pull the sampler knobs out of Settings for a generation call. */
+export function samplerFromSettings(s: Settings): SamplerParams {
+  return {
+    topK: s.topK,
+    minP: s.minP,
+    typicalP: s.typicalP,
+    repeatPenalty: s.repeatPenalty,
+    repeatLastN: s.repeatLastN,
+    presencePenalty: s.presencePenalty,
+    frequencyPenalty: s.frequencyPenalty,
+    mirostat: s.mirostat,
+    mirostatTau: s.mirostatTau,
+    mirostatEta: s.mirostatEta,
+    dryMultiplier: s.dryMultiplier,
+    dryBase: s.dryBase,
+    dryAllowedLength: s.dryAllowedLength,
+    seed: s.seed,
+  }
 }
 
 /** Strip the trailing /v1 to reach Ollama's native API root. */
@@ -125,6 +187,7 @@ export async function streamChat(opts: StreamOptions): Promise<{ content: string
   }
   if (opts.maxTokens && opts.maxTokens > 0) body.max_tokens = opts.maxTokens
   if (opts.reasoningEffort) body.reasoning_effort = opts.reasoningEffort
+  Object.assign(body, samplerBody(opts.sampler))
 
   const resp = await fetch(`${opts.baseUrl}/chat/completions`, {
     method: 'POST',
@@ -186,6 +249,7 @@ export interface NativeStreamOptions {
   topP: number
   think: boolean // false = no reasoning (fast, no runaway); true = full reasoning
   numCtx?: number // Ollama context window (num_ctx); omit to use the model/Modelfile default
+  sampler?: SamplerParams
   signal?: AbortSignal
   handlers?: StreamHandlers
 }
@@ -209,6 +273,7 @@ export async function streamChatNative(opts: NativeStreamOptions): Promise<{ con
       temperature: opts.temperature,
       top_p: opts.topP,
       stream: true,
+      ...samplerBody(opts.sampler),
     }),
     signal: opts.signal,
   })

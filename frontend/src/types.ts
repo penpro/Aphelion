@@ -76,6 +76,21 @@ export interface Settings {
   autoExpandReasoning: boolean
   keepLoaded: boolean // pin the model in VRAM (keep_alive -1) instead of idle-unloading
   proofread: boolean // re-run each reply through the model to fix spelling/grammar
+  // advanced sampling — defaults match llama.cpp, so behavior is unchanged until tuned
+  topK: number
+  minP: number
+  typicalP: number
+  repeatPenalty: number
+  repeatLastN: number
+  presencePenalty: number
+  frequencyPenalty: number
+  mirostat: number
+  mirostatTau: number
+  mirostatEta: number
+  dryMultiplier: number
+  dryBase: number
+  dryAllowedLength: number
+  seed: number
 }
 
 export type AppView = 'chat' | 'story' | 'tree' | 'ask'

@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 import { useStore } from './store'
-import { streamChatNative, reloadModel, proofread } from './api/ollama'
+import { streamChatNative, reloadModel, proofread, samplerFromSettings } from './api/ollama'
 import { buildApiMessages, estTokens } from './prompt'
 import { distillMessages, compactSummary, LIVE_WINDOW_TOKENS, KEEP_RECENT_TOKENS, SUMMARY_CAP_TOKENS } from './memory'
 import type { Character } from './types'
@@ -82,6 +82,7 @@ export function useGeneration() {
         messages: apiMessages,
         temperature: st.settings.temperature,
         topP: st.settings.topP,
+        sampler: samplerFromSettings(st.settings),
         numCtx,
         signal: ctrl.signal,
         handlers,

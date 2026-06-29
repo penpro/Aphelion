@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../store'
-import { streamChatNative } from '../api/ollama'
+import { streamChatNative, samplerFromSettings } from '../api/ollama'
 import { friendlyModelName } from '../models'
 import { Markdown } from './Markdown'
 import { MessageInput } from './MessageInput'
@@ -84,6 +84,7 @@ export function AskView() {
         messages,
         temperature: settings.temperature,
         topP: settings.topP,
+        sampler: samplerFromSettings(settings),
         think: ask.think,
         numCtx: ASK_NUM_CTX,
         signal: ctrl.signal,
