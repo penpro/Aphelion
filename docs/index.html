@@ -397,5 +397,29 @@
       <a href="#support">Support</a>
     </span>
   </footer>
+
+  <script>
+    // Open every cross-origin link in a new tab.  This page is embedded
+    // in an <iframe> on penumbra-tech.com/projects/aphelion; without
+    // this, clicking GitHub / Download / Venmo / Cash App tries to
+    // navigate inside the frame, and many targets (GitHub, Venmo, Cash
+    // App) refuse to be framed and end up showing a blank box.
+    // Same-page anchor links (#features etc.) keep their default
+    // behavior so they still scroll within the page.  Skips links that
+    // already declare a target (e.g. the PayPal form's target="_blank").
+    (function () {
+      var here = location.hostname;
+      document.querySelectorAll('a[href]').forEach(function (a) {
+        if (a.target) return;
+        var href = a.getAttribute('href') || '';
+        if (!/^https?:\/\//i.test(href)) return;
+        try {
+          if (new URL(href, location.href).hostname === here) return;
+        } catch (e) { /* malformed URL — fall through and treat as external */ }
+        a.target = '_blank';
+        a.rel = (a.rel ? a.rel + ' ' : '') + 'noopener noreferrer';
+      });
+    })();
+  </script>
 </body>
 </html>
