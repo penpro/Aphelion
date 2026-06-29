@@ -389,6 +389,72 @@ fn open_path(path: String) -> Result<(), String> {
     cmd.spawn().map(|_| ()).map_err(|e| e.to_string())
 }
 
+/// Save a generated document into a user-granted folder: writes `<title>.typ` and compiles
+/// `<title>.pdf` beside it. Returns the PDF path. The app writes the files; the model never does.
+#[tauri::command]
+fn save_document(app: tauri::AppHandle, folder: String, title: String, source: String) -> Result<String, String> {
+    let dir = PathBuf::from(&folder);
+    if !dir.is_dir() {
+        return Err("That folder no longer exists.".into());
+    }
+    let cleaned: String = title
+        .chars()
+        .map(|c| if c.is_alphanumeric() || c == ' ' || c == '-' || c == '_' { c } else { '_' })
+        .collect();
+    let cleaned = cleaned.trim();
+    let base = if cleaned.is_empty() { "document" } else { cleaned };
+    let safe: String = base.chars().take(60).collect();
+    let typ = dir.join(format!("{safe}.typ"));
+    let pdf = dir.join(format!("{safe}.pdf"));
+    std::fs::write(&typ, &source).map_err(|e| format!("couldn't write the source: {e}"))?;
+    let exe = typst_path(&app).ok_or("Typst engine not found")?;
+    let mut cmd = Command::new(&exe);
+    cmd.arg("compile").arg("--root").arg(&dir).arg(&typ).arg(&pdf);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    let result = cmd.output().map_err(|e| format!("failed to run Typst: {e}"))?;
+    if result.status.success() {
+        Ok(pdf.to_string_lossy().to_string())
+    } else {
+        let err = String::from_utf8_lossy(&result.stderr);
+        Err(if err.trim().is_empty() {
+            "Typst could not compile the document.".into()
+        } else {
+            err.to_string()
+        })
+    }
+}
+
+/// List saved document sources (`*.typ`) in a folder, newest first — for reopening.
+#[tauri::command]
+fn list_documents(folder: String) -> Vec<String> {
+    let mut docs: Vec<(std::time::SystemTime, String)> = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(&folder) {
+        for e in entries.flatten() {
+            let p = e.path();
+            let is_typ = p.extension().map_or(false, |x| x.to_string_lossy().to_lowercase() == "typ");
+            if is_typ {
+                let name = p.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+                let mtime = e.metadata().and_then(|m| m.modified()).unwrap_or(std::time::UNIX_EPOCH);
+                docs.push((mtime, name));
+            }
+        }
+    }
+    docs.sort_by(|a, b| b.0.cmp(&a.0));
+    docs.into_iter().map(|(_, n)| n).collect()
+}
+
+/// Read a saved document's source back from a granted folder (for reopening / editing).
+#[tauri::command]
+fn read_document(folder: String, name: String) -> Result<String, String> {
+    let p = PathBuf::from(&folder).join(&name);
+    std::fs::read_to_string(&p).map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -439,7 +505,10 @@ pub fn run() {
             folder_info,
             retrieve_context,
             compile_typst,
-            open_path
+            open_path,
+            save_document,
+            list_documents,
+            read_document
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

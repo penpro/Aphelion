@@ -81,20 +81,20 @@ export function SourcesPanel({
         <div className="kb-folder" style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid var(--border)' }}>
           {folder ? (
             <div className="source-row" title={folder}>
-              <span className="source-name">📚 {baseName(folder)}</span>
+              <span className="source-name">📁 {baseName(folder)}</span>
               <span className="muted xs">{folderInfo ? `${folderInfo.files} files · ${folderInfo.chunks} chunks` : '…'}</span>
-              <button className="icon-btn sm" title="Remove knowledge folder" onClick={() => onSetFolder(null)}>
+              <button className="icon-btn sm" title="Remove folder" onClick={() => onSetFolder(null)}>
                 ✕
               </button>
             </div>
           ) : (
             <button className="btn sm ghost block" onClick={pickFolder}>
-              📚 Add knowledge folder
+              📁 Grant a folder
             </button>
           )}
           <div className="muted xs" style={{ marginTop: 4 }}>
-            A folder of reference docs (PDF, .txt, .md…). The most relevant passages are pulled into context each message — your files stay on
-            disk; the model only ever sees what's retrieved.
+            A folder Aphelion can read reference docs from (PDF, .txt, .md…) and save the documents you generate into. Relevant
+            passages are pulled into context each message — your files stay on disk; the model only ever sees what's retrieved.
           </div>
         </div>
       )}

@@ -1,15 +1,17 @@
-import { useRef, useState, type CSSProperties } from 'react'
-import { save } from '@tauri-apps/plugin-dialog'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { open } from '@tauri-apps/plugin-dialog'
 import { invoke } from '@tauri-apps/api/core'
 import { useStore } from '../store'
 import { Modal } from './Modal'
 import { generateTypstDoc, fixTypstDoc } from '../generators'
 import { substituteMacros } from '../prompt'
-import type { Chat, Character } from '../types'
+import type { Chat } from '../types'
 
 const checkStyle: CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }
+const baseName = (p: string) => p.split(/[\\/]/).filter(Boolean).pop() || p
 
-/** Generate a document with the model (as Typst) and compile it to a PDF locally. */
+/** Generate a document with the model (as Typst), compile it to a PDF, and save it into
+ * the chat's granted folder (read + write) where it can be reopened later. */
 export function DocumentModal({
   chat,
   charName,
@@ -22,6 +24,7 @@ export function DocumentModal({
   onClose: () => void
 }) {
   const settings = useStore((s) => s.settings)
+  const updateChat = useStore((s) => s.updateChat)
   const [request, setRequest] = useState('')
   const [includeChat, setIncludeChat] = useState(chat.messages.length > 0)
   const [includeFolder, setIncludeFolder] = useState(!!chat.knowledgeFolder)
@@ -29,7 +32,23 @@ export function DocumentModal({
   const [busy, setBusy] = useState<'idle' | 'generating' | 'compiling'>('idle')
   const [error, setError] = useState('')
   const [savedTo, setSavedTo] = useState('')
+  const [docs, setDocs] = useState<string[]>([])
   const abortRef = useRef<AbortController | null>(null)
+
+  const refreshDocs = (folder?: string) => {
+    const f = folder ?? chat.knowledgeFolder
+    if (!f) {
+      setDocs([])
+      return
+    }
+    invoke<string[]>('list_documents', { folder: f })
+      .then(setDocs)
+      .catch(() => setDocs([]))
+  }
+  useEffect(() => {
+    refreshDocs()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chat.knowledgeFolder])
 
   const buildContext = async (): Promise<string> => {
     const parts: string[] = []
@@ -41,7 +60,7 @@ export function DocumentModal({
         lines.push(`${who}: ${substituteMacros(m.content, charName, userName)}`)
       }
       let t = lines.join('\n')
-      if (t.length > 7000) t = '… (earlier omitted) …\n' + t.slice(-7000) // keep the most recent
+      if (t.length > 7000) t = '… (earlier omitted) …\n' + t.slice(-7000)
       parts.push(`Transcript of the current session:\n${t}`)
     }
     if (includeFolder && chat.knowledgeFolder) {
@@ -51,7 +70,7 @@ export function DocumentModal({
           query: request,
           maxChars: 4000,
         })
-        if (kb.trim()) parts.push(`From the knowledge folder:\n${kb}`)
+        if (kb.trim()) parts.push(`From the folder:\n${kb}`)
       } catch {
         /* folder unavailable — skip */
       }
@@ -89,17 +108,31 @@ export function DocumentModal({
   const stop = () => abortRef.current?.abort()
 
   const titleGuess =
-    (request.trim().split('\n')[0] || chat.title || 'document').replace(/[^\w -]+/g, '').trim().slice(0, 40) || 'document'
+    (request.trim().split('\n')[0] || chat.title || 'document').replace(/[^\w -]+/g, '').trim().slice(0, 50) || 'document'
 
-  const compile = async (savePath?: string) => {
+  // Ensure the chat has a granted read/write folder, prompting to pick one if not.
+  const ensureFolder = async (): Promise<string | null> => {
+    if (chat.knowledgeFolder) return chat.knowledgeFolder
+    try {
+      const dir = await open({ directory: true, multiple: false, title: 'Choose a folder for your documents' })
+      if (typeof dir === 'string') {
+        updateChat(chat.id, { knowledgeFolder: dir })
+        return dir
+      }
+    } catch {
+      /* cancelled */
+    }
+    return null
+  }
+
+  // Quick look: compile to a temp PDF and open it (no folder required).
+  const preview = async () => {
     if (!typst.trim() || busy !== 'idle') return
     setError('')
-    setSavedTo('')
     setBusy('compiling')
     try {
-      const path = await invoke<string>('compile_typst', { source: typst, outPath: savePath ?? null })
+      const path = await invoke<string>('compile_typst', { source: typst, outPath: null })
       await invoke('open_path', { path })
-      if (savePath) setSavedTo(savePath)
     } catch (e) {
       const err = e as { message?: string }
       setError(typeof err?.message === 'string' ? err.message : String(e))
@@ -108,12 +141,36 @@ export function DocumentModal({
     }
   }
 
-  const savePdf = async () => {
+  // Persist: write <title>.typ + compile <title>.pdf into the granted folder, then open it.
+  const saveToFolder = async () => {
+    if (!typst.trim() || busy !== 'idle') return
+    const folder = await ensureFolder()
+    if (!folder) return
+    setError('')
+    setBusy('compiling')
     try {
-      const path = await save({ defaultPath: `${titleGuess}.pdf`, filters: [{ name: 'PDF', extensions: ['pdf'] }] })
-      if (typeof path === 'string') await compile(path)
-    } catch {
-      /* dialog cancelled */
+      const pdf = await invoke<string>('save_document', { folder, title: titleGuess, source: typst })
+      await invoke('open_path', { path: pdf })
+      setSavedTo(folder)
+      refreshDocs(folder)
+    } catch (e) {
+      const err = e as { message?: string }
+      setError(typeof err?.message === 'string' ? err.message : String(e))
+    } finally {
+      setBusy('idle')
+    }
+  }
+
+  const reopen = async (name: string) => {
+    if (!chat.knowledgeFolder || busy !== 'idle') return
+    try {
+      const src = await invoke<string>('read_document', { folder: chat.knowledgeFolder, name })
+      setTypst(src)
+      setRequest((r) => r || name.replace(/\.typ$/i, ''))
+      setError('')
+      setSavedTo('')
+    } catch (e) {
+      setError(String(e))
     }
   }
 
@@ -147,12 +204,31 @@ export function DocumentModal({
     }
   }
 
+  const folderLabel = chat.knowledgeFolder ? baseName(chat.knowledgeFolder) : ''
+
   return (
     <Modal title="📄 Create a document" onClose={onClose} wide>
       <p className="muted xs">
         Describe what you want — the model writes it as a clean <b>Typst</b> document and Aphelion compiles it to a PDF.
-        Math, tables, and structure are all supported, and it all runs locally.
+        Math, tables, and structure are supported, and it all runs locally. Saved documents go into your granted folder, where
+        you can reopen them.
       </p>
+
+      {chat.knowledgeFolder && docs.length > 0 && (
+        <div style={{ margin: '6px 0 10px' }}>
+          <div className="field-label">
+            <b>📁 In {folderLabel}</b> <span className="muted">— click to reopen</span>
+          </div>
+          <div className="row gap wrap" style={{ marginTop: 4 }}>
+            {docs.slice(0, 12).map((d) => (
+              <button key={d} className="btn sm ghost" onClick={() => reopen(d)} disabled={busy !== 'idle'} title={d}>
+                {d.replace(/\.typ$/i, '')}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <textarea
         style={{ width: '100%', minHeight: 84, resize: 'vertical', fontFamily: 'inherit' }}
         placeholder="e.g. A one-page recap of this session as a formatted handout… / A two-page primer on photosynthesis with the key equation… / An NPC stat block for a fire giant as a clean table…"
@@ -167,8 +243,8 @@ export function DocumentModal({
         )}
         {chat.knowledgeFolder && (
           <label style={checkStyle}>
-            <input type="checkbox" checked={includeFolder} onChange={(e) => setIncludeFolder(e.target.checked)} /> Use knowledge
-            folder
+            <input type="checkbox" checked={includeFolder} onChange={(e) => setIncludeFolder(e.target.checked)} /> Use folder as
+            reference
           </label>
         )}
         <div style={{ flex: 1 }} />
@@ -196,18 +272,23 @@ export function DocumentModal({
             spellCheck={false}
           />
           <div className="row gap wrap" style={{ marginTop: 8, alignItems: 'center' }}>
-            <button className="btn sm" onClick={() => compile()} disabled={!typst.trim() || busy !== 'idle'}>
-              {busy === 'compiling' ? 'Compiling…' : '📄 Open PDF'}
+            <button className="btn sm ghost" onClick={preview} disabled={!typst.trim() || busy !== 'idle'}>
+              {busy === 'compiling' ? 'Working…' : '👁 Preview'}
             </button>
-            <button className="btn sm ghost" onClick={savePdf} disabled={!typst.trim() || busy !== 'idle'}>
-              💾 Save PDF…
+            <button className="btn sm" onClick={saveToFolder} disabled={!typst.trim() || busy !== 'idle'}>
+              💾 {chat.knowledgeFolder ? `Save to ${folderLabel}` : 'Save to a folder…'}
             </button>
             {error && (
-              <button className="btn sm ghost" onClick={fix} disabled={busy !== 'idle'} title="Send the error back to the model to repair">
+              <button
+                className="btn sm ghost"
+                onClick={fix}
+                disabled={busy !== 'idle'}
+                title="Send the error back to the model to repair"
+              >
                 🔧 Fix with AI
               </button>
             )}
-            {savedTo && <span className="muted xs">Saved · opened in your PDF viewer</span>}
+            {savedTo && <span className="muted xs">Saved to {baseName(savedTo)} · opened</span>}
           </div>
         </>
       )}
