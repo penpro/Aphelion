@@ -33,18 +33,22 @@ export function DocumentModal({
   folder,
   onSetFolder,
   defaultTitle,
+  defaultExpertId,
   transcript,
   onClose,
 }: {
   folder?: string
   onSetFolder: (path: string | null) => void
   defaultTitle: string
+  defaultExpertId?: string | null
   transcript?: { label: string; has: boolean; build: () => string }
   onClose: () => void
 }) {
   const settings = useStore((s) => s.settings)
+  const experts = useStore((s) => s.experts)
   const [request, setRequest] = useState('')
   const [format, setFormat] = useState<Fmt>(FORMATS[0])
+  const [expertId, setExpertId] = useState<string>(defaultExpertId ?? 'plain')
   const [includeChat, setIncludeChat] = useState(!!transcript?.has)
   const [includeFolder, setIncludeFolder] = useState(!!folder)
   const [content, setContent] = useState('')
@@ -99,7 +103,8 @@ export function DocumentModal({
     abortRef.current = ctrl
     try {
       const context = await buildContext()
-      const common = { request, context, settings, signal: ctrl.signal, onContent: (d: string) => setContent((p) => p + d) }
+      const persona = expertId === 'plain' ? undefined : experts.find((e) => e.id === expertId)?.systemPrompt
+      const common = { request, context, persona, settings, signal: ctrl.signal, onContent: (d: string) => setContent((p) => p + d) }
       const result = format.typst
         ? await generateTypstDoc(common)
         : await generateTextDoc({ ...common, fileType: format.lang })
@@ -247,7 +252,7 @@ export function DocumentModal({
         </div>
       )}
 
-      <div className="row gap" style={{ alignItems: 'center', margin: '2px 0 8px' }}>
+      <div className="row gap" style={{ alignItems: 'center', margin: '2px 0 8px', flexWrap: 'wrap' }}>
         <span className="field-label" style={{ margin: 0 }}>
           <b>Format</b>
         </span>
@@ -258,7 +263,21 @@ export function DocumentModal({
             </option>
           ))}
         </select>
-        <span className="muted xs">{format.typst ? 'compiles to a PDF' : `saves as .${format.ext}`}</span>
+        <span className="field-label" style={{ margin: '0 0 0 6px' }}>
+          <b>Writer</b>
+        </span>
+        <select
+          value={expertId}
+          onChange={(e) => setExpertId(e.target.value)}
+          title="Which expert's instructions shape the content (the format rules are always enforced)"
+        >
+          <option value="plain">Plain (format only)</option>
+          {experts.map((ex) => (
+            <option key={ex.id} value={ex.id}>
+              {(ex.emoji ? ex.emoji + ' ' : '') + ex.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       <textarea

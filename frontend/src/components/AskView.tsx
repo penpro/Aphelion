@@ -237,6 +237,7 @@ export function AskView() {
           folder={ask.knowledgeFolder}
           onSetFolder={(p) => updateAsk(ask.id, { knowledgeFolder: p ?? undefined })}
           defaultTitle={ask.title || 'document'}
+          defaultExpertId={ask.expertId}
           transcript={{
             label: 'this conversation',
             has: ask.messages.length > 0,

@@ -62,10 +62,19 @@ function stripCodeFences(s: string): string {
   return t
 }
 
+/** Layer an expert's persona (optional) over the format-enforcing instructions: the
+ * expert shapes the content, the format rules govern the output. */
+function composeSystem(persona: string | undefined, formatInstructions: string): string {
+  const p = persona?.trim()
+  if (!p) return formatInstructions
+  return `${p}\n\n---\nYou are now producing a document. Apply your expertise and judgment to the CONTENT, but you MUST follow these output rules exactly:\n\n${formatInstructions}`
+}
+
 /** Generate a self-contained Typst document from a request (+ optional reference context). */
 export async function generateTypstDoc(opts: {
   request: string
   context?: string
+  persona?: string
   settings: Settings
   signal?: AbortSignal
   onContent?: (delta: string) => void
@@ -81,7 +90,7 @@ export async function generateTypstDoc(opts: {
     baseUrl: opts.settings.baseUrl,
     model: opts.settings.model,
     messages: [
-      { role: 'system', content: TYPST_SYSTEM },
+      { role: 'system', content: composeSystem(opts.persona, TYPST_SYSTEM) },
       { role: 'user', content: user },
     ],
     temperature: opts.settings.temperature,
@@ -129,11 +138,15 @@ export async function generateTextDoc(opts: {
   request: string
   fileType: string
   context?: string
+  persona?: string
   settings: Settings
   signal?: AbortSignal
   onContent?: (delta: string) => void
 }): Promise<string> {
-  const system = `You generate the complete contents of a single ${opts.fileType} file. Output ONLY the raw file contents — no explanations, no commentary, and no markdown code fences. The result must be complete, correct, and ready to save directly to a file that an IDE or editor can open and use.`
+  const system = composeSystem(
+    opts.persona,
+    `You generate the complete contents of a single ${opts.fileType} file. Output ONLY the raw file contents — no explanations, no commentary, and no markdown code fences. The result must be complete, correct, and ready to save directly to a file that an IDE or editor can open and use.`,
+  )
   const user = [
     `Create a ${opts.fileType} file for the following:\n\n${opts.request.trim()}`,
     opts.context?.trim() ? `\n\nReference material to draw from:\n\n${opts.context.trim()}` : '',
