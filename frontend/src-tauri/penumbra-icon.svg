@@ -1,0 +1,25 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="78%">
+      <stop offset="0%" stop-color="#180c40"/>
+      <stop offset="58%" stop-color="#0a0426"/>
+      <stop offset="100%" stop-color="#06021a"/>
+    </radialGradient>
+    <radialGradient id="corona" cx="50%" cy="50%" r="50%">
+      <stop offset="60%" stop-color="#5eead4" stop-opacity="0"/>
+      <stop offset="80%" stop-color="#5eead4" stop-opacity="0.9"/>
+      <stop offset="90%" stop-color="#22d3ee" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#22d3ee" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="blur" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="20"/>
+    </filter>
+  </defs>
+  <rect width="1024" height="1024" rx="224" fill="url(#bg)"/>
+  <circle cx="512" cy="512" r="312" fill="url(#corona)" filter="url(#blur)"/>
+  <circle cx="512" cy="512" r="252" fill="none" stroke="#5eead4" stroke-width="52" opacity="0.16"/>
+  <circle cx="512" cy="512" r="252" fill="none" stroke="#5eead4" stroke-width="16"/>
+  <circle cx="512" cy="512" r="210" fill="#06021a"/>
+  <circle cx="512" cy="512" r="210" fill="none" stroke="#5eead4" stroke-width="3" opacity="0.45"/>
+  <circle cx="676" cy="676" r="13" fill="#ff79c6"/>
+</svg>
