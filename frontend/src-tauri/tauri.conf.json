@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "LocalLLM Studio",
-  "mainBinaryName": "LocalLLM Studio",
+  "productName": "Aphelion",
+  "mainBinaryName": "Aphelion",
   "version": "0.1.0",
   "identifier": "com.localllm.studio",
   "build": {
@@ -13,7 +13,7 @@
   "app": {
     "windows": [
       {
-        "title": "LocalLLM Studio",
+        "title": "Aphelion",
         "width": 1400,
         "height": 900,
         "minWidth": 940,

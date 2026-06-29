@@ -36,7 +36,7 @@ const PIECES: { icon: string; title: string; body: string }[] = [
 export function Tutorial({ onClose }: { onClose: () => void }) {
   return (
     <Modal
-      title="How LocalLLM Studio works"
+      title="How Aphelion works"
       onClose={onClose}
       wide
       footer={
@@ -54,7 +54,7 @@ export function Tutorial({ onClose }: { onClose: () => void }) {
         </p>
 
         <div className="tut-flow">
-          <svg viewBox="0 0 620 175" width="100%" role="img" aria-label="Flow: you, to the LocalLLM Studio interface, to the llama.cpp engine, to the model on your GPU — all running locally and offline.">
+          <svg viewBox="0 0 620 175" width="100%" role="img" aria-label="Flow: you, to the Aphelion interface, to the llama.cpp engine, to the model on your GPU — all running locally and offline.">
             <defs>
               <marker id="tut-ah" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
                 <path d="M0,0 L6,3 L0,6 Z" fill="#5eead4" />
@@ -73,7 +73,7 @@ export function Tutorial({ onClose }: { onClose: () => void }) {
               <text x="66" y="96" fill="#8b7ab0" fontSize="9.5">your prompt</text>
 
               <rect x="156" y="50" width="130" height="56" rx="8" fill="#0c0426" stroke="rgba(94,234,212,0.3)" />
-              <text x="221" y="80" fill="#ecfeff" fontSize="12" fontWeight="600">LocalLLM Studio</text>
+              <text x="221" y="80" fill="#ecfeff" fontSize="12" fontWeight="600">Aphelion</text>
               <text x="221" y="96" fill="#8b7ab0" fontSize="9.5">builds the request</text>
 
               <rect x="312" y="50" width="130" height="56" rx="8" fill="#0c0426" stroke="#5eead4" strokeWidth="1.4" />

@@ -53,7 +53,7 @@ export function ChatView({ onEditCharacter }: { onEditCharacter: (c: Character) 
     return (
       <div className="chat empty-state">
         <div>
-          <h1>🎭 Roleplay Studio</h1>
+          <h1>🎭 Roleplay</h1>
           <p className="muted">Pick a character on the left to begin — or create a new one.</p>
         </div>
       </div>

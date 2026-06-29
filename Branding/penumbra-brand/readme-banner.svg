@@ -1,0 +1,84 @@
+<svg width="1280" height="400" viewBox="0 0 1280 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Aphelion — Run LLMs locally. Your data, your rules.">
+  <defs>
+    
+    <radialGradient id="bn-bg" cx="33%" cy="48%" r="62%">
+      <stop offset="0%" stop-color="#130A30"></stop><stop offset="55%" stop-color="#0C0426"></stop><stop offset="100%" stop-color="#07021A"></stop>
+    </radialGradient>
+    <linearGradient id="bn-ring" x1="0.12" y1="0.1" x2="0.9" y2="0.92">
+      <stop offset="0%" stop-color="#22D3EE"></stop><stop offset="34%" stop-color="#5EEAD4"></stop>
+      <stop offset="62%" stop-color="#C084FC"></stop><stop offset="100%" stop-color="#FF79C6"></stop>
+    </linearGradient>
+    <radialGradient id="bn-bloom" cx="50%" cy="50%" r="50%">
+      <stop offset="55%" stop-color="#22D3EE" stop-opacity="0"></stop>
+      <stop offset="80%" stop-color="#5EEAD4" stop-opacity="0.45"></stop>
+      <stop offset="100%" stop-color="#C084FC" stop-opacity="0"></stop>
+    </radialGradient>
+    <radialGradient id="bn-planet" cx="38%" cy="34%" r="72%">
+      <stop offset="0%" stop-color="#FFE6F5"></stop><stop offset="45%" stop-color="#FF79C6"></stop><stop offset="100%" stop-color="#C084FC"></stop>
+    </radialGradient>
+    <linearGradient id="bn-accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#5EEAD4"></stop><stop offset="100%" stop-color="#C084FC"></stop>
+    </linearGradient>
+    <linearGradient id="bn-bracket" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#5EEAD4"></stop><stop offset="100%" stop-color="#FF79C6"></stop>
+    </linearGradient>
+    <filter id="bn-soft" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="14"></feGaussianBlur></filter>
+    <filter id="bn-rim" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="2.6"></feGaussianBlur></filter>
+    <filter id="bn-halo" x="-150%" y="-150%" width="400%" height="400%"><feGaussianBlur stdDeviation="7"></feGaussianBlur></filter>
+  </defs>
+
+  <rect width="1280" height="400" fill="url(#bn-bg)"></rect>
+  <rect x="0.5" y="0.5" width="1279" height="399" fill="none" stroke="rgba(94,234,212,0.12)"></rect>
+
+  
+  <g fill="none" stroke="url(#bn-bracket)" stroke-width="2" opacity="0.8">
+    <path d="M28 70 V36 H62"></path>
+    <path d="M1252 70 V36 H1218"></path>
+    <path d="M28 330 V364 H62"></path>
+    <path d="M1252 330 V364 H1218"></path>
+  </g>
+
+  
+  <g transform="translate(250,200)">
+    <g stroke="#5EEAD4" stroke-width="1.4" opacity="0.4"><path d="M0 -184 v16 M0 168 v16 M-184 0 h16 M168 0 h16"></path></g>
+    <g transform="rotate(-20)">
+      <ellipse cx="0" cy="0" rx="163" ry="130" fill="none" stroke="url(#bn-ring)" stroke-width="1.6" opacity="0.5"></ellipse>
+      <circle cx="163" cy="0" r="22" fill="#FF79C6" opacity="0.5" filter="url(#bn-halo)"></circle>
+      <circle cx="163" cy="0" r="9" fill="url(#bn-planet)"></circle>
+      <circle cx="159" cy="-4" r="2.6" fill="#FFFFFF" opacity="0.9"></circle>
+    </g>
+    <circle cx="0" cy="0" r="138" fill="url(#bn-bloom)" filter="url(#bn-soft)"></circle>
+    <circle cx="0" cy="0" r="112" fill="none" stroke="url(#bn-ring)" stroke-width="30" filter="url(#bn-soft)" opacity="0.9"></circle>
+    <circle cx="0" cy="0" r="108" fill="#000000"></circle>
+    <circle cx="0" cy="0" r="110" fill="none" stroke="url(#bn-ring)" stroke-width="7" filter="url(#bn-rim)"></circle>
+    <circle cx="0" cy="0" r="110" fill="none" stroke="#ECFEFF" stroke-width="2" opacity="0.92"></circle>
+  </g>
+
+  
+  <text font-family="&#39;Space Grotesk&#39;,&#39;Segoe UI&#39;,system-ui,sans-serif" font-weight="500" fill="#ECFEFF" x="500" y="150" font-size="84" letter-spacing="-0.01em">Aphelion</text>
+  <rect x="503" y="178" width="92" height="4" rx="2" fill="url(#bn-accent)"></rect>
+  <text font-family="&#39;JetBrains Mono&#39;,&#39;Consolas&#39;,monospace" font-weight="400" x="503" y="224" font-size="22" fill="#9DB4BC">Run LLMs locally. Your data, your rules.</text>
+
+  
+  <g font-family="&#39;JetBrains Mono&#39;,&#39;Consolas&#39;,monospace" font-weight="500" font-size="14">
+    <g transform="translate(503,270)">
+      <rect width="148" height="40" rx="20" fill="rgba(94,234,212,0.06)" stroke="rgba(94,234,212,0.4)"></rect>
+      <circle cx="26" cy="20" r="3.5" fill="#5EEAD4"></circle><text x="42" y="25" fill="#ECFEFF">100% OFFLINE</text>
+    </g>
+    <g transform="translate(663,270)">
+      <rect width="138" height="40" rx="20" fill="rgba(34,211,238,0.06)" stroke="rgba(34,211,238,0.4)"></rect>
+      <circle cx="26" cy="20" r="3.5" fill="#22D3EE"></circle><text x="42" y="25" fill="#ECFEFF">ZERO SETUP</text>
+    </g>
+    <g transform="translate(813,270)">
+      <rect width="150" height="40" rx="20" fill="rgba(192,132,252,0.06)" stroke="rgba(192,132,252,0.4)"></rect>
+      <circle cx="26" cy="20" r="3.5" fill="#C084FC"></circle><text x="42" y="25" fill="#ECFEFF">GPU AUTO-FIT</text>
+    </g>
+    <g transform="translate(975,270)">
+      <rect width="160" height="40" rx="20" fill="rgba(255,121,198,0.06)" stroke="rgba(255,121,198,0.4)"></rect>
+      <circle cx="26" cy="20" r="3.5" fill="#FF79C6"></circle><text x="42" y="25" fill="#ECFEFF">FULLY PRIVATE</text>
+    </g>
+  </g>
+
+  
+  <text font-family="&#39;JetBrains Mono&#39;,&#39;Consolas&#39;,monospace" font-weight="500" x="503" y="346" font-size="13" letter-spacing="0.22em" fill="#5A6B78">BY PENUMBRA</text>
+</svg>

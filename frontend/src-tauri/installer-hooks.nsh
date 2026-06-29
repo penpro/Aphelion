@@ -1,4 +1,4 @@
-; Custom NSIS hooks for LocalLLM Studio.
+; Custom NSIS hooks for Aphelion.
 ;
 ; The standard uninstaller removes the app + bundled engine, but NOT the user's
 ; downloaded models and chat data (kept in %APPDATA%\com.localllm.studio, which

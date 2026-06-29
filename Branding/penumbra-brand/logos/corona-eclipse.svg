@@ -1,0 +1,49 @@
+<svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Penumbra Aphelion corona-eclipse mark">
+  <defs>
+    
+    <linearGradient id="ce-ring" x1="0.12" y1="0.1" x2="0.9" y2="0.92">
+      <stop offset="0%" stop-color="#22D3EE"></stop>
+      <stop offset="34%" stop-color="#5EEAD4"></stop>
+      <stop offset="62%" stop-color="#C084FC"></stop>
+      <stop offset="100%" stop-color="#FF79C6"></stop>
+    </linearGradient>
+    <radialGradient id="ce-bloom" cx="50%" cy="50%" r="50%">
+      <stop offset="62%" stop-color="#22D3EE" stop-opacity="0"></stop>
+      <stop offset="80%" stop-color="#5EEAD4" stop-opacity="0.5"></stop>
+      <stop offset="100%" stop-color="#C084FC" stop-opacity="0"></stop>
+    </radialGradient>
+    <radialGradient id="ce-planet" cx="38%" cy="34%" r="72%">
+      <stop offset="0%" stop-color="#FFE6F5"></stop>
+      <stop offset="45%" stop-color="#FF79C6"></stop>
+      <stop offset="100%" stop-color="#C084FC"></stop>
+    </radialGradient>
+    <filter id="ce-soft" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="9"></feGaussianBlur></filter>
+    <filter id="ce-rim" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="2.2"></feGaussianBlur></filter>
+    <filter id="ce-halo" x="-120%" y="-120%" width="340%" height="340%"><feGaussianBlur stdDeviation="5"></feGaussianBlur></filter>
+  </defs>
+
+  
+  <g stroke="#5EEAD4" stroke-width="1.4" opacity="0.4">
+    <path d="M128 12 v12 M128 232 v12 M12 128 h12 M232 128 h12"></path>
+  </g>
+
+  
+  <g transform="rotate(-20 128 128)">
+    <ellipse cx="128" cy="128" rx="106" ry="84" fill="none" stroke="url(#ce-ring)" stroke-width="1.5" opacity="0.5"></ellipse>
+    
+    <circle cx="234" cy="128" r="15" fill="#FF79C6" opacity="0.5" filter="url(#ce-halo)"></circle>
+    <circle cx="234" cy="128" r="6.4" fill="url(#ce-planet)"></circle>
+    <circle cx="231.6" cy="125.6" r="1.8" fill="#FFFFFF" opacity="0.9"></circle>
+  </g>
+
+  
+  <circle cx="128" cy="128" r="86" fill="url(#ce-bloom)" filter="url(#ce-soft)"></circle>
+  
+  <circle cx="128" cy="128" r="72" fill="none" stroke="url(#ce-ring)" stroke-width="20" filter="url(#ce-soft)" opacity="0.85"></circle>
+  
+  <circle cx="128" cy="128" r="70" fill="#000000"></circle>
+  
+  <circle cx="128" cy="128" r="71" fill="none" stroke="url(#ce-ring)" stroke-width="5.5" filter="url(#ce-rim)"></circle>
+  
+  <circle cx="128" cy="128" r="71" fill="none" stroke="#ECFEFF" stroke-width="1.4" opacity="0.9"></circle>
+</svg>

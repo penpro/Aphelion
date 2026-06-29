@@ -2,26 +2,29 @@
 @font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url('./assets/fonts/jetbrains-mono-400.woff2') format('woff2'); }
 @font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 500; font-display: swap; src: url('./assets/fonts/jetbrains-mono-500.woff2') format('woff2'); }
 @font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 700; font-display: swap; src: url('./assets/fonts/jetbrains-mono-700.woff2') format('woff2'); }
+@font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 400; font-display: swap; src: url('./assets/fonts/space-grotesk-400.woff2') format('woff2'); }
 @font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 500; font-display: swap; src: url('./assets/fonts/space-grotesk-500.woff2') format('woff2'); }
 @font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 600; font-display: swap; src: url('./assets/fonts/space-grotesk-600.woff2') format('woff2'); }
 @font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 700; font-display: swap; src: url('./assets/fonts/space-grotesk-700.woff2') format('woff2'); }
 
 :root {
-  /* corona accent + secondary — theme presets override just these + the voids */
-  --accent: #5eead4;
-  --accent-2: #22d3ee;
-  --magenta: #ff79c6;
-  --violet: #c084fc;
+  /* App tokens aliased to the Penumbra brand tokens (brand-tokens.css).
+     Theme presets below override --accent + the voids; everything else re-derives. */
+  --accent: var(--penumbra-corona);
+  --accent-2: var(--penumbra-flare);
+  --magenta: var(--penumbra-magenta);
+  --violet: var(--penumbra-violet);
   /* voids / surfaces */
-  --bg: #07021a;
-  --panel: #0c0426;
-  --bg-2: #130a30;
-  --bg-3: #1d1142;
+  --bg: var(--penumbra-void-900);
+  --panel: var(--penumbra-void-800);
+  --bg-2: var(--penumbra-void-700);
+  --bg-3: #1d1142; /* one step above void-700 (brand ships 3 voids) */
   --panel-glass: rgba(12, 4, 28, 0.62);
   /* text */
-  --text: #ecfeff;
-  --text-2: #cbd5e1;
-  --muted: #8b7ab0;
+  --text: var(--penumbra-text);
+  --text-2: var(--penumbra-text-dim);
+  --muted: var(--penumbra-text-dim);
+  --faint: var(--penumbra-text-faint);
   --on-accent: #0a0510;
   --danger: #ff6b6b;
   --warn: #fde68a;
@@ -31,13 +34,15 @@
   --border-2: color-mix(in srgb, var(--accent) 32%, transparent);
   --glow: 0 0 24px color-mix(in srgb, var(--accent) 28%, transparent);
   --glow-sm: 0 0 12px color-mix(in srgb, var(--accent) 22%, transparent);
-  --grad: linear-gradient(120deg, var(--accent), var(--violet));
-  --grad-hot: linear-gradient(120deg, var(--accent), var(--magenta));
-  /* type */
-  --font: 'JetBrains Mono', ui-monospace, 'Cascadia Code', Consolas, monospace;
-  --font-head: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  /* signature corona sweep (brand identity gradient) */
+  --grad: linear-gradient(120deg, var(--penumbra-flare), var(--penumbra-corona), var(--penumbra-violet), var(--penumbra-magenta));
+  --grad-hot: linear-gradient(120deg, var(--penumbra-corona), var(--penumbra-magenta));
+  /* type — Space Grotesk for everything human, JetBrains Mono for labels/data */
+  --font: var(--penumbra-font-head);
+  --font-mono: var(--penumbra-font-mono);
+  --font-head: var(--penumbra-font-head);
   /* shape + motion */
-  --radius: 12px;
+  --radius: 14px;
   --radius-sm: 8px;
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -100,12 +105,16 @@ body {
     var(--bg);
   background-attachment: fixed;
   color: var(--text);
-  font: 13.5px/1.6 var(--font);
+  font: 14px/1.6 var(--font);
   -webkit-font-smoothing: antialiased;
 }
-h1, h2, h3, .brand, .chat-title {
+h1, h2, h3, h4, .brand, .chat-title {
   font-family: var(--font-head);
   letter-spacing: -0.01em;
+}
+/* "Machine" type — labels, data, and code in JetBrains Mono per the brand */
+code, pre, kbd, .mono, .xs, .hint, .model-name, .estimate, .num-input, .field-label b {
+  font-family: var(--font-mono);
 }
 
 /* ---------- layout ---------- */

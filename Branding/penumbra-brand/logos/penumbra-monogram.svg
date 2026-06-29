@@ -1,0 +1,18 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Penumbra monogram">
+  <defs>
+    <linearGradient id="pm-grad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#22D3EE"></stop>
+      <stop offset="55%" stop-color="#C084FC"></stop>
+      <stop offset="100%" stop-color="#FF79C6"></stop>
+    </linearGradient>
+    <filter id="pm-glow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="3.5"></feGaussianBlur></filter>
+  </defs>
+
+  
+  <rect x="9" y="9" width="102" height="102" rx="30" fill="none" stroke="url(#pm-grad)" stroke-width="5.5" filter="url(#pm-glow)" opacity="0.5"></rect>
+  <rect x="9" y="9" width="102" height="102" rx="30" fill="none" stroke="url(#pm-grad)" stroke-width="5.5"></rect>
+
+  
+  <path fill-rule="evenodd" fill="url(#pm-grad)" filter="url(#pm-glow)" opacity="0.5" d="M41 88 L41 32 L64 32 C 75 32 81 39 81 50 C 81 61 75 68 64 68 L54 68 L54 88 Z&#xA;           M54 44 L63 44 C 68 44 70 47 70 50 C 70 53 68 56 63 56 L54 56 Z"></path>
+  <path fill-rule="evenodd" fill="url(#pm-grad)" d="M41 88 L41 32 L64 32 C 75 32 81 39 81 50 C 81 61 75 68 64 68 L54 68 L54 88 Z&#xA;           M54 44 L63 44 C 68 44 70 47 70 50 C 70 53 68 56 63 56 L54 56 Z"></path>
+</svg>

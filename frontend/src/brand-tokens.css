@@ -1,0 +1,46 @@
+/* Aphelion (by Penumbra) — Design Tokens
+ * Motif: corona eclipse + aphelion orbit · dark void + cyan glow
+ * Canonical brand tokens (from the Penumbra brand package). The app's
+ * styles.css aliases its own --accent/--bg/etc. to these — reference the
+ * brand here, not hard-coded hex. */
+
+:root {
+  /* ── Brand palette ──────────────────────────── */
+  --penumbra-corona:  #5EEAD4; /* primary glow / mint-teal */
+  --penumbra-flare:   #22D3EE; /* secondary glow / cyan    */
+  --penumbra-magenta: #FF79C6; /* accent / aphelion planet  */
+  --penumbra-violet:  #C084FC; /* accent / secondary pop   */
+
+  /* ── Voids (backgrounds, dark → darkest) ─────── */
+  --penumbra-void-900: #07021A; /* deepest base */
+  --penumbra-void-800: #0C0426; /* surface      */
+  --penumbra-void-700: #130A30; /* raised panel */
+
+  /* ── Text ───────────────────────────────────── */
+  --penumbra-text:      #ECFEFF; /* primary text       */
+  --penumbra-text-dim:  #9DB4BC; /* muted / secondary  */
+  --penumbra-text-faint:#5A6B78; /* labels / captions  */
+
+  /* ── Functional ─────────────────────────────── */
+  --penumbra-border:    rgba(94, 234, 212, 0.16);
+  --penumbra-glow:      0 0 48px rgba(34, 211, 238, 0.35);
+  --penumbra-gradient-corona: radial-gradient(circle, #5EEAD4 0%, #22D3EE 70%, rgba(34,211,238,0) 100%);
+  --penumbra-gradient-void:   radial-gradient(120% 100% at 50% 0%, #130A30 0%, #0C0426 55%, #07021A 100%);
+
+  /* ── Type ───────────────────────────────────── */
+  --penumbra-font-head: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --penumbra-font-mono: "JetBrains Mono", "SFMono-Regular", "Consolas", monospace;
+
+  --penumbra-weight-regular: 400;
+  --penumbra-weight-medium:  500;
+  --penumbra-weight-bold:    700;
+
+  --penumbra-leading-body:  1.6;
+  --penumbra-tracking-tight: -0.02em;
+  --penumbra-tracking-mono:  0.04em;
+
+  /* ── Radius ─────────────────────────────────── */
+  --penumbra-radius-sm: 8px;
+  --penumbra-radius-md: 14px;
+  --penumbra-radius-lg: 22px;
+}

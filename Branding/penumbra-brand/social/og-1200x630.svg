@@ -1,0 +1,51 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Aphelion — open graph card">
+  <defs>
+    
+    <radialGradient id="og-bg" cx="32%" cy="44%" r="68%">
+      <stop offset="0%" stop-color="#130A30"></stop><stop offset="55%" stop-color="#0C0426"></stop><stop offset="100%" stop-color="#07021A"></stop>
+    </radialGradient>
+    <linearGradient id="og-ring" x1="0.12" y1="0.1" x2="0.9" y2="0.92">
+      <stop offset="0%" stop-color="#22D3EE"></stop><stop offset="34%" stop-color="#5EEAD4"></stop>
+      <stop offset="62%" stop-color="#C084FC"></stop><stop offset="100%" stop-color="#FF79C6"></stop>
+    </linearGradient>
+    <radialGradient id="og-bloom" cx="50%" cy="50%" r="50%">
+      <stop offset="55%" stop-color="#22D3EE" stop-opacity="0"></stop><stop offset="80%" stop-color="#5EEAD4" stop-opacity="0.45"></stop><stop offset="100%" stop-color="#C084FC" stop-opacity="0"></stop>
+    </radialGradient>
+    <radialGradient id="og-planet" cx="38%" cy="34%" r="72%">
+      <stop offset="0%" stop-color="#FFE6F5"></stop><stop offset="45%" stop-color="#FF79C6"></stop><stop offset="100%" stop-color="#C084FC"></stop>
+    </radialGradient>
+    <linearGradient id="og-accent" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#5EEAD4"></stop><stop offset="100%" stop-color="#C084FC"></stop></linearGradient>
+    <linearGradient id="og-bracket" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#5EEAD4"></stop><stop offset="100%" stop-color="#FF79C6"></stop></linearGradient>
+    <filter id="og-soft" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="16"></feGaussianBlur></filter>
+    <filter id="og-rim" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="3"></feGaussianBlur></filter>
+    <filter id="og-halo" x="-150%" y="-150%" width="400%" height="400%"><feGaussianBlur stdDeviation="8"></feGaussianBlur></filter>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#og-bg)"></rect>
+  <g fill="none" stroke="url(#og-bracket)" stroke-width="2.4" opacity="0.8">
+    <path d="M40 92 V48 H84"></path><path d="M1160 92 V48 H1116"></path>
+    <path d="M40 538 V582 H84"></path><path d="M1160 538 V582 H1116"></path>
+  </g>
+
+  
+  <g transform="translate(330,315)">
+    <g stroke="#5EEAD4" stroke-width="1.4" opacity="0.38"><path d="M0 -224 v18 M0 206 v18 M-224 0 h18 M206 0 h18"></path></g>
+    <g transform="rotate(-20)">
+      <ellipse cx="0" cy="0" rx="196" ry="156" fill="none" stroke="url(#og-ring)" stroke-width="1.8" opacity="0.5"></ellipse>
+      <circle cx="196" cy="0" r="26" fill="#FF79C6" opacity="0.5" filter="url(#og-halo)"></circle>
+      <circle cx="196" cy="0" r="11" fill="url(#og-planet)"></circle>
+      <circle cx="191" cy="-5" r="3" fill="#FFFFFF" opacity="0.9"></circle>
+    </g>
+    <circle cx="0" cy="0" r="166" fill="url(#og-bloom)" filter="url(#og-soft)"></circle>
+    <circle cx="0" cy="0" r="136" fill="none" stroke="url(#og-ring)" stroke-width="36" filter="url(#og-soft)" opacity="0.9"></circle>
+    <circle cx="0" cy="0" r="130" fill="#000000"></circle>
+    <circle cx="0" cy="0" r="133" fill="none" stroke="url(#og-ring)" stroke-width="8" filter="url(#og-rim)"></circle>
+    <circle cx="0" cy="0" r="133" fill="none" stroke="#ECFEFF" stroke-width="2.2" opacity="0.92"></circle>
+  </g>
+
+  <text font-family="&#39;Space Grotesk&#39;,&#39;Segoe UI&#39;,system-ui,sans-serif" font-weight="500" fill="#ECFEFF" x="620" y="312" font-size="104" letter-spacing="-0.01em">Aphelion</text>
+  <rect x="623" y="346" width="96" height="4" rx="2" fill="url(#og-accent)"></rect>
+  <text font-family="&#39;JetBrains Mono&#39;,&#39;Consolas&#39;,monospace" font-weight="400" x="623" y="394" font-size="24" fill="#9DB4BC">Run LLMs locally. Your data, your rules.</text>
+  <text font-family="&#39;JetBrains Mono&#39;,&#39;Consolas&#39;,monospace" font-weight="500" x="623" y="456" font-size="15" letter-spacing="0.22em" fill="#5EEAD4">100% OFFLINE · GPU AUTO-FIT · FULLY PRIVATE</text>
+  <text font-family="&#39;JetBrains Mono&#39;,&#39;Consolas&#39;,monospace" font-weight="500" x="623" y="512" font-size="14" letter-spacing="0.24em" fill="#5A6B78">BY PENUMBRA</text>
+</svg>

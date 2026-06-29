@@ -1,0 +1,18 @@
+<svg width="700" height="200" viewBox="0 0 700 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Aphelion by Penumbra" style="color:#ECFEFF">
+  <defs>
+    
+  </defs>
+  
+  <g transform="translate(100,100)" fill="none" stroke="currentColor">
+    <g stroke-width="1.4" opacity="0.65"><path d="M0 -94 v10 M0 84 v10 M-94 0 h10 M84 0 h10"></path></g>
+    <g transform="rotate(-20)">
+      <ellipse cx="0" cy="0" rx="88" ry="70" stroke-width="1.5" opacity="0.7"></ellipse>
+      <circle cx="88" cy="0" r="5.5" fill="currentColor" stroke="none"></circle>
+    </g>
+    <circle r="58" stroke-width="10"></circle>
+    <circle r="44" stroke-width="2" opacity="0.55"></circle>
+  </g>
+
+  <text class="lo-word" fill="currentColor" font-family="&#39;Space Grotesk&#39;,&#39;Segoe UI&#39;,system-ui,sans-serif" font-weight="500" x="216" y="98" font-size="60" letter-spacing="-0.01em">Aphelion</text>
+  <text class="lo-mono" fill="currentColor" font-family="&#39;JetBrains Mono&#39;,&#39;Consolas&#39;,monospace" font-weight="500" x="218" y="134" font-size="13" opacity="0.75">LOCAL AI · BY PENUMBRA</text>
+</svg>

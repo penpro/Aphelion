@@ -66,7 +66,7 @@ export function Sidebar({
   return (
     <aside className="sidebar">
       <div className="brand">
-        <CoronaMark size={18} /> LocalLLM Studio
+        <CoronaMark size={22} /> Aphelion
       </div>
 
       <ModelBar />

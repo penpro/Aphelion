@@ -1,0 +1,49 @@
+<svg width="1200" height="675" viewBox="0 0 1200 675" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Aphelion — X card">
+  <defs>
+    
+    <radialGradient id="xc-bg" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#130A30"></stop><stop offset="55%" stop-color="#0C0426"></stop><stop offset="100%" stop-color="#07021A"></stop>
+    </radialGradient>
+    <linearGradient id="xc-ring" x1="0.12" y1="0.1" x2="0.9" y2="0.92">
+      <stop offset="0%" stop-color="#22D3EE"></stop><stop offset="34%" stop-color="#5EEAD4"></stop>
+      <stop offset="62%" stop-color="#C084FC"></stop><stop offset="100%" stop-color="#FF79C6"></stop>
+    </linearGradient>
+    <radialGradient id="xc-bloom" cx="50%" cy="50%" r="50%">
+      <stop offset="55%" stop-color="#22D3EE" stop-opacity="0"></stop><stop offset="80%" stop-color="#5EEAD4" stop-opacity="0.45"></stop><stop offset="100%" stop-color="#C084FC" stop-opacity="0"></stop>
+    </radialGradient>
+    <radialGradient id="xc-planet" cx="38%" cy="34%" r="72%">
+      <stop offset="0%" stop-color="#FFE6F5"></stop><stop offset="45%" stop-color="#FF79C6"></stop><stop offset="100%" stop-color="#C084FC"></stop>
+    </radialGradient>
+    <linearGradient id="xc-accent" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#5EEAD4"></stop><stop offset="100%" stop-color="#C084FC"></stop></linearGradient>
+    <linearGradient id="xc-bracket" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#5EEAD4"></stop><stop offset="100%" stop-color="#FF79C6"></stop></linearGradient>
+    <filter id="xc-soft" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="16"></feGaussianBlur></filter>
+    <filter id="xc-rim" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="3"></feGaussianBlur></filter>
+    <filter id="xc-halo" x="-150%" y="-150%" width="400%" height="400%"><feGaussianBlur stdDeviation="8"></feGaussianBlur></filter>
+  </defs>
+
+  <rect width="1200" height="675" fill="url(#xc-bg)"></rect>
+  <g fill="none" stroke="url(#xc-bracket)" stroke-width="2.4" opacity="0.8">
+    <path d="M40 96 V52 H84"></path><path d="M1160 96 V52 H1116"></path>
+    <path d="M40 579 V623 H84"></path><path d="M1160 579 V623 H1116"></path>
+  </g>
+
+  
+  <g transform="translate(600,250)">
+    <g transform="rotate(-20)">
+      <ellipse cx="0" cy="0" rx="175" ry="139" fill="none" stroke="url(#xc-ring)" stroke-width="1.8" opacity="0.5"></ellipse>
+      <circle cx="175" cy="0" r="24" fill="#FF79C6" opacity="0.5" filter="url(#xc-halo)"></circle>
+      <circle cx="175" cy="0" r="10" fill="url(#xc-planet)"></circle>
+      <circle cx="170.5" cy="-4.5" r="2.8" fill="#FFFFFF" opacity="0.9"></circle>
+    </g>
+    <circle cx="0" cy="0" r="150" fill="url(#xc-bloom)" filter="url(#xc-soft)"></circle>
+    <circle cx="0" cy="0" r="122" fill="none" stroke="url(#xc-ring)" stroke-width="32" filter="url(#xc-soft)" opacity="0.9"></circle>
+    <circle cx="0" cy="0" r="116" fill="#000000"></circle>
+    <circle cx="0" cy="0" r="119" fill="none" stroke="url(#xc-ring)" stroke-width="7.5" filter="url(#xc-rim)"></circle>
+    <circle cx="0" cy="0" r="119" fill="none" stroke="#ECFEFF" stroke-width="2.2" opacity="0.92"></circle>
+  </g>
+
+  <text font-family="&#39;Space Grotesk&#39;,&#39;Segoe UI&#39;,system-ui,sans-serif" font-weight="500" fill="#ECFEFF" x="600" y="528" font-size="92" letter-spacing="-0.01em" text-anchor="middle">Aphelion</text>
+  <rect x="552" y="556" width="96" height="4" rx="2" fill="url(#xc-accent)"></rect>
+  <text font-family="&#39;JetBrains Mono&#39;,&#39;Consolas&#39;,monospace" font-weight="400" x="600" y="604" font-size="24" fill="#9DB4BC" text-anchor="middle">Run LLMs locally. Your data, your rules.</text>
+  <text font-family="&#39;JetBrains Mono&#39;,&#39;Consolas&#39;,monospace" font-weight="500" x="600" y="646" font-size="13" letter-spacing="0.24em" fill="#5A6B78" text-anchor="middle">100% OFFLINE · GPU AUTO-FIT · BY PENUMBRA</text>
+</svg>
