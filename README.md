@@ -121,7 +121,7 @@ Aphelion is free and open source, and I'd like to keep it that way. The main rec
 
 - **Venmo:** [@drfaustus](https://venmo.com/u/drfaustus)
 - **Cash App:** [$penumbrapro](https://cash.app/$penumbrapro)
-- **PayPal:** penumbraproductionsllc@gmail.com
+- **PayPal:** [Donate via PayPal](https://www.paypal.com/ncp/payment/VW5MDGVLWWSJ8)
 
 ---
 
