@@ -534,6 +534,43 @@ select:focus {
   color: var(--magenta);
 }
 
+/* ---------- tutorial ---------- */
+.tut-intro {
+  font-size: 13px;
+  margin: 0 0 12px;
+}
+.tut-flow {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin-bottom: 14px;
+}
+.tut-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.tut-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+.tut-card h4 {
+  margin: 0 0 4px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.tut-card p {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
 /* ---------- modal ---------- */
 .modal-overlay {
   position: fixed;
