@@ -148,6 +148,43 @@
     .side,.panel{display:none}
     .chat{border-right:none}
   }
+
+  /* ── content sections ── */
+  section.block{max-width:1080px;margin:0 auto;padding:clamp(44px,7vh,92px) clamp(20px,5vw,64px);border-top:1px solid var(--border)}
+  .eyebrow-sm{font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:var(--corona);margin-bottom:14px}
+  .sec-title{font-weight:500;font-size:clamp(28px,3.6vw,42px);letter-spacing:-.02em;margin-bottom:14px}
+  .sec-lead{font-size:clamp(15px,1.4vw,18px);line-height:1.6;color:var(--dim);max-width:46em;margin-bottom:36px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+  .card{background:linear-gradient(180deg,rgba(19,10,48,.5),rgba(12,4,38,.5));border:1px solid var(--border);border-radius:14px;padding:22px}
+  .card .tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;color:var(--corona);display:block;margin-bottom:12px}
+  .card h3{font-weight:500;font-size:17px;margin-bottom:8px}
+  .card p{font-size:14px;line-height:1.6;color:var(--dim)}
+  .tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-bottom:18px}
+  .tier{border:1px solid var(--border);border-radius:12px;padding:18px;background:rgba(7,2,26,.4)}
+  .tier .vram{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--corona);margin-bottom:10px}
+  .tier h4{font-weight:500;font-size:16px;margin-bottom:6px}
+  .tier p{font-size:13px;line-height:1.5;color:var(--dim)}
+  .tier .sz{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:10px}
+  .note{font-size:13.5px;line-height:1.65;color:var(--faint)}
+  .note b{color:var(--dim);font-weight:500}
+  .safe-panel{border:1px solid rgba(94,234,212,.28);border-radius:16px;padding:clamp(20px,3vw,30px);background:linear-gradient(180deg,rgba(94,234,212,.06),rgba(12,4,38,.4))}
+  .safe-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px 28px}
+  .safe-cols ul{list-style:none}
+  .safe-cols li{font-size:14px;line-height:1.5;color:var(--dim);padding:7px 0 7px 26px;position:relative}
+  .safe-cols li::before{position:absolute;left:0;top:7px;font-family:var(--mono)}
+  .safe-cols li.yes::before{content:"✓";color:var(--corona)}
+  .safe-cols li.no::before{content:"✕";color:var(--magenta)}
+  .safe-head{font-family:var(--mono);font-size:11px;letter-spacing:.16em;margin-bottom:4px}
+  .safe-head.yes{color:var(--corona)} .safe-head.no{color:var(--magenta)}
+  .faq details{border-bottom:1px solid var(--border);padding:18px 2px}
+  .faq summary{font-weight:500;font-size:16px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:16px}
+  .faq summary::-webkit-details-marker{display:none}
+  .faq summary::after{content:"+";color:var(--corona);font-family:var(--mono);font-size:20px;line-height:1}
+  .faq details[open] summary::after{content:"\2013"}
+  .faq p{margin-top:12px;font-size:14px;line-height:1.65;color:var(--dim);max-width:62em}
+  .faq a,.hl{color:var(--corona)}
+  footer{max-width:1080px;margin:0 auto;padding:36px clamp(20px,5vw,64px) 60px;border-top:1px solid var(--border);font-family:var(--mono);font-size:12.5px;color:var(--faint);display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px}
+  footer a:hover{color:var(--corona)}
 </style>
 </head>
 <body>
@@ -166,7 +203,7 @@
     </div>
     <div class="nav-links">
       <span class="links-grp" style="display:flex;gap:30px">
-        <a href="#">Features</a><a href="#">Models</a><a href="https://github.com/penpro/Aphelion#readme">Docs</a><a href="https://github.com/penpro/Aphelion">GitHub</a>
+        <a href="#features">Features</a><a href="#models">Models</a><a href="#faq">FAQ</a><a href="https://github.com/penpro/Aphelion">GitHub</a>
       </span>
       <a class="ghost" href="https://github.com/penpro/Aphelion/releases/latest">Download</a>
     </div>
@@ -254,5 +291,84 @@
       </div>
     </div>
   </main>
+
+  <section class="block" id="features">
+    <div class="eyebrow-sm">WHAT YOU GET</div>
+    <h2 class="sec-title">A whole AI workspace — in one window.</h2>
+    <p class="sec-lead">Not a chat box bolted onto a server. Aphelion is one app where characters, stories, dialogue trees, and an expert assistant live side by side — all powered by models running on your own machine.</p>
+    <div class="cards">
+      <div class="card"><span class="tag">LOCAL</span><h3>Stays on your machine</h3><p>Every prompt, model, and conversation runs and lives on your PC. Your data never leaves it — online or off.</p></div>
+      <div class="card"><span class="tag">ONE APP</span><h3>Zero setup, not a stack</h3><p>Install one program and start talking. No servers, no containers, no Ollama-plus-six-other-things to wire together.</p></div>
+      <div class="card"><span class="tag">AUTO-FIT</span><h3>Fits your hardware</h3><p>Aphelion reads your GPU and VRAM and loads the best model that runs fast — no config files, no guesswork.</p></div>
+      <div class="card"><span class="tag">WORKSPACE</span><h3>More than a chat box</h3><p>Characters and group chats, long-form stories, branching dialogue trees, and expert assistants — all in one place.</p></div>
+      <div class="card"><span class="tag">PRIVATE</span><h3>Private by default</h3><p>No account. No telemetry. No phone-home. The lock icon means exactly what it says.</p></div>
+      <div class="card"><span class="tag">OPEN</span><h3>Open and yours</h3><p>Free and MIT-licensed. Read the source, change it, build on it. Nothing hidden.</p></div>
+    </div>
+  </section>
+
+  <section class="block" id="models">
+    <div class="eyebrow-sm">MODELS</div>
+    <h2 class="sec-title">It picks the right brain for your machine.</h2>
+    <p class="sec-lead">On first run, Aphelion checks your graphics card and downloads a model sized to fit — so it runs fast instead of crawling. Bigger card, bigger and smarter model. Switch any time, or bring your own.</p>
+    <div class="tiers">
+      <div class="tier"><div class="vram">~6 GB VRAM</div><h4>Light &amp; fast</h4><p>A compact model like Gemma 3 4B. Runs on modest GPUs — even CPU in a pinch.</p><div class="sz">~2.3 GB download</div></div>
+      <div class="tier"><div class="vram">~12 GB VRAM</div><h4>Balanced</h4><p>A strong all-rounder like Gemma 3 12B for mid-range cards.</p><div class="sz">~7 GB download</div></div>
+      <div class="tier"><div class="vram">20 GB+ VRAM</div><h4>Most capable</h4><p>Flagship models — Gemma 3 27B or SuperGemma4 26B — for high-VRAM GPUs.</p><div class="sz">~15 GB download</div></div>
+    </div>
+    <p class="note"><b>Uncensored models</b> are available behind an opt-in warning, and you can point Aphelion at <b>your own GGUF</b> file. Whatever you pick, it runs entirely on your machine.</p>
+  </section>
+
+  <section class="block" id="safe">
+    <div class="eyebrow-sm">IS IT SAFE?</div>
+    <h2 class="sec-title">It's a model, not an agent.</h2>
+    <p class="sec-lead">Some "AI" tools are autonomous <em>agents</em> — deliberately given permission to run commands, browse the web, and change files on your computer (think AutoGPT, OpenClaw, and computer-use bots). That power is also the risk. Aphelion is the opposite: a language model in a box that only speaks text.</p>
+    <div class="safe-panel">
+      <div class="safe-cols">
+        <div>
+          <div class="safe-head yes">WHAT IT DOES</div>
+          <ul>
+            <li class="yes">Reads your prompt and writes text back — that's the whole job</li>
+            <li class="yes">Runs a model on your GPU, on your machine</li>
+            <li class="yes">Saves the chats and characters you make, on your own disk</li>
+          </ul>
+        </div>
+        <div>
+          <div class="safe-head no">WHAT IT CANNOT DO</div>
+          <ul>
+            <li class="no">Run programs, scripts, or shell commands</li>
+            <li class="no">Read, change, or delete your files</li>
+            <li class="no">Reach the internet, your accounts, or other apps</li>
+            <li class="no">Click, type, or control anything on your computer</li>
+          </ul>
+        </div>
+      </div>
+      <p class="note" style="margin-top:18px">There are <b>no system permissions to grant and nothing to sandbox</b> — because the model was never given any. It can write a villain's monologue; it can't go rummaging through your hard drive.</p>
+    </div>
+  </section>
+
+  <section class="block" id="faq">
+    <div class="eyebrow-sm">FAQ</div>
+    <h2 class="sec-title">Questions, answered.</h2>
+    <div class="faq">
+      <details><summary>Is it really free?</summary><p>Yes — completely. MIT open source, no account, no trial, no upsell.</p></details>
+      <details><summary>Does it send my conversations anywhere?</summary><p>No, never. The AI runs on your own computer. Disconnect from the internet and it keeps working.</p></details>
+      <details><summary>Is this an "AI agent"? Can it do things to my computer?</summary><p>No. Aphelion only generates text inside the app — it can't run commands, read or change your files, or touch anything else on your system. Unlike autonomous agents, it has <span class="hl">no permissions at all</span>. See <a href="#safe">"It's a model, not an agent"</a> above.</p></details>
+      <details><summary>What's a "model"?</summary><p>The AI's "brain" — a file the app downloads once. Setup picks a good one for your hardware; you can change it in Settings.</p></details>
+      <details><summary>Windows says it "protected my PC" — is that bad?</summary><p>No. It just means the app isn't code-signed yet (a paid certificate). Click <b>More info → Run anyway</b>. The source is all public, right here.</p></details>
+      <details><summary>What hardware do I need?</summary><p>64-bit Windows 10 or 11. A graphics card (GPU) is recommended — more VRAM means a bigger, smarter model — but setup fits a model to whatever you have.</p></details>
+      <details><summary>Can I use uncensored models?</summary><p>Yes — behind an opt-in warning. Whatever the AI writes is generated by the model you choose, not by Aphelion. Use at your own discretion.</p></details>
+      <details><summary>How do I uninstall it?</summary><p>Settings → Apps → Aphelion → Uninstall. It even asks whether to also delete the downloaded model and your chats, so you can reclaim the disk space.</p></details>
+    </div>
+  </section>
+
+  <footer>
+    <span>Aphelion — by Penumbra · MIT licensed</span>
+    <span style="display:flex;gap:22px;flex-wrap:wrap">
+      <a href="https://github.com/penpro/Aphelion">GitHub</a>
+      <a href="https://github.com/penpro/Aphelion/releases/latest">Download</a>
+      <a href="#features">Features</a>
+      <a href="#faq">FAQ</a>
+    </span>
+  </footer>
 </body>
 </html>

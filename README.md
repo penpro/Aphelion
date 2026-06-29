@@ -52,11 +52,29 @@ There's a built-in **"How it works"** guide (bottom-left in the app) with a diag
 
 ---
 
+## 🛡️ Safe by design — it's a model, not an agent
+
+Some "AI" tools are autonomous **agents** — deliberately given permission to run commands, browse the web, and change files on your computer (think AutoGPT, OpenClaw, and computer-use bots). That power is also the risk. **Aphelion is the opposite:** a language model in a box that only speaks text.
+
+**What it does:** reads your prompt and writes text back, runs a model on your GPU, and saves the chats you make — all on your own machine.
+
+**What it cannot do:**
+- ❌ Run programs, scripts, or shell commands
+- ❌ Read, change, or delete your files
+- ❌ Reach the internet, your accounts, or other apps
+- ❌ Click, type, or control anything on your computer
+
+There are **no system permissions to grant and nothing to sandbox** — because the model was never given any. It can write a villain's monologue; it can't go rummaging through your hard drive.
+
+---
+
 ## ❓ Common questions
 
 **Is it really free?** Yes. Completely. No account, no trial, no upsell.
 
 **Does it send my conversations anywhere?** No — never. The AI runs on your own computer; disconnect from the internet and it keeps working.
+
+**Is this an "AI agent"? Can it do things to my computer?** No. Aphelion only generates text inside the app — it can't run commands, read or change your files, or touch anything else on your system. Unlike autonomous agents (AutoGPT, OpenClaw, computer-use bots), it has **no system permissions at all**. See *Safe by design* above.
 
 **What's a "model"?** The AI's "brain" — a file the app downloads once. Setup picks a good one for your hardware; you can change it in Settings.
 
