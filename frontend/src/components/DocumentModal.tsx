@@ -168,7 +168,17 @@ export function DocumentModal({
   const openFile = async () => {
     if (busy !== 'idle') return
     try {
-      const picked = await open({ directory: false, multiple: false, title: 'Open a file to edit' })
+      const picked = await open({
+        directory: false,
+        multiple: false,
+        title: 'Open a file to edit',
+        filters: [
+          {
+            name: 'Text & code',
+            extensions: ['txt', 'md', 'markdown', 'html', 'htm', 'css', 'js', 'jsx', 'ts', 'tsx', 'json', 'csv', 'xml', 'yaml', 'yml', 'java', 'py', 'rs', 'go', 'c', 'cpp', 'h', 'sh', 'sql', 'typ'],
+          },
+        ],
+      })
       if (typeof picked !== 'string') return
       const src = await invoke<string>('read_text_file', { path: picked })
       setFormat(fmtForExt(picked.split('.').pop() || ''))

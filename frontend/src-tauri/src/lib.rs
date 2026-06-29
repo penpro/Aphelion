@@ -500,10 +500,13 @@ fn write_temp_file(name: String, content: String) -> Result<String, String> {
     Ok(p.to_string_lossy().to_string())
 }
 
-/// Read any text file by absolute path (for opening a file to edit).
+/// Read any text file by absolute path (for opening a file to edit). Binary/non-UTF-8
+/// files (e.g. images) return a friendly error rather than a cryptic decode failure.
 #[tauri::command]
 fn read_text_file(path: String) -> Result<String, String> {
-    std::fs::read_to_string(&path).map_err(|e| e.to_string())
+    let bytes = std::fs::read(&path).map_err(|e| e.to_string())?;
+    String::from_utf8(bytes)
+        .map_err(|_| "That file isn't text (it looks like an image or binary). To analyze an image, drag it into the chat instead.".to_string())
 }
 
 /// Overwrite a text/code file at an absolute path (saving edits back to the opened file).

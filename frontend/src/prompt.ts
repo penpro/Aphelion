@@ -162,7 +162,8 @@ export function buildApiMessages(
   // Walk newest → oldest, keeping turns until the budget runs out (always keep
   // at least the most recent turn so generation never starves).
   for (let i = turns.length - 1; i >= 0; i--) {
-    const cost = estTokens(turns[i].content) + 8 // small per-message framing overhead
+    const c = turns[i].content
+    const cost = estTokens(typeof c === 'string' ? c : '') + 8 // small per-message framing overhead
     if (remaining - cost < 0 && kept.length > 0) break
     remaining -= cost
     kept.unshift(turns[i])

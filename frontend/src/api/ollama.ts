@@ -1,8 +1,10 @@
 import type { Settings } from '../types'
 
+export type ContentPart = { type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } }
+
 export interface ApiMessage {
   role: string
-  content: string
+  content: string | ContentPart[] // string for text; parts array for multimodal (image) turns
 }
 
 export interface StreamHandlers {
