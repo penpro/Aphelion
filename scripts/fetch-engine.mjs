@@ -63,7 +63,9 @@ const engineDir = findEngineDir(tmp)
 if (!engineDir) throw new Error(`could not find ${exe} inside ${asset}`)
 
 mkdirSync(dest, { recursive: true })
-cpSync(engineDir, dest, { recursive: true })
+// dereference: macOS/Linux ship libs as versioned symlinks (e.g. libmtmd.so.0) —
+// copy the real file contents so the bundler doesn't choke on dangling links.
+cpSync(engineDir, dest, { recursive: true, dereference: true })
 if (platform !== 'win32') chmodSync(join(dest, exe), 0o755)
 rmSync(tmp, { recursive: true, force: true })
 
