@@ -6,6 +6,7 @@ import { MessageInput } from './MessageInput'
 import { ChatSetup } from './ChatSetup'
 import { ChatDials } from './ChatDials'
 import { Modal } from './Modal'
+import { DocumentModal } from './DocumentModal'
 import { substituteMacros } from '../prompt'
 import { generateCharacterFromReference } from '../generators'
 import { download } from '../util'
@@ -28,6 +29,7 @@ export function ChatView({ onEditCharacter }: { onEditCharacter: (c: Character) 
   const { isStreaming, memoryStatus, send, regenerate, begin, stop } = useGeneration()
   const [creatingRef, setCreatingRef] = useState<string | null>(null)
   const [showMemory, setShowMemory] = useState(false)
+  const [showDoc, setShowDoc] = useState(false)
 
   const chat = useMemo(() => chats.find((c) => c.id === activeChatId) ?? null, [chats, activeChatId])
   const character = useMemo(
@@ -114,6 +116,9 @@ export function ChatView({ onEditCharacter }: { onEditCharacter: (c: Character) 
         <button className="btn sm ghost" onClick={exportChat} disabled={!chat.messages.length}>
           Export
         </button>
+        <button className="btn sm ghost" onClick={() => setShowDoc(true)} title="Generate a document and compile it to a PDF">
+          📄 Document
+        </button>
         <button className="btn sm ghost" onClick={() => setShowMemory(true)} title="View / edit the rolling story memory">
           🧠 Memory
         </button>
@@ -128,6 +133,7 @@ export function ChatView({ onEditCharacter }: { onEditCharacter: (c: Character) 
           {header}
           <ChatSetup chat={chat} character={character} persona={persona} onStart={() => begin(chat.id)} />
         </div>
+        {showDoc && <DocumentModal chat={chat} charName={dispName} userName={userName} onClose={() => setShowDoc(false)} />}
       </div>
     )
   }
@@ -169,6 +175,7 @@ export function ChatView({ onEditCharacter }: { onEditCharacter: (c: Character) 
         />
       </div>
       <ChatDials chat={chat} />
+      {showDoc && <DocumentModal chat={chat} charName={dispName} userName={userName} onClose={() => setShowDoc(false)} />}
       {showMemory && (
         <Modal title="🧠 Story memory" onClose={() => setShowMemory(false)} wide>
           <p className="muted xs">

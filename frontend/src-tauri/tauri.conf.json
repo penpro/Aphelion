@@ -30,7 +30,8 @@
     "active": true,
     "targets": ["nsis", "app", "dmg", "appimage", "deb"],
     "resources": {
-      "bin/llama/": "llama/"
+      "bin/llama/": "llama/",
+      "bin/typst/": "typst/"
     },
     "windows": {
       "nsis": {

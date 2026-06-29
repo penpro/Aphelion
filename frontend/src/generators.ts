@@ -23,6 +23,106 @@ async function complete(settings: Settings, messages: ApiMessage[], signal?: Abo
   return content
 }
 
+// ----------------------------- Document generation (Typst → PDF) -----------------------------
+
+const TYPST_SYSTEM = `You are a document-authoring engine. You write clean, professional documents in TYPST markup and output ONLY the Typst source — no explanations, no commentary, and no markdown code fences.
+
+TYPST QUICK REFERENCE (use only what the document needs):
+• Headings: "= Title" (h1), "== Section" (h2), "=== Subsection" (h3)
+• Emphasis: *bold*, _italic_
+• Lists: "- item" for bullets, "+ item" for numbered; indent nested items by two spaces
+• Paragraph break: a blank line. Forced line break: end the line with a single backslash.
+• Tables: #table(columns: 3, [A], [B], [C], [1], [2], [3])
+• Inline math: $E = m c^2$ . Display math (keep the surrounding spaces): $ sum_(i=1)^n i = (n (n+1)) / 2 $
+• Quote block: #quote(block: true)[ ... ]
+• Page break: #pagebreak() . Horizontal rule: #line(length: 100%)
+• Accent color on text: #text(fill: rgb("#5EEAD4"))[ ... ]
+
+ALWAYS begin the document with exactly this preamble, then a title heading and the content:
+
+#set page(margin: 2.2cm, numbering: "1")
+#set text(font: "New Computer Modern", size: 11pt)
+#set par(justify: true, leading: 0.72em)
+#set heading(numbering: none)
+#show heading: set text(fill: rgb("#241152"))
+
+RULES:
+• Output must be valid, self-contained Typst that compiles with NO external files, fonts, or images.
+• Never use #image(...), #import, #include, or read any external path.
+• Give the document real structure: a clear title ("= ..."), sections, and lists / tables / math where they help.
+• Be accurate to the request and to any reference material. Do not attribute invented facts to the references.
+• Output ONLY the Typst source, starting with the preamble above — no prose before or after.`
+
+/** Strip a wrapping ```...``` code fence if the model added one despite instructions. */
+function stripCodeFences(s: string): string {
+  let t = s.trim()
+  const fenced = t.match(/^```[a-zA-Z]*\s*\n([\s\S]*?)\n```$/)
+  if (fenced) return fenced[1].trim()
+  return t.replace(/^```[a-zA-Z]*\s*\n/, '').replace(/\n```\s*$/, '').trim()
+}
+
+/** Generate a self-contained Typst document from a request (+ optional reference context). */
+export async function generateTypstDoc(opts: {
+  request: string
+  context?: string
+  settings: Settings
+  signal?: AbortSignal
+  onContent?: (delta: string) => void
+}): Promise<string> {
+  const user = [
+    `Create the following document:\n\n${opts.request.trim()}`,
+    opts.context?.trim()
+      ? `\n\nReference material to draw from (do not copy verbatim unless quoting is appropriate):\n\n${opts.context.trim()}`
+      : '',
+    '\n\nOutput only the Typst source.',
+  ].join('')
+  const { content } = await streamChat({
+    baseUrl: opts.settings.baseUrl,
+    model: opts.settings.model,
+    messages: [
+      { role: 'system', content: TYPST_SYSTEM },
+      { role: 'user', content: user },
+    ],
+    temperature: opts.settings.temperature,
+    topP: opts.settings.topP,
+    maxTokens: 0,
+    signal: opts.signal,
+    handlers: { onContent: opts.onContent },
+  })
+  return stripCodeFences(content)
+}
+
+/** Repair a Typst document that failed to compile, given the compiler error. */
+export async function fixTypstDoc(opts: {
+  source: string
+  error: string
+  settings: Settings
+  signal?: AbortSignal
+  onContent?: (delta: string) => void
+}): Promise<string> {
+  const user = `This Typst document failed to compile. Fix it so it compiles cleanly, changing as little as possible and preserving the content. Output ONLY the corrected Typst source.
+
+--- Typst source ---
+${opts.source}
+
+--- Compiler error ---
+${opts.error}`
+  const { content } = await streamChat({
+    baseUrl: opts.settings.baseUrl,
+    model: opts.settings.model,
+    messages: [
+      { role: 'system', content: TYPST_SYSTEM },
+      { role: 'user', content: user },
+    ],
+    temperature: opts.settings.temperature,
+    topP: opts.settings.topP,
+    maxTokens: 0,
+    signal: opts.signal,
+    handlers: { onContent: opts.onContent },
+  })
+  return stripCodeFences(content)
+}
+
 // ----------------------------- Character generation -----------------------------
 
 export async function generateCharacter(

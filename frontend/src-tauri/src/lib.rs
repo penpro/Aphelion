@@ -302,6 +302,93 @@ fn retrieve_context(cache: State<KnowledgeCache>, path: String, query: String, m
     out
 }
 
+// ---------- document generator (Typst → PDF) ----------
+
+/// The Typst CLI binary name (`.exe` only on Windows).
+fn typst_bin() -> &'static str {
+    if cfg!(windows) {
+        "typst.exe"
+    } else {
+        "typst"
+    }
+}
+
+/// Resolve the bundled Typst binary (resource dir when packaged, dev `bin/typst` otherwise).
+fn typst_path(app: &tauri::AppHandle) -> Option<PathBuf> {
+    let bin = typst_bin();
+    let resource = app
+        .path()
+        .resolve(format!("typst/{bin}"), tauri::path::BaseDirectory::Resource)
+        .ok()
+        .filter(|p| p.exists());
+    let dev = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("bin/typst").join(bin);
+    resource.or(Some(dev)).filter(|p| p.exists())
+}
+
+/// Compile Typst `source` to a PDF. With `out_path`, writes there; otherwise to a temp
+/// preview file. Returns the PDF path on success, or Typst's error output on failure.
+#[tauri::command]
+fn compile_typst(app: tauri::AppHandle, source: String, out_path: Option<String>) -> Result<String, String> {
+    let exe = typst_path(&app).ok_or("Typst engine not found")?;
+    let work = std::env::temp_dir().join("aphelion-typst");
+    std::fs::create_dir_all(&work).map_err(|e| e.to_string())?;
+    let input = work.join("document.typ");
+    std::fs::write(&input, &source).map_err(|e| format!("couldn't write source: {e}"))?;
+    let out = match out_path {
+        Some(p) => PathBuf::from(p),
+        None => work.join("preview.pdf"),
+    };
+    let mut cmd = Command::new(&exe);
+    cmd.arg("compile").arg("--root").arg(&work).arg(&input).arg(&out);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    let result = cmd.output().map_err(|e| format!("failed to run Typst: {e}"))?;
+    if result.status.success() {
+        Ok(out.to_string_lossy().to_string())
+    } else {
+        let err = String::from_utf8_lossy(&result.stderr);
+        Err(if err.trim().is_empty() {
+            "Typst could not compile the document.".into()
+        } else {
+            err.to_string()
+        })
+    }
+}
+
+/// Open a file with the OS default application (used to show a generated PDF).
+#[tauri::command]
+fn open_path(path: String) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    let mut cmd = {
+        let mut c = Command::new("cmd");
+        c.args(["/C", "start", "", &path]);
+        c
+    };
+    #[cfg(target_os = "macos")]
+    let mut cmd = {
+        let mut c = Command::new("open");
+        c.arg(&path);
+        c
+    };
+    #[cfg(target_os = "linux")]
+    let mut cmd = {
+        let mut c = Command::new("xdg-open");
+        c.arg(&path);
+        c
+    };
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    cmd.spawn().map(|_| ()).map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -350,7 +437,9 @@ pub fn run() {
             model_dir_path,
             start_engine,
             folder_info,
-            retrieve_context
+            retrieve_context,
+            compile_typst,
+            open_path
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
