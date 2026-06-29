@@ -119,9 +119,9 @@ For a fast dev loop: `npm run tauri dev`.
 
 Aphelion is free and open source, and I'd like to keep it that way. It's currently **unsigned** — the only reason Windows flashes that "unknown publisher" warning — because a **code-signing certificate** is a recurring monthly cost, and I haven't paid for one. If donations start coming in, that's the first thing they'll go toward, and they help keep Aphelion free instead of me ever having to charge for it. **No pressure, ever** — the app stays free either way; donations just decide how fast the rough edges (like that warning) get smoothed out.
 
-- **Venmo:** [@drfaustus](https://venmo.com/u/drfaustus)
-- **Cash App:** [$penumbrapro](https://cash.app/$penumbrapro)
-- **PayPal:** [Donate via PayPal](https://www.paypal.com/ncp/payment/VW5MDGVLWWSJ8)
+[![Venmo — @drfaustus](https://img.shields.io/badge/Venmo-%40drfaustus-008CFF?style=for-the-badge&logo=venmo&logoColor=white)](https://venmo.com/u/drfaustus)
+[![Cash App — $penumbrapro](https://img.shields.io/badge/Cash_App-%24penumbrapro-00D632?style=for-the-badge&logo=cashapp&logoColor=white)](https://cash.app/$penumbrapro)
+[![PayPal — Donate](https://img.shields.io/badge/PayPal-Donate-003087?style=for-the-badge&logo=paypal&logoColor=white)](https://www.paypal.com/ncp/payment/VW5MDGVLWWSJ8)
 
 ---
 
