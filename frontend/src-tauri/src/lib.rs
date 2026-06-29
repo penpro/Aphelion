@@ -432,12 +432,18 @@ fn save_document(app: tauri::AppHandle, folder: String, title: String, source: S
 /// List saved document sources (`*.typ`) in a folder, newest first — for reopening.
 #[tauri::command]
 fn list_documents(folder: String) -> Vec<String> {
+    const DOC_EXTS: &[&str] = &[
+        "typ", "md", "markdown", "txt", "text", "html", "htm", "css", "js", "ts", "jsx", "tsx", "json",
+        "csv", "xml", "yaml", "yml", "java", "py", "rs", "go", "c", "cpp", "h", "sh", "sql",
+    ];
     let mut docs: Vec<(std::time::SystemTime, String)> = Vec::new();
     if let Ok(entries) = std::fs::read_dir(&folder) {
         for e in entries.flatten() {
             let p = e.path();
-            let is_typ = p.extension().map_or(false, |x| x.to_string_lossy().to_lowercase() == "typ");
-            if is_typ {
+            let is_doc = p
+                .extension()
+                .map_or(false, |x| DOC_EXTS.contains(&x.to_string_lossy().to_lowercase().as_str()));
+            if is_doc {
                 let name = p.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
                 let mtime = e.metadata().and_then(|m| m.modified()).unwrap_or(std::time::UNIX_EPOCH);
                 docs.push((mtime, name));
@@ -453,6 +459,40 @@ fn list_documents(folder: String) -> Vec<String> {
 fn read_document(folder: String, name: String) -> Result<String, String> {
     let p = PathBuf::from(&folder).join(&name);
     std::fs::read_to_string(&p).map_err(|e| e.to_string())
+}
+
+/// Save a generated plain-text / code document as `<title>.<ext>` in a granted folder,
+/// ready for an IDE/editor to open. Returns the file path.
+#[tauri::command]
+fn save_text_document(folder: String, title: String, ext: String, content: String) -> Result<String, String> {
+    let dir = PathBuf::from(&folder);
+    if !dir.is_dir() {
+        return Err("That folder no longer exists.".into());
+    }
+    let cleaned: String = title
+        .chars()
+        .map(|c| if c.is_alphanumeric() || c == ' ' || c == '-' || c == '_' { c } else { '_' })
+        .collect();
+    let cleaned = cleaned.trim();
+    let base = if cleaned.is_empty() { "document" } else { cleaned };
+    let safe: String = base.chars().take(60).collect();
+    let ext_clean: String = ext.chars().filter(|c| c.is_alphanumeric()).take(12).collect::<String>().to_lowercase();
+    let ext_clean = if ext_clean.is_empty() { "txt".to_string() } else { ext_clean };
+    let file = dir.join(format!("{safe}.{ext_clean}"));
+    std::fs::write(&file, content).map_err(|e| format!("couldn't write the file: {e}"))?;
+    Ok(file.to_string_lossy().to_string())
+}
+
+/// Write content to a temp file (to preview a generated text/code file in its default app).
+#[tauri::command]
+fn write_temp_file(name: String, content: String) -> Result<String, String> {
+    let safe: String = name.chars().filter(|c| c.is_alphanumeric() || *c == '.' || *c == '-' || *c == '_').collect();
+    let safe = if safe.is_empty() { "preview.txt".to_string() } else { safe };
+    let dir = std::env::temp_dir().join("aphelion-docs");
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let p = dir.join(safe);
+    std::fs::write(&p, content).map_err(|e| e.to_string())?;
+    Ok(p.to_string_lossy().to_string())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -508,7 +548,9 @@ pub fn run() {
             open_path,
             save_document,
             list_documents,
-            read_document
+            read_document,
+            save_text_document,
+            write_temp_file
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

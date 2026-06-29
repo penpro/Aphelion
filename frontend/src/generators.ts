@@ -53,12 +53,13 @@ RULES:
 • Be accurate to the request and to any reference material. Do not attribute invented facts to the references.
 • Output ONLY the Typst source, starting with the preamble above — no prose before or after.`
 
-/** Strip a wrapping ```...``` code fence if the model added one despite instructions. */
+/** If the model wrapped its output in a ```...``` fence (often with prose around it),
+ * extract the first fenced block; otherwise return the text as-is. */
 function stripCodeFences(s: string): string {
-  let t = s.trim()
-  const fenced = t.match(/^```[a-zA-Z]*\s*\n([\s\S]*?)\n```$/)
-  if (fenced) return fenced[1].trim()
-  return t.replace(/^```[a-zA-Z]*\s*\n/, '').replace(/\n```\s*$/, '').trim()
+  const t = s.trim()
+  const block = t.match(/```[a-zA-Z0-9+#-]*\s*\r?\n([\s\S]*?)\r?\n```/)
+  if (block) return block[1].trim()
+  return t
 }
 
 /** Generate a self-contained Typst document from a request (+ optional reference context). */
@@ -112,6 +113,37 @@ ${opts.error}`
     model: opts.settings.model,
     messages: [
       { role: 'system', content: TYPST_SYSTEM },
+      { role: 'user', content: user },
+    ],
+    temperature: opts.settings.temperature,
+    topP: opts.settings.topP,
+    maxTokens: 0,
+    signal: opts.signal,
+    handlers: { onContent: opts.onContent },
+  })
+  return stripCodeFences(content)
+}
+
+/** Generate the complete contents of a plain-text / code file (HTML, Java, Markdown, …). */
+export async function generateTextDoc(opts: {
+  request: string
+  fileType: string
+  context?: string
+  settings: Settings
+  signal?: AbortSignal
+  onContent?: (delta: string) => void
+}): Promise<string> {
+  const system = `You generate the complete contents of a single ${opts.fileType} file. Output ONLY the raw file contents — no explanations, no commentary, and no markdown code fences. The result must be complete, correct, and ready to save directly to a file that an IDE or editor can open and use.`
+  const user = [
+    `Create a ${opts.fileType} file for the following:\n\n${opts.request.trim()}`,
+    opts.context?.trim() ? `\n\nReference material to draw from:\n\n${opts.context.trim()}` : '',
+    `\n\nOutput only the ${opts.fileType} file contents.`,
+  ].join('')
+  const { content } = await streamChat({
+    baseUrl: opts.settings.baseUrl,
+    model: opts.settings.model,
+    messages: [
+      { role: 'system', content: system },
       { role: 'user', content: user },
     ],
     temperature: opts.settings.temperature,

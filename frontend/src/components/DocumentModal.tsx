@@ -3,15 +3,33 @@ import { open } from '@tauri-apps/plugin-dialog'
 import { invoke } from '@tauri-apps/api/core'
 import { useStore } from '../store'
 import { Modal } from './Modal'
-import { generateTypstDoc, fixTypstDoc } from '../generators'
+import { generateTypstDoc, generateTextDoc, fixTypstDoc } from '../generators'
 import { substituteMacros } from '../prompt'
 import type { Chat } from '../types'
 
 const checkStyle: CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }
 const baseName = (p: string) => p.split(/[\\/]/).filter(Boolean).pop() || p
 
-/** Generate a document with the model (as Typst), compile it to a PDF, and save it into
- * the chat's granted folder (read + write) where it can be reopened later. */
+type Fmt = { id: string; label: string; ext: string; lang: string; typst?: boolean }
+const FORMATS: Fmt[] = [
+  { id: 'pdf', label: 'PDF (Typst)', ext: 'pdf', lang: 'Typst', typst: true },
+  { id: 'md', label: 'Markdown', ext: 'md', lang: 'Markdown' },
+  { id: 'html', label: 'HTML', ext: 'html', lang: 'standalone HTML' },
+  { id: 'txt', label: 'Plain text', ext: 'txt', lang: 'plain text' },
+  { id: 'java', label: 'Java', ext: 'java', lang: 'Java' },
+  { id: 'py', label: 'Python', ext: 'py', lang: 'Python' },
+  { id: 'js', label: 'JavaScript', ext: 'js', lang: 'JavaScript' },
+  { id: 'ts', label: 'TypeScript', ext: 'ts', lang: 'TypeScript' },
+  { id: 'css', label: 'CSS', ext: 'css', lang: 'CSS' },
+  { id: 'json', label: 'JSON', ext: 'json', lang: 'JSON' },
+  { id: 'csv', label: 'CSV', ext: 'csv', lang: 'CSV' },
+  { id: 'sql', label: 'SQL', ext: 'sql', lang: 'SQL' },
+  { id: 'yaml', label: 'YAML', ext: 'yaml', lang: 'YAML' },
+  { id: 'xml', label: 'XML', ext: 'xml', lang: 'XML' },
+]
+
+/** Generate a document with the model — a PDF (via Typst) or a plain-text / code file —
+ * and save it into the chat's granted folder (read + write), where it can be reopened. */
 export function DocumentModal({
   chat,
   charName,
@@ -26,9 +44,11 @@ export function DocumentModal({
   const settings = useStore((s) => s.settings)
   const updateChat = useStore((s) => s.updateChat)
   const [request, setRequest] = useState('')
+  const [format, setFormat] = useState<Fmt>(FORMATS[0])
   const [includeChat, setIncludeChat] = useState(chat.messages.length > 0)
   const [includeFolder, setIncludeFolder] = useState(!!chat.knowledgeFolder)
-  const [typst, setTypst] = useState('')
+  const [content, setContent] = useState('')
+  const [docName, setDocName] = useState('') // set when a saved doc is reopened, so Save writes back to it
   const [busy, setBusy] = useState<'idle' | 'generating' | 'compiling'>('idle')
   const [error, setError] = useState('')
   const [savedTo, setSavedTo] = useState('')
@@ -82,20 +102,18 @@ export function DocumentModal({
     if (!request.trim() || busy !== 'idle') return
     setError('')
     setSavedTo('')
-    setTypst('')
+    setContent('')
+    setDocName('')
     setBusy('generating')
     const ctrl = new AbortController()
     abortRef.current = ctrl
     try {
       const context = await buildContext()
-      const result = await generateTypstDoc({
-        request,
-        context,
-        settings,
-        signal: ctrl.signal,
-        onContent: (d) => setTypst((prev) => prev + d),
-      })
-      setTypst(result)
+      const common = { request, context, settings, signal: ctrl.signal, onContent: (d: string) => setContent((p) => p + d) }
+      const result = format.typst
+        ? await generateTypstDoc(common)
+        : await generateTextDoc({ ...common, fileType: format.lang })
+      setContent(result)
     } catch (e) {
       const err = e as { name?: string; message?: string }
       if (err?.name !== 'AbortError') setError(err?.message ?? 'Generation failed')
@@ -109,6 +127,7 @@ export function DocumentModal({
 
   const titleGuess =
     (request.trim().split('\n')[0] || chat.title || 'document').replace(/[^\w -]+/g, '').trim().slice(0, 50) || 'document'
+  const saveTitle = docName || titleGuess
 
   // Ensure the chat has a granted read/write folder, prompting to pick one if not.
   const ensureFolder = async (): Promise<string | null> => {
@@ -125,13 +144,15 @@ export function DocumentModal({
     return null
   }
 
-  // Quick look: compile to a temp PDF and open it (no folder required).
+  // Quick look without saving: PDF → temp compile; text/code → temp file in its default app.
   const preview = async () => {
-    if (!typst.trim() || busy !== 'idle') return
+    if (!content.trim() || busy !== 'idle') return
     setError('')
     setBusy('compiling')
     try {
-      const path = await invoke<string>('compile_typst', { source: typst, outPath: null })
+      const path = format.typst
+        ? await invoke<string>('compile_typst', { source: content, outPath: null })
+        : await invoke<string>('write_temp_file', { name: `${saveTitle}.${format.ext}`, content })
       await invoke('open_path', { path })
     } catch (e) {
       const err = e as { message?: string }
@@ -141,16 +162,18 @@ export function DocumentModal({
     }
   }
 
-  // Persist: write <title>.typ + compile <title>.pdf into the granted folder, then open it.
+  // Persist into the granted folder, then open the result.
   const saveToFolder = async () => {
-    if (!typst.trim() || busy !== 'idle') return
+    if (!content.trim() || busy !== 'idle') return
     const folder = await ensureFolder()
     if (!folder) return
     setError('')
     setBusy('compiling')
     try {
-      const pdf = await invoke<string>('save_document', { folder, title: titleGuess, source: typst })
-      await invoke('open_path', { path: pdf })
+      const path = format.typst
+        ? await invoke<string>('save_document', { folder, title: saveTitle, source: content })
+        : await invoke<string>('save_text_document', { folder, title: saveTitle, ext: format.ext, content })
+      await invoke('open_path', { path })
       setSavedTo(folder)
       refreshDocs(folder)
     } catch (e) {
@@ -165,8 +188,14 @@ export function DocumentModal({
     if (!chat.knowledgeFolder || busy !== 'idle') return
     try {
       const src = await invoke<string>('read_document', { folder: chat.knowledgeFolder, name })
-      setTypst(src)
-      setRequest((r) => r || name.replace(/\.typ$/i, ''))
+      const ext = (name.split('.').pop() || '').toLowerCase()
+      const fmt: Fmt =
+        ext === 'typ'
+          ? FORMATS[0]
+          : FORMATS.find((f) => f.ext === ext) ?? { id: ext || 'txt', label: (ext || 'text').toUpperCase(), ext: ext || 'txt', lang: 'plain text' }
+      setFormat(fmt)
+      setContent(src)
+      setDocName(name.replace(/\.[^.]+$/, ''))
       setError('')
       setSavedTo('')
     } catch (e) {
@@ -175,12 +204,12 @@ export function DocumentModal({
   }
 
   const fix = async () => {
-    if (!typst.trim() || !error || busy !== 'idle') return
+    if (!content.trim() || !error || busy !== 'idle') return
     const prevError = error
-    const before = typst
+    const before = content
     setBusy('generating')
     setError('')
-    setTypst('')
+    setContent('')
     const ctrl = new AbortController()
     abortRef.current = ctrl
     try {
@@ -189,14 +218,14 @@ export function DocumentModal({
         error: prevError,
         settings,
         signal: ctrl.signal,
-        onContent: (d) => setTypst((p) => p + d),
+        onContent: (d) => setContent((p) => p + d),
       })
-      setTypst(result)
+      setContent(result)
     } catch (e) {
       const err = e as { name?: string; message?: string }
       if (err?.name !== 'AbortError') {
         setError(err?.message ?? 'Fix failed')
-        setTypst(before)
+        setContent(before)
       }
     } finally {
       setBusy('idle')
@@ -209,9 +238,8 @@ export function DocumentModal({
   return (
     <Modal title="📄 Create a document" onClose={onClose} wide>
       <p className="muted xs">
-        Describe what you want — the model writes it as a clean <b>Typst</b> document and Aphelion compiles it to a PDF.
-        Math, tables, and structure are supported, and it all runs locally. Saved documents go into your granted folder, where
-        you can reopen them.
+        Describe what you want — the model writes it as a <b>PDF</b> (via Typst, with math &amp; tables) or as a plain-text /
+        code file an IDE can open. Saved documents go into your granted folder, where you can reopen them. It all runs locally.
       </p>
 
       {chat.knowledgeFolder && docs.length > 0 && (
@@ -220,18 +248,36 @@ export function DocumentModal({
             <b>📁 In {folderLabel}</b> <span className="muted">— click to reopen</span>
           </div>
           <div className="row gap wrap" style={{ marginTop: 4 }}>
-            {docs.slice(0, 12).map((d) => (
+            {docs.slice(0, 14).map((d) => (
               <button key={d} className="btn sm ghost" onClick={() => reopen(d)} disabled={busy !== 'idle'} title={d}>
-                {d.replace(/\.typ$/i, '')}
+                {d}
               </button>
             ))}
           </div>
         </div>
       )}
 
+      <div className="row gap" style={{ alignItems: 'center', margin: '2px 0 8px' }}>
+        <span className="field-label" style={{ margin: 0 }}>
+          <b>Format</b>
+        </span>
+        <select value={format.id} onChange={(e) => setFormat(FORMATS.find((f) => f.id === e.target.value) ?? FORMATS[0])}>
+          {FORMATS.map((f) => (
+            <option key={f.id} value={f.id}>
+              {f.label}
+            </option>
+          ))}
+        </select>
+        <span className="muted xs">{format.typst ? 'compiles to a PDF' : `saves as .${format.ext}`}</span>
+      </div>
+
       <textarea
         style={{ width: '100%', minHeight: 84, resize: 'vertical', fontFamily: 'inherit' }}
-        placeholder="e.g. A one-page recap of this session as a formatted handout… / A two-page primer on photosynthesis with the key equation… / An NPC stat block for a fire giant as a clean table…"
+        placeholder={
+          format.typst
+            ? 'e.g. A one-page recap of this session as a formatted handout… / A primer on photosynthesis with the key equation…'
+            : `e.g. A ${format.label} file that… (a character-sheet web page, a dice-roller class, a campaign data file…)`
+        }
         value={request}
         onChange={(e) => setRequest(e.target.value)}
       />
@@ -259,26 +305,27 @@ export function DocumentModal({
         )}
       </div>
 
-      {(typst || busy === 'generating') && (
+      {(content || busy === 'generating') && (
         <>
           <div className="field-label" style={{ marginTop: 4 }}>
-            <b>Typst source</b> <span className="muted">— edit freely before compiling</span>
+            <b>{format.typst ? 'Typst source' : `${format.label} content`}</b>{' '}
+            <span className="muted">— edit freely before saving</span>
           </div>
           <textarea
             className="mono"
             style={{ width: '100%', minHeight: 240, resize: 'vertical', fontSize: 12.5, lineHeight: 1.5 }}
-            value={typst}
-            onChange={(e) => setTypst(e.target.value)}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
             spellCheck={false}
           />
           <div className="row gap wrap" style={{ marginTop: 8, alignItems: 'center' }}>
-            <button className="btn sm ghost" onClick={preview} disabled={!typst.trim() || busy !== 'idle'}>
-              {busy === 'compiling' ? 'Working…' : '👁 Preview'}
+            <button className="btn sm ghost" onClick={preview} disabled={!content.trim() || busy !== 'idle'}>
+              {busy === 'compiling' ? 'Working…' : format.typst ? '👁 Preview' : '↗ Open'}
             </button>
-            <button className="btn sm" onClick={saveToFolder} disabled={!typst.trim() || busy !== 'idle'}>
+            <button className="btn sm" onClick={saveToFolder} disabled={!content.trim() || busy !== 'idle'}>
               💾 {chat.knowledgeFolder ? `Save to ${folderLabel}` : 'Save to a folder…'}
             </button>
-            {error && (
+            {format.typst && error && (
               <button
                 className="btn sm ghost"
                 onClick={fix}
