@@ -93,4 +93,4 @@ For a fast dev loop: `npm run tauri dev`.
 - AI models (Gemma, etc.) are downloaded from their original publishers and remain under **their own licenses** — please respect them.
 - App icon & brand: the *Penumbra* corona-eclipse mark.
 
-License for this project: **TBD.** Until one is added, please ask before redistributing.
+License: **[MIT](LICENSE)** — free to use, modify, and share. The whole point is to put local AI in everyone's hands.
