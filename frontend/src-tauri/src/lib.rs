@@ -1,10 +1,14 @@
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command};
 use std::sync::Mutex;
-use tauri::Manager;
+use tauri::{Manager, State};
 
 /// Holds the bundled llama.cpp server process so we can shut it down / restart it.
 struct Engine(Mutex<Option<Child>>);
+
+/// Caches ingested + chunked text per knowledge-folder path (re-read on app restart).
+struct KnowledgeCache(Mutex<HashMap<String, Vec<(String, String)>>>);
 
 const LLAMA_PORT: u16 = 11435;
 
@@ -179,11 +183,132 @@ fn start_engine(app: tauri::AppHandle, filename: String) -> Result<(), String> {
     }
 }
 
+// ---------- knowledge folder (user-granted, read-only, app-injected) ----------
+
+/// Split text into ~1200-char chunks on paragraph boundaries.
+fn chunk_text(t: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut cur = String::new();
+    for para in t.split("\n\n") {
+        let para = para.trim();
+        if para.is_empty() {
+            continue;
+        }
+        if !cur.is_empty() && cur.len() + para.len() > 1200 {
+            out.push(std::mem::take(&mut cur));
+        }
+        if !cur.is_empty() {
+            cur.push_str("\n\n");
+        }
+        cur.push_str(para);
+        if cur.len() >= 1200 {
+            out.push(std::mem::take(&mut cur));
+        }
+    }
+    if !cur.trim().is_empty() {
+        out.push(cur);
+    }
+    out
+}
+
+/// Read every supported file under `path` into (filename, chunk) pairs. Text/markdown/
+/// code read directly; PDFs via text extraction (scanned/image PDFs yield nothing).
+fn ingest_folder(path: &str) -> Vec<(String, String)> {
+    let mut chunks = Vec::new();
+    let mut stack = vec![PathBuf::from(path)];
+    while let Some(dir) = stack.pop() {
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
+        for e in entries.flatten() {
+            let p = e.path();
+            if p.is_dir() {
+                stack.push(p);
+                continue;
+            }
+            let name = p.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+            let ext = p.extension().map(|x| x.to_string_lossy().to_lowercase()).unwrap_or_default();
+            let text = match ext.as_str() {
+                "txt" | "md" | "markdown" | "text" | "csv" | "json" | "rs" | "py" | "js" | "ts" => {
+                    std::fs::read_to_string(&p).ok()
+                }
+                // pdf-extract can panic on malformed PDFs — contain it so one bad file can't crash ingest.
+                "pdf" => std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| pdf_extract::extract_text(&p).ok()))
+                    .ok()
+                    .flatten(),
+                _ => None,
+            };
+            if let Some(t) = text {
+                for c in chunk_text(&t) {
+                    chunks.push((name.clone(), c));
+                }
+            }
+        }
+    }
+    chunks
+}
+
+/// Ingest (cached) a knowledge folder; returns (file count, chunk count, file names).
+#[tauri::command]
+fn folder_info(cache: State<KnowledgeCache>, path: String) -> (usize, usize, Vec<String>) {
+    let mut map = cache.0.lock().unwrap();
+    let chunks = map.entry(path.clone()).or_insert_with(|| ingest_folder(&path));
+    let mut names: Vec<String> = chunks.iter().map(|c| c.0.clone()).collect();
+    names.sort();
+    names.dedup();
+    (names.len(), chunks.len(), names)
+}
+
+/// Retrieve the chunks most relevant to `query` (keyword scoring), up to `max_chars`.
+#[tauri::command]
+fn retrieve_context(cache: State<KnowledgeCache>, path: String, query: String, max_chars: usize) -> String {
+    let mut map = cache.0.lock().unwrap();
+    let chunks = map.entry(path.clone()).or_insert_with(|| ingest_folder(&path));
+    if chunks.is_empty() {
+        return String::new();
+    }
+    let terms: Vec<String> = query
+        .to_lowercase()
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|w| w.len() > 2)
+        .map(|w| w.to_string())
+        .collect();
+    if terms.is_empty() {
+        return String::new();
+    }
+    let mut scored: Vec<(usize, usize)> = chunks
+        .iter()
+        .enumerate()
+        .map(|(i, (_, text))| {
+            let lc = text.to_lowercase();
+            let score = terms.iter().map(|t| lc.matches(t.as_str()).count()).sum::<usize>();
+            (score, i)
+        })
+        .filter(|(s, _)| *s > 0)
+        .collect();
+    scored.sort_by(|a, b| b.0.cmp(&a.0));
+    let mut out = String::new();
+    for (_, i) in scored {
+        let (src, text) = &chunks[i];
+        if out.len() + text.len() + src.len() + 8 > max_chars {
+            continue;
+        }
+        out.push_str("[");
+        out.push_str(src);
+        out.push_str("]\n");
+        out.push_str(text);
+        out.push_str("\n\n");
+    }
+    out
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_upload::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(Engine(Mutex::new(None)))
+        .manage(KnowledgeCache(Mutex::new(HashMap::new())))
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -223,7 +348,9 @@ pub fn run() {
             vram_total_mb,
             list_models,
             model_dir_path,
-            start_engine
+            start_engine,
+            folder_info,
+            retrieve_context
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

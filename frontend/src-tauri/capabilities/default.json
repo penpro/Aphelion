@@ -7,6 +7,7 @@
   ],
   "permissions": [
     "core:default",
-    "upload:default"
+    "upload:default",
+    "dialog:default"
   ]
 }

@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 import { useStore } from './store'
+import { invoke } from '@tauri-apps/api/core'
 import { streamChatNative, reloadModel, proofread, samplerFromSettings } from './api/ollama'
 import { buildApiMessages, estTokens } from './prompt'
 import { distillMessages, compactSummary, LIVE_WINDOW_TOKENS, KEEP_RECENT_TOKENS, SUMMARY_CAP_TOKENS } from './memory'
@@ -42,6 +43,29 @@ export function useGeneration() {
     // live tail to fit, so a long chat never overflows the window and stalls.
     const numCtx = Math.min(Math.max(st.settings.contextLength || 8192, 2048), 131072)
     const reserve = chat.tuning.think === 'full' ? 12000 : 3072
+    // Knowledge folder: pull the passages most relevant to the latest user message and
+    // inject them as a reference source. The app reads the files; the model never does.
+    let sources = chat.sources
+    if (chat.knowledgeFolder) {
+      const lastUser = [...fullHistory].reverse().find((m) => m.role === 'user')?.content
+      if (lastUser?.trim()) {
+        setMemoryStatus('📚 searching knowledge folder…')
+        try {
+          const kb = await invoke<string>('retrieve_context', {
+            path: chat.knowledgeFolder,
+            query: lastUser,
+            maxChars: 6000,
+          })
+          if (kb?.trim()) {
+            sources = [...sources, { id: 'kb', name: 'Knowledge folder — relevant excerpts (factual reference)', text: kb }]
+          }
+        } catch {
+          /* folder moved or unreadable — just skip it */
+        }
+        setMemoryStatus('')
+      }
+    }
+
     const apiMessages = buildApiMessages(
       cast,
       st.persona,
@@ -50,7 +74,7 @@ export function useGeneration() {
         scenePrompt: chat.scenePrompt,
         tuning: chat.tuning,
         mutedIds: chat.mutedIds,
-        sources: chat.sources,
+        sources,
         summary: chat.summary,
       },
       { maxContextTokens: numCtx, reserveTokens: reserve },

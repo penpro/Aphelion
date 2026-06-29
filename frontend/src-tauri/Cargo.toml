@@ -24,6 +24,8 @@ log = "0.4"
 tauri = { version = "2.11.3", features = [] }
 tauri-plugin-log = "2"
 tauri-plugin-upload = "2"
+tauri-plugin-dialog = "2"
+pdf-extract = "0.12"
 
 # Windows-only — DXGI VRAM detection (used under #[cfg(windows)]); not built on macOS/Linux.
 [target.'cfg(windows)'.dependencies]

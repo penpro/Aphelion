@@ -56,7 +56,12 @@ export function ChatDials({ chat }: { chat: Chat }) {
 
       <div className="dials-section">
         <div className="dials-title">Sources</div>
-        <SourcesPanel sources={chat.sources} onChange={(s) => updateChat(chat.id, { sources: s })} />
+        <SourcesPanel
+          sources={chat.sources}
+          onChange={(s) => updateChat(chat.id, { sources: s })}
+          folder={chat.knowledgeFolder}
+          onSetFolder={(p) => updateChat(chat.id, { knowledgeFolder: p ?? undefined })}
+        />
       </div>
 
       <div className="dials-section">

@@ -59,6 +59,7 @@ export interface Chat {
   started: boolean // false = still in the setup panel
   tuning: ChatTuning
   sources: Source[] // reference docs injected into context
+  knowledgeFolder?: string // path to a user-granted folder; relevant chunks retrieved into context per message
   summary: string // rolling distilled "story so far" memory of older, summarized-out messages
   summarizedCount: number // count of leading messages folded into `summary` (not sent verbatim)
   messages: ChatMessage[]
