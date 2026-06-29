@@ -2,7 +2,7 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Aphelion",
   "mainBinaryName": "Aphelion",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "identifier": "com.localllm.studio",
   "build": {
     "frontendDist": "../dist",
@@ -28,7 +28,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
+    "targets": ["nsis", "app", "dmg", "appimage", "deb"],
     "resources": {
       "bin/llama/": "llama/"
     },

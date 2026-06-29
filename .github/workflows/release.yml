@@ -1,0 +1,66 @@
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to build and attach (e.g. v0.1.1)
+        required: true
+        default: v0.1.1
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest   # Windows installer (.exe / NSIS)
+          - os: ubuntu-22.04      # Linux (.AppImage / .deb)
+          - os: macos-14          # macOS Apple Silicon (.dmg / .app, Metal)
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: frontend/src-tauri
+
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev patchelf libayatana-appindicator3-dev
+
+      - name: Install frontend dependencies
+        run: npm --prefix frontend ci
+
+      - name: Fetch llama.cpp engine (per-OS)
+        run: node scripts/fetch-engine.mjs
+
+      - name: Build app + publish to release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: frontend
+          tagName: ${{ github.event.inputs.tag || github.ref_name }}
+          releaseName: Aphelion ${{ github.event.inputs.tag || github.ref_name }}
+          releaseBody: |
+            Aphelion runs AI entirely on your own machine — offline, private, free.
+            Download the build for your OS under **Assets**:
+            • **Windows** — `-setup.exe`  • **macOS** — `.dmg`  • **Linux** — `.AppImage` or `.deb`
+
+            macOS builds are not yet notarized; right-click → Open the first time. Windows: More info → Run anyway.
+          releaseDraft: false
+          prerelease: false

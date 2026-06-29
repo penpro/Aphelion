@@ -15,14 +15,24 @@ fn model_dir(app: &tauri::AppHandle) -> Option<PathBuf> {
     Some(dir)
 }
 
-/// Resolve `llama-server.exe` (resource dir when packaged, dev `bin/llama` otherwise).
+/// The llama.cpp server binary name (`.exe` only on Windows).
+fn server_bin() -> &'static str {
+    if cfg!(windows) {
+        "llama-server.exe"
+    } else {
+        "llama-server"
+    }
+}
+
+/// Resolve the llama-server binary (resource dir when packaged, dev `bin/llama` otherwise).
 fn llama_server_path(app: &tauri::AppHandle) -> Option<PathBuf> {
+    let bin = server_bin();
     let resource = app
         .path()
-        .resolve("llama/llama-server.exe", tauri::path::BaseDirectory::Resource)
+        .resolve(format!("llama/{bin}"), tauri::path::BaseDirectory::Resource)
         .ok()
         .filter(|p| p.exists());
-    let dev = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("bin/llama/llama-server.exe");
+    let dev = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("bin/llama").join(bin);
     resource.or(Some(dev)).filter(|p| p.exists())
 }
 
@@ -103,11 +113,24 @@ fn detect_vram_mb_dxgi() -> Option<u64> {
     }
 }
 
-/// Total VRAM (MiB) for model recommendation. DXGI first (universal), nvidia-smi fallback.
+/// Apple Silicon shares system RAM with the GPU, so ~70% of total RAM is the model budget.
+#[cfg(target_os = "macos")]
+fn detect_mem_budget_mb_macos() -> Option<u64> {
+    let out = Command::new("sysctl").args(["-n", "hw.memsize"]).output().ok()?;
+    let bytes: u64 = String::from_utf8_lossy(&out.stdout).trim().parse().ok()?;
+    Some((bytes / (1024 * 1024)) * 7 / 10)
+}
+
+/// Total VRAM (MiB) for model recommendation: DXGI on Windows (any GPU vendor),
+/// Apple unified-memory budget on macOS, nvidia-smi elsewhere.
 #[tauri::command]
 fn vram_total_mb() -> Option<u64> {
     #[cfg(windows)]
     if let Some(mb) = detect_vram_mb_dxgi() {
+        return Some(mb);
+    }
+    #[cfg(target_os = "macos")]
+    if let Some(mb) = detect_mem_budget_mb_macos() {
         return Some(mb);
     }
     gpu_vram().map(|(_, total)| total)
