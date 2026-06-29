@@ -78,7 +78,7 @@ There are **no system permissions to grant and nothing to sandbox** — because 
 
 **What's a "model"?** The AI's "brain" — a file the app downloads once. Setup picks a good one for your hardware; you can change it in Settings.
 
-**Windows says it "protected my PC" — is that bad?** No. It just means the app isn't *code-signed* yet (a paid certificate). Click **More info → Run anyway.** The source is all right here to read.
+**Windows says it "protected my PC" — is that bad?** No. It just means the app isn't *code-signed* yet — and that certificate is a **recurring monthly cost**, so while Aphelion is free I haven't bought one. Click **More info → Run anyway** (the source is all right here to read). That cost is the one thing standing between you and a warning-free install — see **Support** below.
 
 **How do I uninstall it?** **Settings → Apps**, find *Aphelion*, click Uninstall. It will **ask whether to also delete the downloaded model and your chats** so you can reclaim the disk space, or keep them for later.
 
@@ -112,6 +112,16 @@ For a fast dev loop: `npm run tauri dev`.
 - If a build fails with *"file in use,"* close any running Aphelion window first — a running instance locks the engine DLLs the build needs.
 
 **Stack:** [Tauri v2](https://tauri.app/) (Rust + React 18 / TypeScript / Vite), a bundled [llama.cpp](https://github.com/ggml-org/llama.cpp) server (Vulkan), and GGUF models. The engine runs hidden on `127.0.0.1` — no console window. Brand assets and design tokens live in [`Branding/penumbra-brand/`](Branding/penumbra-brand/).
+
+---
+
+## 💜 Support Aphelion
+
+Aphelion is free and open source, and I'd like to keep it that way. The main recurring cost is a **code-signing certificate** — a monthly bill, and the only reason Windows still flashes that "protected your PC" warning. I'm covering things out of pocket for now; if that keeps growing I'd eventually have to start charging for the app. **If Aphelion is useful to you, a small donation helps keep it free** — and helps me sign it so the warning disappears. No pressure, ever; the app stays free either way.
+
+- **Venmo:** [@drfaustus](https://venmo.com/u/drfaustus)
+- **Cash App:** [$penumbrapro](https://cash.app/$penumbrapro)
+- **PayPal:** penumbraproductionsllc@gmail.com
 
 ---
 
