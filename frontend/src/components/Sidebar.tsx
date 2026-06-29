@@ -1,5 +1,6 @@
 import { useStore } from '../store'
 import { ModelBar } from './ModelBar'
+import { CoronaMark } from './CoronaMark'
 import { cx, timeAgo } from '../util'
 import type { AppView, Character } from '../types'
 
@@ -64,7 +65,9 @@ export function Sidebar({
 
   return (
     <aside className="sidebar">
-      <div className="brand">🎭 Roleplay Studio</div>
+      <div className="brand">
+        <CoronaMark size={18} /> LocalLLM Studio
+      </div>
 
       <ModelBar />
 

@@ -77,6 +77,7 @@ export interface Settings {
   keepLoaded: boolean // pin the model in VRAM (keep_alive -1) instead of idle-unloading
   proofread: boolean // re-run each reply through the model to fix spelling/grammar
   seenTutorial: boolean // the first-run tutorial has been shown
+  theme: string // accent/void preset: penumbra | synthwave | cyber | ember | bloodmoon
   // advanced sampling — defaults match llama.cpp, so behavior is unchanged until tuned
   topK: number
   minP: number

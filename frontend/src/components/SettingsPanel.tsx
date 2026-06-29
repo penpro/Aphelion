@@ -214,6 +214,17 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           </div>
         </label>
 
+        <label className="field">
+          <span>Theme</span>
+          <select value={settings.theme} onChange={(e) => updateSettings({ theme: e.target.value })}>
+            <option value="penumbra">Penumbra · cyan</option>
+            <option value="synthwave">Synthwave · pink</option>
+            <option value="cyber">Cyber · neon</option>
+            <option value="ember">Ember · amber</option>
+            <option value="bloodmoon">Bloodmoon · red</option>
+          </select>
+        </label>
+
         <Control label="Temperature" value={settings.temperature.toFixed(2)} info={TIP.temperature}>
           <input
             type="range"

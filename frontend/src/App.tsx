@@ -15,6 +15,7 @@ import type { Character } from './types'
 
 export default function App() {
   const view = useStore((s) => s.view)
+  const theme = useStore((s) => s.settings.theme)
   const [editingChar, setEditingChar] = useState<Character | 'new' | null>(null)
   const [showPersona, setShowPersona] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
@@ -32,6 +33,10 @@ export default function App() {
       })
       .catch(() => setNeedsSetup(false)) // not running under Tauri (browser dev) — skip
   }, [])
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+  }, [theme])
 
   return (
     <div className="app">

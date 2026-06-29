@@ -7,33 +7,32 @@
 @font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 700; font-display: swap; src: url('./assets/fonts/space-grotesk-700.woff2') format('woff2'); }
 
 :root {
-  /* Penumbra — voids / surfaces */
+  /* corona accent + secondary — theme presets override just these + the voids */
+  --accent: #5eead4;
+  --accent-2: #22d3ee;
+  --magenta: #ff79c6;
+  --violet: #c084fc;
+  /* voids / surfaces */
   --bg: #07021a;
   --panel: #0c0426;
   --bg-2: #130a30;
   --bg-3: #1d1142;
   --panel-glass: rgba(12, 4, 28, 0.62);
-  /* lines */
-  --border: rgba(94, 234, 212, 0.16);
-  --border-2: rgba(94, 234, 212, 0.32);
   /* text */
   --text: #ecfeff;
   --text-2: #cbd5e1;
   --muted: #8b7ab0;
-  /* corona accent + secondary */
-  --accent: #5eead4;
-  --accent-2: #22d3ee;
-  --accent-soft: rgba(94, 234, 212, 0.12);
-  --on-accent: #04121a;
-  --magenta: #ff79c6;
-  --violet: #c084fc;
+  --on-accent: #0a0510;
   --danger: #ff6b6b;
   --warn: #fde68a;
-  /* glow + gradient */
-  --glow: 0 0 24px rgba(94, 234, 212, 0.28);
-  --glow-sm: 0 0 12px rgba(94, 234, 212, 0.22);
-  --grad: linear-gradient(120deg, #5eead4, #c084fc);
-  --grad-hot: linear-gradient(120deg, #5eead4, #ff79c6);
+  /* derived from --accent so a preset only needs to set the accent + voids */
+  --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
+  --border: color-mix(in srgb, var(--accent) 16%, transparent);
+  --border-2: color-mix(in srgb, var(--accent) 32%, transparent);
+  --glow: 0 0 24px color-mix(in srgb, var(--accent) 28%, transparent);
+  --glow-sm: 0 0 12px color-mix(in srgb, var(--accent) 22%, transparent);
+  --grad: linear-gradient(120deg, var(--accent), var(--violet));
+  --grad-hot: linear-gradient(120deg, var(--accent), var(--magenta));
   /* type */
   --font: 'JetBrains Mono', ui-monospace, 'Cascadia Code', Consolas, monospace;
   --font-head: 'Space Grotesk', 'Inter', system-ui, sans-serif;
@@ -41,6 +40,48 @@
   --radius: 12px;
   --radius-sm: 8px;
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Theme presets — accent + void swaps; borders/glows/gradients re-derive automatically. */
+[data-theme='synthwave'] {
+  --accent: #ff5cf4;
+  --accent-2: #ff79c6;
+  --magenta: #ff79c6;
+  --violet: #b06cff;
+  --bg: #0a0420;
+  --panel: #140833;
+  --bg-2: #1c0c44;
+  --bg-3: #281056;
+}
+[data-theme='cyber'] {
+  --accent: #00ffff;
+  --accent-2: #22ddff;
+  --magenta: #ff00ff;
+  --violet: #7c4dff;
+  --bg: #04000f;
+  --panel: #0a0820;
+  --bg-2: #0f1030;
+  --bg-3: #161a45;
+}
+[data-theme='ember'] {
+  --accent: #fbbf24;
+  --accent-2: #fde68a;
+  --magenta: #ff7849;
+  --violet: #f59e0b;
+  --bg: #0c0506;
+  --panel: #170b08;
+  --bg-2: #211009;
+  --bg-3: #2c170c;
+}
+[data-theme='bloodmoon'] {
+  --accent: #ff5a5a;
+  --accent-2: #ff8a6b;
+  --magenta: #ff8a8a;
+  --violet: #c43a5a;
+  --bg: #140609;
+  --panel: #1f0a0e;
+  --bg-2: #2a0e12;
+  --bg-3: #371318;
 }
 
 * {
@@ -54,8 +95,8 @@ body,
 }
 body {
   background:
-    radial-gradient(1100px 720px at 50% -10%, rgba(94, 234, 212, 0.06), transparent 60%),
-    radial-gradient(900px 620px at 95% 112%, rgba(192, 132, 252, 0.06), transparent 55%),
+    radial-gradient(1100px 720px at 50% -10%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 60%),
+    radial-gradient(900px 620px at 95% 112%, color-mix(in srgb, var(--violet) 7%, transparent), transparent 55%),
     var(--bg);
   background-attachment: fixed;
   color: var(--text);
@@ -84,6 +125,9 @@ h1, h2, h3, .brand, .chat-title {
   min-height: 0;
 }
 .brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 16px 16px 12px;
   font-weight: 700;
   font-size: 16px;

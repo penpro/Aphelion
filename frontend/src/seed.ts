@@ -33,6 +33,7 @@ export const defaultSettings: Settings = {
   keepLoaded: false,
   proofread: false,
   seenTutorial: false,
+  theme: 'penumbra',
   // advanced sampling — llama.cpp defaults (behavior-preserving until changed)
   topK: 40,
   minP: 0.05,
