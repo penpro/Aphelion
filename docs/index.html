@@ -424,6 +424,18 @@
         a.target = '_blank';
         a.rel = (a.rel ? a.rel + ' ' : '') + 'noopener noreferrer';
       });
+
+      // When embedded as an iframe on the Penumbra Tech consulting site,
+      // hide the floating donate button — the parent page renders its
+      // own version pinned to the parent's viewport, so the embedded one
+      // would be a confusing duplicate.  Detected via window.top check;
+      // standalone visitors still see the floating button.
+      try {
+        if (window.top !== window.self) {
+          var f = document.querySelector('.donate-float');
+          if (f) f.style.display = 'none';
+        }
+      } catch (e) { /* cross-origin parent access can throw — leave button as-is */ }
     })();
   </script>
 </body>
