@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aphelion — Run LLMs locally</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --corona:#5EEAD4; --flare:#22D3EE; --magenta:#FF79C6; --violet:#C084FC;
+    --void-900:#07021A; --void-800:#0C0426; --void-700:#130A30;
+    --text:#ECFEFF; --dim:#9DB4BC; --faint:#5A6B78;
+    --border:rgba(94,234,212,.16);
+    --head:"Space Grotesk","Segoe UI",system-ui,sans-serif;
+    --mono:"JetBrains Mono","SFMono-Regular",Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--void-900); color:var(--text); font-family:var(--head);
+    -webkit-font-smoothing:antialiased; overflow-x:hidden; min-height:100vh;
+    background-image:
+      radial-gradient(120% 90% at 22% 30%, rgba(34,211,238,.16), transparent 55%),
+      radial-gradient(90% 80% at 82% 18%, rgba(192,132,252,.14), transparent 50%),
+      radial-gradient(70% 90% at 70% 100%, rgba(255,121,198,.08), transparent 60%);
+  }
+  a{color:inherit;text-decoration:none}
+
+  /* ── nav ── */
+  nav{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:22px clamp(20px,5vw,64px); position:relative; z-index:5;
+  }
+  .brand{display:flex; align-items:center; gap:12px; font-weight:500; font-size:19px; letter-spacing:-.01em}
+  .brand .mono-tag{font-family:var(--mono); font-size:11px; letter-spacing:.2em; color:var(--faint); border:1px solid var(--border); padding:3px 8px; border-radius:6px}
+  .nav-links{display:flex; align-items:center; gap:30px; font-family:var(--mono); font-size:13px; color:var(--dim)}
+  .nav-links a:hover{color:var(--corona)}
+  .nav-links .ghost{border:1px solid var(--border); padding:8px 16px; border-radius:8px; color:var(--text)}
+  .nav-links .ghost:hover{border-color:var(--corona); color:var(--corona)}
+
+  /* ── hero shell + brackets ── */
+  .hero{
+    position:relative; max-width:1280px; margin:0 auto;
+    padding:clamp(40px,7vh,96px) clamp(20px,5vw,64px) 80px;
+  }
+  .bracket{position:absolute; width:46px; height:46px; pointer-events:none; opacity:.85}
+  .bracket svg{width:100%; height:100%}
+  .bk-tl{top:8px; left:clamp(8px,2.5vw,32px)}
+  .bk-tr{top:8px; right:clamp(8px,2.5vw,32px); transform:scaleX(-1)}
+  .bk-bl{bottom:30px; left:clamp(8px,2.5vw,32px); transform:scaleY(-1)}
+  .bk-br{bottom:30px; right:clamp(8px,2.5vw,32px); transform:scale(-1,-1)}
+
+  .hero-grid{display:grid; grid-template-columns:1.05fr 1fr; gap:clamp(32px,5vw,72px); align-items:center}
+
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:10px; font-family:var(--mono); font-size:12px;
+    letter-spacing:.18em; color:var(--corona); border:1px solid var(--border);
+    background:rgba(94,234,212,.05); padding:8px 14px; border-radius:999px; margin-bottom:26px;
+  }
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--corona);box-shadow:0 0 10px var(--corona)}
+  h1{
+    font-weight:500; font-size:clamp(40px,5.6vw,76px); line-height:1.02; letter-spacing:-.02em; margin-bottom:24px;
+  }
+  h1 .glow{
+    background:linear-gradient(100deg,var(--flare),var(--corona) 38%,var(--violet) 72%,var(--magenta));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .subhead{font-size:clamp(16px,1.5vw,20px); line-height:1.6; color:var(--dim); max-width:30em; margin-bottom:36px}
+  .cta-row{display:flex; flex-wrap:wrap; gap:16px; align-items:center; margin-bottom:26px}
+  .btn-primary{
+    display:inline-flex; align-items:center; gap:12px; font-family:var(--head); font-weight:500; font-size:16px;
+    color:var(--void-900); padding:16px 26px; border-radius:12px; border:none; cursor:pointer;
+    background:linear-gradient(100deg,var(--corona),var(--flare) 55%,var(--violet));
+    box-shadow:0 0 0 1px rgba(94,234,212,.4), 0 12px 40px rgba(34,211,238,.35);
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .btn-primary:hover{transform:translateY(-2px); box-shadow:0 0 0 1px rgba(94,234,212,.6), 0 18px 54px rgba(34,211,238,.5)}
+  .btn-primary .sub{font-family:var(--mono); font-size:11px; opacity:.7; display:block; line-height:1; margin-top:3px}
+  .btn-primary .pblock{text-align:left; line-height:1.05}
+  .btn-ghost{
+    display:inline-flex; align-items:center; gap:10px; font-family:var(--mono); font-size:14px; color:var(--text);
+    padding:15px 22px; border-radius:12px; border:1px solid var(--border); transition:border-color .15s, color .15s;
+  }
+  .btn-ghost:hover{border-color:var(--corona); color:var(--corona)}
+  .trust{font-family:var(--mono); font-size:12.5px; color:var(--faint); letter-spacing:.04em; display:flex; gap:18px; flex-wrap:wrap}
+  .trust b{color:var(--corona); font-weight:500}
+
+  /* ── eclipse accent behind window ── */
+  .stage{position:relative}
+  .eclipse{position:absolute; width:82%; height:82%; left:28%; top:-12%; z-index:0; pointer-events:none; opacity:.7}
+
+  /* ── faux app window ── */
+  .window{
+    position:relative; z-index:1; border-radius:16px; overflow:hidden;
+    background:linear-gradient(180deg,rgba(19,10,48,.92),rgba(12,4,38,.96));
+    border:1px solid rgba(94,234,212,.22);
+    box-shadow:0 0 0 1px rgba(7,2,26,.6), 0 40px 120px rgba(7,2,26,.8), 0 0 80px rgba(34,211,238,.18);
+  }
+  .titlebar{display:flex; align-items:center; gap:14px; padding:12px 16px; border-bottom:1px solid var(--border); background:rgba(7,2,26,.4)}
+  .titlebar .ttl{display:flex; align-items:center; gap:9px; font-size:13px; font-weight:500}
+  .titlebar .ttl .mk{width:18px;height:18px;display:block}
+  .pill{font-family:var(--mono); font-size:11px; color:var(--dim); border:1px solid var(--border); border-radius:8px; padding:6px 10px; display:flex; align-items:center; gap:8px}
+  .pill .ok{color:var(--corona)}
+  .pill.vram{margin-left:auto}
+  .winctl{display:flex; gap:16px; color:var(--faint); font-family:var(--mono); font-size:13px}
+
+  .body{display:grid; grid-template-columns:120px 1fr 132px; min-height:330px}
+  .side{padding:14px 12px; border-right:1px solid var(--border); display:flex; flex-direction:column; gap:6px; font-size:11.5px}
+  .side .newchat{display:flex; align-items:center; gap:8px; color:var(--void-900); font-weight:500; background:linear-gradient(100deg,var(--corona),var(--flare)); padding:8px 10px; border-radius:8px; font-size:11px}
+  .side .lbl{font-family:var(--mono); font-size:9.5px; letter-spacing:.16em; color:var(--faint); margin:12px 0 3px}
+  .side .item{display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:7px; color:var(--dim); cursor:default}
+  .side .item.on{background:rgba(94,234,212,.08); color:var(--text)}
+  .side .ic{width:13px;height:13px;flex:none;color:var(--corona);opacity:.8}
+
+  .chat{padding:18px 20px; display:flex; flex-direction:column; gap:14px; border-right:1px solid var(--border)}
+  .chat .head{font-size:13px; color:var(--dim); font-family:var(--mono); letter-spacing:.04em}
+  .msg{max-width:88%}
+  .msg .who{font-family:var(--mono); font-size:10px; letter-spacing:.12em; color:var(--faint); margin-bottom:6px}
+  .msg.user{align-self:flex-end; text-align:right}
+  .msg.user .bubble{background:rgba(34,211,238,.1); border:1px solid rgba(34,211,238,.25)}
+  .bubble{padding:11px 14px; border-radius:12px; font-size:12.5px; line-height:1.55; color:var(--text); background:rgba(94,234,212,.05); border:1px solid var(--border)}
+  .msg.ai .bubble{border-color:rgba(192,132,252,.25)}
+  .composer{margin-top:auto; display:flex; align-items:center; gap:10px; border:1px solid var(--border); border-radius:11px; padding:11px 13px; color:var(--faint); font-family:var(--mono); font-size:11.5px}
+  .composer .send{margin-left:auto; width:28px;height:28px;border-radius:8px; background:linear-gradient(100deg,var(--corona),var(--violet)); display:grid; place-items:center; color:var(--void-900)}
+
+  .panel{padding:14px 13px; display:flex; flex-direction:column; gap:14px}
+  .tabs{display:flex; gap:4px; font-family:var(--mono); font-size:10.5px}
+  .tabs .t{padding:6px 9px; border-radius:7px; color:var(--faint)}
+  .tabs .t.on{color:var(--text); border-bottom:2px solid var(--corona)}
+  .field{font-size:11px}
+  .field .k{font-family:var(--mono); font-size:9.5px; letter-spacing:.1em; color:var(--faint); display:flex; justify-content:space-between; margin-bottom:6px}
+  .track{height:4px; border-radius:3px; background:rgba(94,234,212,.14); position:relative}
+  .track i{position:absolute; left:0; top:0; bottom:0; border-radius:3px; background:linear-gradient(90deg,var(--corona),var(--violet))}
+  .track i::after{content:""; position:absolute; right:-4px; top:50%; transform:translateY(-50%); width:9px;height:9px;border-radius:50%; background:var(--text); box-shadow:0 0 8px var(--flare)}
+  .vbar{height:5px; border-radius:3px; background:rgba(94,234,212,.14); overflow:hidden}
+  .vbar i{display:block; height:100%; width:93%; background:linear-gradient(90deg,var(--corona),var(--flare))}
+
+  .statusbar{display:flex; align-items:center; gap:10px; padding:9px 16px; border-top:1px solid var(--border); font-family:var(--mono); font-size:10.5px; color:var(--faint); background:rgba(7,2,26,.4)}
+  .statusbar .live{color:var(--corona); display:flex; align-items:center; gap:6px}
+  .statusbar .live .dot{width:6px;height:6px;border-radius:50%;background:var(--corona);box-shadow:0 0 8px var(--corona)}
+
+  @media (max-width:920px){
+    .hero-grid{grid-template-columns:1fr; gap:48px}
+    .nav-links .links-grp{display:none}
+    .body{grid-template-columns:1fr; min-height:0}
+    .side,.panel{display:none}
+    .chat{border-right:none}
+  }
+</style>
+</head>
+<body>
+  <nav>
+    <div class="brand">
+      <svg class="mk" width="30" height="30" viewBox="0 0 256 256" aria-hidden="true">
+        <defs>
+          <linearGradient id="nv-r" x1="0.12" y1="0.1" x2="0.9" y2="0.92"><stop offset="0%" stop-color="#22D3EE"/><stop offset="34%" stop-color="#5EEAD4"/><stop offset="62%" stop-color="#C084FC"/><stop offset="100%" stop-color="#FF79C6"/></linearGradient>
+        </defs>
+        <circle cx="128" cy="128" r="60" fill="none" stroke="url(#nv-r)" stroke-width="14"/>
+        <circle cx="128" cy="128" r="54" fill="#000"/>
+        <circle cx="128" cy="128" r="55" fill="none" stroke="#ECFEFF" stroke-width="2"/>
+      </svg>
+      Aphelion
+      <span class="mono-tag">BY&nbsp;PENUMBRA</span>
+    </div>
+    <div class="nav-links">
+      <span class="links-grp" style="display:flex;gap:30px">
+        <a href="#">Features</a><a href="#">Models</a><a href="https://github.com/penpro/Aphelion#readme">Docs</a><a href="https://github.com/penpro/Aphelion">GitHub</a>
+      </span>
+      <a class="ghost" href="https://github.com/penpro/Aphelion/releases/latest">Download</a>
+    </div>
+  </nav>
+
+  <main class="hero">
+    <span class="bracket bk-tl"><svg viewBox="0 0 46 46" fill="none"><path d="M44 4 H4 V44" stroke="url(#bg-g)" stroke-width="2"/><defs><linearGradient id="bg-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5EEAD4"/><stop offset="1" stop-color="#FF79C6"/></linearGradient></defs></svg></span>
+    <span class="bracket bk-tr"><svg viewBox="0 0 46 46" fill="none"><path d="M44 4 H4 V44" stroke="#5EEAD4" stroke-width="2" opacity=".8"/></svg></span>
+    <span class="bracket bk-bl"><svg viewBox="0 0 46 46" fill="none"><path d="M44 4 H4 V44" stroke="#5EEAD4" stroke-width="2" opacity=".8"/></svg></span>
+    <span class="bracket bk-br"><svg viewBox="0 0 46 46" fill="none"><path d="M44 4 H4 V44" stroke="#C084FC" stroke-width="2" opacity=".8"/></svg></span>
+
+    <div class="hero-grid">
+      <div class="copy">
+        <span class="eyebrow"><span class="dot"></span>100% LOCAL · WINDOWS · NO CLOUD</span>
+        <h1>Your own AI.<br>On <span class="glow">your machine.</span></h1>
+        <p class="subhead">Aphelion runs powerful language models entirely on your PC — chat, characters, stories and code, fully offline. No servers to wire up, no Ollama-on-top-of-everything. One app that auto-fits the best model to your GPU and just works.</p>
+        <div class="cta-row">
+          <a class="btn-primary" href="https://github.com/penpro/Aphelion/releases/latest">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.6 10.2 4.6 10.2 11.2 3 11.2Z M11.2 4.45 21 3.1 21 11.2 11.2 11.2Z M3 12.8 10.2 12.8 10.2 19.4 3 18.4Z M11.2 12.8 21 12.8 21 20.9 11.2 19.55Z"/></svg>
+            <span class="pblock">Download for Windows<span class="sub">Free · 64-bit · ~120 MB</span></span>
+          </a>
+          <a class="btn-ghost" href="https://github.com/penpro/Aphelion"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2A10 10 0 0 0 8.8 21.5c.5.1.7-.2.7-.5v-1.7c-2.8.6-3.4-1.3-3.4-1.3-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.3 1.1 2.9.8.1-.6.3-1.1.6-1.4-2.2-.300-4.6-1.1-4.6-4.9 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.7 1a9.4 9.4 0 0 1 5 0c1.9-1.3 2.7-1 2.7-1 .5 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.8-2.4 4.6-4.6 4.9.3.3.6.9.6 1.9v2.8c0 .3.2.6.7.5A10 10 0 0 0 12 2Z"/></svg>View on GitHub</a>
+        </div>
+        <div class="trust"><span><b>No account.</b> No cloud.</span><span><b>No telemetry.</b> Ever.</span><span><b>Open source.</b></span></div>
+      </div>
+
+      <div class="stage">
+        <svg class="eclipse" viewBox="0 0 256 256" aria-hidden="true">
+          <defs>
+            <linearGradient id="ec-r" x1="0.12" y1="0.1" x2="0.9" y2="0.92"><stop offset="0%" stop-color="#22D3EE"/><stop offset="34%" stop-color="#5EEAD4"/><stop offset="62%" stop-color="#C084FC"/><stop offset="100%" stop-color="#FF79C6"/></linearGradient>
+            <radialGradient id="ec-b" cx="50%" cy="50%" r="50%"><stop offset="55%" stop-color="#22D3EE" stop-opacity="0"/><stop offset="80%" stop-color="#5EEAD4" stop-opacity=".4"/><stop offset="100%" stop-color="#C084FC" stop-opacity="0"/></radialGradient>
+            <radialGradient id="ec-planet" cx="38%" cy="34%" r="72%"><stop offset="0%" stop-color="#FFE6F5"/><stop offset="45%" stop-color="#FF79C6"/><stop offset="100%" stop-color="#C084FC"/></radialGradient>
+            <filter id="ec-s" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="11"/></filter>
+          </defs>
+          <g transform="rotate(-20 128 128)">
+            <ellipse cx="128" cy="128" rx="106" ry="84" fill="none" stroke="url(#ec-r)" stroke-width="1.5" opacity=".5"/>
+            <circle cx="234" cy="128" r="16" fill="#FF79C6" opacity=".5" filter="url(#ec-s)"/>
+            <circle cx="234" cy="128" r="7" fill="url(#ec-planet)"/>
+            <circle cx="231" cy="125" r="2" fill="#fff" opacity=".9"/>
+          </g>
+          <circle cx="128" cy="128" r="86" fill="url(#ec-b)" filter="url(#ec-s)"/>
+          <circle cx="128" cy="128" r="72" fill="none" stroke="url(#ec-r)" stroke-width="20" filter="url(#ec-s)" opacity=".8"/>
+        </svg>
+
+        <div class="window">
+          <div class="titlebar">
+            <span class="ttl">
+              <svg class="mk" viewBox="0 0 256 256" aria-hidden="true"><circle cx="128" cy="128" r="60" fill="none" stroke="url(#nv-r)" stroke-width="16"/><circle cx="128" cy="128" r="54" fill="#000"/></svg>
+              Aphelion
+            </span>
+            <span class="pill">Model: llama3.1-8b-instruct ▾</span>
+            <span class="pill vram"><span class="ok">●</span> Auto-Fit · 11.2 / 12 GB VRAM</span>
+            <span class="winctl">— ▢ ✕</span>
+          </div>
+          <div class="body">
+            <aside class="side">
+              <div class="newchat"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" style="color:#07021A"><path d="M12 5v14M5 12h14"/></svg>New Chat</div>
+              <div class="lbl">LIBRARY</div>
+              <div class="item on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/></svg>Characters</div>
+              <div class="item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v14H4z M8 5v14"/></svg>Stories</div>
+              <div class="item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h14v16l-7-3-7 3z"/></svg>Prompts</div>
+              <div class="lbl">TOOLS</div>
+              <div class="item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="19" r="2"/><path d="M12 7v4M12 11l-6 6M12 11l6 6"/></svg>Dialogue Tree</div>
+              <div class="item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>World Builder</div>
+              <div class="item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>Settings</div>
+            </aside>
+
+            <section class="chat">
+              <div class="head">Story · The Last Ember</div>
+              <div class="msg user"><div class="who">YOU</div><div class="bubble">Continue the story. The protagonist enters the ancient ruin and discovers a hidden chamber.</div></div>
+              <div class="msg ai"><div class="who">ARIA NYX</div><div class="bubble">The air grows colder as you descend the worn stone steps, footsteps echoing in the silence. At the heart of the ruin a chamber opens — vast and circular, a pedestal cradling a faintly glowing crystal at its center.</div></div>
+              <div class="composer">Continue the story…<span class="send"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 11 21 3l-8 18-2-7z"/></svg></span></div>
+            </section>
+
+            <aside class="panel">
+              <div class="tabs"><span class="t on">Model</span><span class="t">Settings</span></div>
+              <div class="field"><div class="k"><span>VRAM</span><span style="color:var(--corona)">11.2/12 GB</span></div><div class="vbar"><i></i></div></div>
+              <div class="field"><div class="k"><span>CONTEXT</span><span>8,192</span></div></div>
+              <div class="field"><div class="k"><span>TEMPERATURE</span><span>0.7</span></div><div class="track"><i style="width:35%"></i></div></div>
+              <div class="field"><div class="k"><span>TOP P</span><span>0.95</span></div><div class="track"><i style="width:90%"></i></div></div>
+            </aside>
+          </div>
+          <div class="statusbar"><span class="live"><span class="dot"></span>LIVE</span> 100% OFFLINE · YOUR GPU · TOTAL PRIVACY <span style="margin-left:auto;color:var(--violet)">Your data never leaves your machine 🔒</span></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</body>
+</html>
