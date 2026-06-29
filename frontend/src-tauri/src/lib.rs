@@ -495,6 +495,47 @@ fn write_temp_file(name: String, content: String) -> Result<String, String> {
     Ok(p.to_string_lossy().to_string())
 }
 
+/// Read any text file by absolute path (for opening a file to edit).
+#[tauri::command]
+fn read_text_file(path: String) -> Result<String, String> {
+    std::fs::read_to_string(&path).map_err(|e| e.to_string())
+}
+
+/// Overwrite a text/code file at an absolute path (saving edits back to the opened file).
+#[tauri::command]
+fn write_to_path(path: String, content: String) -> Result<(), String> {
+    std::fs::write(&path, content).map_err(|e| e.to_string())
+}
+
+/// Write Typst source to `typ_path` and compile a PDF beside it; returns the PDF path.
+#[tauri::command]
+fn save_typst_at(app: tauri::AppHandle, typ_path: String, source: String) -> Result<String, String> {
+    let typ = PathBuf::from(&typ_path);
+    let dir = typ.parent().map(|p| p.to_path_buf()).unwrap_or_else(std::env::temp_dir);
+    std::fs::write(&typ, &source).map_err(|e| format!("couldn't write the source: {e}"))?;
+    let pdf = typ.with_extension("pdf");
+    let exe = typst_path(&app).ok_or("Typst engine not found")?;
+    let mut cmd = Command::new(&exe);
+    cmd.arg("compile").arg("--root").arg(&dir).arg(&typ).arg(&pdf);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    let result = cmd.output().map_err(|e| format!("failed to run Typst: {e}"))?;
+    if result.status.success() {
+        Ok(pdf.to_string_lossy().to_string())
+    } else {
+        let err = String::from_utf8_lossy(&result.stderr);
+        Err(if err.trim().is_empty() {
+            "Typst could not compile the document.".into()
+        } else {
+            err.to_string()
+        })
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -550,7 +591,10 @@ pub fn run() {
             list_documents,
             read_document,
             save_text_document,
-            write_temp_file
+            write_temp_file,
+            read_text_file,
+            write_to_path,
+            save_typst_at
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -168,6 +168,36 @@ export async function generateTextDoc(opts: {
   return stripCodeFences(content)
 }
 
+/** Edit an existing document/file: apply an instruction to its current contents and
+ * return the full updated file (Typst, HTML, code, …). */
+export async function editDoc(opts: {
+  current: string
+  instruction: string
+  fileType: string
+  persona?: string
+  settings: Settings
+  signal?: AbortSignal
+  onContent?: (delta: string) => void
+}): Promise<string> {
+  const base = `You are editing an existing ${opts.fileType} file. Apply the user's requested change and output the COMPLETE updated file contents — raw, with no explanations, no commentary, and no markdown code fences. Preserve everything the change doesn't touch. The result must be a valid, complete ${opts.fileType} file.`
+  const system = composeSystem(opts.persona, base)
+  const user = `Here is the current ${opts.fileType} file:\n\n${opts.current}\n\nRequested change:\n${opts.instruction}\n\nOutput the full updated file.`
+  const { content } = await streamChat({
+    baseUrl: opts.settings.baseUrl,
+    model: opts.settings.model,
+    messages: [
+      { role: 'system', content: system },
+      { role: 'user', content: user },
+    ],
+    temperature: opts.settings.temperature,
+    topP: opts.settings.topP,
+    maxTokens: 0,
+    signal: opts.signal,
+    handlers: { onContent: opts.onContent },
+  })
+  return stripCodeFences(content)
+}
+
 // ----------------------------- Character generation -----------------------------
 
 export async function generateCharacter(

@@ -3,7 +3,7 @@ import { open } from '@tauri-apps/plugin-dialog'
 import { invoke } from '@tauri-apps/api/core'
 import { useStore } from '../store'
 import { Modal } from './Modal'
-import { generateTypstDoc, generateTextDoc, fixTypstDoc } from '../generators'
+import { generateTypstDoc, generateTextDoc, editDoc, fixTypstDoc } from '../generators'
 
 const checkStyle: CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }
 const baseName = (p: string) => p.split(/[\\/]/).filter(Boolean).pop() || p
@@ -26,9 +26,18 @@ const FORMATS: Fmt[] = [
   { id: 'xml', label: 'XML', ext: 'xml', lang: 'XML' },
 ]
 
-/** Generate a document with the model — a PDF (via Typst) or a plain-text / code file —
- * and save it into a granted read/write folder where it can be reopened. Shared by the
- * roleplay chat and the Ask view via generic props. */
+const fmtForExt = (ext: string): Fmt =>
+  ext === 'typ'
+    ? FORMATS[0]
+    : FORMATS.find((f) => f.ext === ext.toLowerCase()) ?? {
+        id: ext || 'txt',
+        label: (ext || 'text').toUpperCase(),
+        ext: ext || 'txt',
+        lang: 'plain text',
+      }
+
+/** Generate or edit a document with the model — a PDF (Typst) or a plain-text / code file —
+ * and save it into a granted folder or back to an opened file. Shared by Chat and Ask. */
 export function DocumentModal({
   folder,
   onSetFolder,
@@ -52,12 +61,15 @@ export function DocumentModal({
   const [includeChat, setIncludeChat] = useState(!!transcript?.has)
   const [includeFolder, setIncludeFolder] = useState(!!folder)
   const [content, setContent] = useState('')
-  const [docName, setDocName] = useState('') // set when a saved doc is reopened, so Save writes back to it
+  const [docName, setDocName] = useState('') // base name when saving into the folder
+  const [filePath, setFilePath] = useState<string | null>(null) // an opened external file, saved back in place
   const [busy, setBusy] = useState<'idle' | 'generating' | 'compiling'>('idle')
   const [error, setError] = useState('')
   const [savedTo, setSavedTo] = useState('')
   const [docs, setDocs] = useState<string[]>([])
   const abortRef = useRef<AbortController | null>(null)
+
+  const persona = () => (expertId === 'plain' ? undefined : experts.find((e) => e.id === expertId)?.systemPrompt)
 
   const refreshDocs = (f?: string) => {
     const dir = f ?? folder
@@ -92,22 +104,21 @@ export function DocumentModal({
     return parts.join('\n\n')
   }
 
+  // Fresh generation from the request (ignores any loaded content).
   const generate = async () => {
     if (!request.trim() || busy !== 'idle') return
     setError('')
     setSavedTo('')
     setContent('')
     setDocName('')
+    setFilePath(null)
     setBusy('generating')
     const ctrl = new AbortController()
     abortRef.current = ctrl
     try {
       const context = await buildContext()
-      const persona = expertId === 'plain' ? undefined : experts.find((e) => e.id === expertId)?.systemPrompt
-      const common = { request, context, persona, settings, signal: ctrl.signal, onContent: (d: string) => setContent((p) => p + d) }
-      const result = format.typst
-        ? await generateTypstDoc(common)
-        : await generateTextDoc({ ...common, fileType: format.lang })
+      const common = { request, context, persona: persona(), settings, signal: ctrl.signal, onContent: (d: string) => setContent((p) => p + d) }
+      const result = format.typst ? await generateTypstDoc(common) : await generateTextDoc({ ...common, fileType: format.lang })
       setContent(result)
     } catch (e) {
       const err = e as { name?: string; message?: string }
@@ -118,13 +129,78 @@ export function DocumentModal({
     }
   }
 
+  // Apply the request as an edit to the current content.
+  const applyChange = async () => {
+    if (!content.trim() || !request.trim() || busy !== 'idle') return
+    const before = content
+    setError('')
+    setSavedTo('')
+    setBusy('generating')
+    setContent('')
+    const ctrl = new AbortController()
+    abortRef.current = ctrl
+    try {
+      const result = await editDoc({
+        current: before,
+        instruction: request,
+        fileType: format.typst ? 'Typst' : format.lang,
+        persona: persona(),
+        settings,
+        signal: ctrl.signal,
+        onContent: (d) => setContent((p) => p + d),
+      })
+      setContent(result)
+    } catch (e) {
+      const err = e as { name?: string; message?: string }
+      if (err?.name !== 'AbortError') {
+        setError(err?.message ?? 'Edit failed')
+        setContent(before)
+      }
+    } finally {
+      setBusy('idle')
+      abortRef.current = null
+    }
+  }
+
   const stop = () => abortRef.current?.abort()
+
+  // Open any file to edit it; saves back to that file in place.
+  const openFile = async () => {
+    if (busy !== 'idle') return
+    try {
+      const picked = await open({ directory: false, multiple: false, title: 'Open a file to edit' })
+      if (typeof picked !== 'string') return
+      const src = await invoke<string>('read_text_file', { path: picked })
+      setFormat(fmtForExt(picked.split('.').pop() || ''))
+      setContent(src)
+      setFilePath(picked)
+      setDocName(baseName(picked).replace(/\.[^.]+$/, ''))
+      setError('')
+      setSavedTo('')
+    } catch (e) {
+      setError(typeof (e as { message?: string })?.message === 'string' ? (e as { message?: string }).message! : String(e))
+    }
+  }
+
+  const reopen = async (name: string) => {
+    if (!folder || busy !== 'idle') return
+    try {
+      const src = await invoke<string>('read_document', { folder, name })
+      setFormat(fmtForExt(name.split('.').pop() || ''))
+      setContent(src)
+      setFilePath(null)
+      setDocName(name.replace(/\.[^.]+$/, ''))
+      setError('')
+      setSavedTo('')
+    } catch (e) {
+      setError(String(e))
+    }
+  }
 
   const titleGuess =
     (request.trim().split('\n')[0] || defaultTitle || 'document').replace(/[^\w -]+/g, '').trim().slice(0, 50) || 'document'
   const saveTitle = docName || titleGuess
 
-  // Ensure a granted read/write folder, prompting to pick one if not.
   const ensureFolder = async (): Promise<string | null> => {
     if (folder) return folder
     try {
@@ -157,44 +233,39 @@ export function DocumentModal({
     }
   }
 
-  // Persist into the granted folder, then open the result.
-  const saveToFolder = async () => {
+  // Save: back to the opened file in place, else into the granted folder.
+  const save = async () => {
     if (!content.trim() || busy !== 'idle') return
-    const dir = await ensureFolder()
-    if (!dir) return
     setError('')
     setBusy('compiling')
     try {
-      const path = format.typst
-        ? await invoke<string>('save_document', { folder: dir, title: saveTitle, source: content })
-        : await invoke<string>('save_text_document', { folder: dir, title: saveTitle, ext: format.ext, content })
-      await invoke('open_path', { path })
-      setSavedTo(dir)
-      refreshDocs(dir)
+      let opened: string
+      if (filePath) {
+        if (format.typst) {
+          opened = await invoke<string>('save_typst_at', { typPath: filePath, source: content })
+        } else {
+          await invoke('write_to_path', { path: filePath, content })
+          opened = filePath
+        }
+        setSavedTo(filePath)
+      } else {
+        const dir = await ensureFolder()
+        if (!dir) {
+          setBusy('idle')
+          return
+        }
+        opened = format.typst
+          ? await invoke<string>('save_document', { folder: dir, title: saveTitle, source: content })
+          : await invoke<string>('save_text_document', { folder: dir, title: saveTitle, ext: format.ext, content })
+        setSavedTo(dir)
+        refreshDocs(dir)
+      }
+      await invoke('open_path', { path: opened })
     } catch (e) {
       const err = e as { message?: string }
       setError(typeof err?.message === 'string' ? err.message : String(e))
     } finally {
       setBusy('idle')
-    }
-  }
-
-  const reopen = async (name: string) => {
-    if (!folder || busy !== 'idle') return
-    try {
-      const src = await invoke<string>('read_document', { folder, name })
-      const ext = (name.split('.').pop() || '').toLowerCase()
-      const fmt: Fmt =
-        ext === 'typ'
-          ? FORMATS[0]
-          : FORMATS.find((f) => f.ext === ext) ?? { id: ext || 'txt', label: (ext || 'text').toUpperCase(), ext: ext || 'txt', lang: 'plain text' }
-      setFormat(fmt)
-      setContent(src)
-      setDocName(name.replace(/\.[^.]+$/, ''))
-      setError('')
-      setSavedTo('')
-    } catch (e) {
-      setError(String(e))
     }
   }
 
@@ -208,13 +279,7 @@ export function DocumentModal({
     const ctrl = new AbortController()
     abortRef.current = ctrl
     try {
-      const result = await fixTypstDoc({
-        source: before,
-        error: prevError,
-        settings,
-        signal: ctrl.signal,
-        onContent: (d) => setContent((p) => p + d),
-      })
+      const result = await fixTypstDoc({ source: before, error: prevError, settings, signal: ctrl.signal, onContent: (d) => setContent((p) => p + d) })
       setContent(result)
     } catch (e) {
       const err = e as { name?: string; message?: string }
@@ -229,12 +294,13 @@ export function DocumentModal({
   }
 
   const folderLabel = folder ? baseName(folder) : ''
+  const hasContent = !!content.trim()
 
   return (
     <Modal title="📄 Create a document" onClose={onClose} wide>
       <p className="muted xs">
-        Describe what you want — the model writes it as a <b>PDF</b> (via Typst, with math &amp; tables) or as a plain-text /
-        code file an IDE can open. Saved documents go into your granted folder, where you can reopen them. It all runs locally.
+        Describe what you want (a <b>PDF</b> via Typst, or a text / code file), or <b>📂 Open a file</b> and tell it what to
+        change. Saved documents go into your granted folder; opened files save back in place. It all runs locally.
       </p>
 
       {folder && docs.length > 0 && (
@@ -278,14 +344,21 @@ export function DocumentModal({
             </option>
           ))}
         </select>
+        {filePath && (
+          <span className="muted xs" title={filePath}>
+            · editing {baseName(filePath)}
+          </span>
+        )}
       </div>
 
       <textarea
-        style={{ width: '100%', minHeight: 84, resize: 'vertical', fontFamily: 'inherit' }}
+        style={{ width: '100%', minHeight: 76, resize: 'vertical', fontFamily: 'inherit' }}
         placeholder={
-          format.typst
-            ? 'e.g. A one-page recap as a formatted handout… / A primer on photosynthesis with the key equation…'
-            : `e.g. A ${format.label} file that… (a character-sheet web page, a dice-roller class, a data file…)`
+          hasContent
+            ? 'Describe a change to apply (e.g. "make it dark mode", "add a stats table"), or write a new request and Generate.'
+            : format.typst
+              ? 'e.g. A one-page recap as a formatted handout… / A primer with the key equation…'
+              : `e.g. A ${format.label} file that… — or 📂 Open a file and tell it what to change.`
         }
         value={request}
         onChange={(e) => setRequest(e.target.value)}
@@ -303,15 +376,25 @@ export function DocumentModal({
             reference
           </label>
         )}
+        <button className="btn sm ghost" onClick={openFile} disabled={busy !== 'idle'} title="Open an existing file to edit">
+          📂 Open file…
+        </button>
         <div style={{ flex: 1 }} />
         {busy === 'generating' ? (
           <button className="btn sm" onClick={stop}>
             ■ Stop
           </button>
         ) : (
-          <button className="btn sm" onClick={generate} disabled={!request.trim() || busy !== 'idle'}>
-            ✨ Generate
-          </button>
+          <>
+            {hasContent && (
+              <button className="btn sm" onClick={applyChange} disabled={!request.trim()} title="Apply your request as an edit to the current content">
+                ✏️ Apply change
+              </button>
+            )}
+            <button className="btn sm" onClick={generate} disabled={!request.trim()}>
+              ✨ {hasContent ? 'Generate fresh' : 'Generate'}
+            </button>
+          </>
         )}
       </div>
 
@@ -323,7 +406,7 @@ export function DocumentModal({
           </div>
           <textarea
             className="mono"
-            style={{ width: '100%', minHeight: 240, resize: 'vertical', fontSize: 12.5, lineHeight: 1.5 }}
+            style={{ width: '100%', minHeight: 230, resize: 'vertical', fontSize: 12.5, lineHeight: 1.5 }}
             value={content}
             onChange={(e) => setContent(e.target.value)}
             spellCheck={false}
@@ -332,20 +415,15 @@ export function DocumentModal({
             <button className="btn sm ghost" onClick={preview} disabled={!content.trim() || busy !== 'idle'}>
               {busy === 'compiling' ? 'Working…' : format.typst ? '👁 Preview' : '↗ Open'}
             </button>
-            <button className="btn sm" onClick={saveToFolder} disabled={!content.trim() || busy !== 'idle'}>
-              💾 {folder ? `Save to ${folderLabel}` : 'Save to a folder…'}
+            <button className="btn sm" onClick={save} disabled={!content.trim() || busy !== 'idle'}>
+              💾 {filePath ? `Save to ${baseName(filePath)}` : folder ? `Save to ${folderLabel}` : 'Save to a folder…'}
             </button>
             {format.typst && error && (
-              <button
-                className="btn sm ghost"
-                onClick={fix}
-                disabled={busy !== 'idle'}
-                title="Send the error back to the model to repair"
-              >
+              <button className="btn sm ghost" onClick={fix} disabled={busy !== 'idle'} title="Send the error back to the model to repair">
                 🔧 Fix with AI
               </button>
             )}
-            {savedTo && <span className="muted xs">Saved to {baseName(savedTo)} · opened</span>}
+            {savedTo && <span className="muted xs">Saved · opened</span>}
           </div>
         </>
       )}
