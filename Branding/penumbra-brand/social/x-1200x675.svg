@@ -28,18 +28,19 @@
   </g>
 
   
-  <g transform="translate(600,250)">
-    <g transform="rotate(-20)">
-      <ellipse cx="0" cy="0" rx="175" ry="139" fill="none" stroke="url(#xc-ring)" stroke-width="1.8" opacity="0.5"></ellipse>
-      <circle cx="175" cy="0" r="24" fill="#FF79C6" opacity="0.5" filter="url(#xc-halo)"></circle>
-      <circle cx="175" cy="0" r="10" fill="url(#xc-planet)"></circle>
-      <circle cx="170.5" cy="-4.5" r="2.8" fill="#FFFFFF" opacity="0.9"></circle>
+  <g transform="translate(600,248)">
+    <g transform="rotate(-22)">
+      <ellipse cx="0" cy="0" rx="210" ry="170" fill="none" stroke="url(#xc-ring)" stroke-width="2.5" opacity="0.3"></ellipse>
+      <ellipse cx="0" cy="0" rx="210" ry="170" fill="none" stroke="url(#xc-ring)" stroke-width="1.4" opacity="0.7"></ellipse>
+      <circle cx="210" cy="0" r="28" fill="#FF79C6" opacity="0.5" filter="url(#xc-halo)"></circle>
+      <circle cx="210" cy="0" r="12" fill="url(#xc-planet)"></circle>
+      <circle cx="205" cy="-5" r="3.4" fill="#FFFFFF" opacity="0.9"></circle>
     </g>
-    <circle cx="0" cy="0" r="150" fill="url(#xc-bloom)" filter="url(#xc-soft)"></circle>
-    <circle cx="0" cy="0" r="122" fill="none" stroke="url(#xc-ring)" stroke-width="32" filter="url(#xc-soft)" opacity="0.9"></circle>
-    <circle cx="0" cy="0" r="116" fill="#000000"></circle>
-    <circle cx="0" cy="0" r="119" fill="none" stroke="url(#xc-ring)" stroke-width="7.5" filter="url(#xc-rim)"></circle>
-    <circle cx="0" cy="0" r="119" fill="none" stroke="#ECFEFF" stroke-width="2.2" opacity="0.92"></circle>
+    <circle cx="0" cy="0" r="184" fill="url(#xc-bloom)" filter="url(#xc-soft)"></circle>
+    <circle cx="0" cy="0" r="146" fill="none" stroke="url(#xc-ring)" stroke-width="40" filter="url(#xc-soft)" opacity="0.9"></circle>
+    <circle cx="0" cy="0" r="142" fill="#000000"></circle>
+    <circle cx="0" cy="0" r="144" fill="none" stroke="url(#xc-ring)" stroke-width="8.5" filter="url(#xc-rim)"></circle>
+    <circle cx="0" cy="0" r="144" fill="none" stroke="#ECFEFF" stroke-width="2.4" opacity="0.92"></circle>
   </g>
 
   <text font-family="&#39;Space Grotesk&#39;,&#39;Segoe UI&#39;,system-ui,sans-serif" font-weight="500" fill="#ECFEFF" x="600" y="528" font-size="92" letter-spacing="-0.01em" text-anchor="middle">Aphelion</text>

@@ -28,19 +28,19 @@
   </g>
 
   
-  <g transform="translate(330,315)">
-    <g stroke="#5EEAD4" stroke-width="1.4" opacity="0.38"><path d="M0 -224 v18 M0 206 v18 M-224 0 h18 M206 0 h18"></path></g>
-    <g transform="rotate(-20)">
-      <ellipse cx="0" cy="0" rx="196" ry="156" fill="none" stroke="url(#og-ring)" stroke-width="1.8" opacity="0.5"></ellipse>
-      <circle cx="196" cy="0" r="26" fill="#FF79C6" opacity="0.5" filter="url(#og-halo)"></circle>
-      <circle cx="196" cy="0" r="11" fill="url(#og-planet)"></circle>
-      <circle cx="191" cy="-5" r="3" fill="#FFFFFF" opacity="0.9"></circle>
+  <g transform="translate(322,315)">
+    <g transform="rotate(-22)">
+      <ellipse cx="0" cy="0" rx="242" ry="195" fill="none" stroke="url(#og-ring)" stroke-width="2.6" opacity="0.3"></ellipse>
+      <ellipse cx="0" cy="0" rx="242" ry="195" fill="none" stroke="url(#og-ring)" stroke-width="1.5" opacity="0.7"></ellipse>
+      <circle cx="242" cy="0" r="30" fill="#FF79C6" opacity="0.5" filter="url(#og-halo)"></circle>
+      <circle cx="242" cy="0" r="13" fill="url(#og-planet)"></circle>
+      <circle cx="237" cy="-5" r="3.6" fill="#FFFFFF" opacity="0.9"></circle>
     </g>
-    <circle cx="0" cy="0" r="166" fill="url(#og-bloom)" filter="url(#og-soft)"></circle>
-    <circle cx="0" cy="0" r="136" fill="none" stroke="url(#og-ring)" stroke-width="36" filter="url(#og-soft)" opacity="0.9"></circle>
-    <circle cx="0" cy="0" r="130" fill="#000000"></circle>
-    <circle cx="0" cy="0" r="133" fill="none" stroke="url(#og-ring)" stroke-width="8" filter="url(#og-rim)"></circle>
-    <circle cx="0" cy="0" r="133" fill="none" stroke="#ECFEFF" stroke-width="2.2" opacity="0.92"></circle>
+    <circle cx="0" cy="0" r="210" fill="url(#og-bloom)" filter="url(#og-soft)"></circle>
+    <circle cx="0" cy="0" r="168" fill="none" stroke="url(#og-ring)" stroke-width="44" filter="url(#og-soft)" opacity="0.92"></circle>
+    <circle cx="0" cy="0" r="164" fill="#000000"></circle>
+    <circle cx="0" cy="0" r="166" fill="none" stroke="url(#og-ring)" stroke-width="9" filter="url(#og-rim)"></circle>
+    <circle cx="0" cy="0" r="166" fill="none" stroke="#ECFEFF" stroke-width="2.4" opacity="0.92"></circle>
   </g>
 
   <text font-family="&#39;Space Grotesk&#39;,&#39;Segoe UI&#39;,system-ui,sans-serif" font-weight="500" fill="#ECFEFF" x="620" y="312" font-size="104" letter-spacing="-0.01em">Aphelion</text>
