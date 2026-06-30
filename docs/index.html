@@ -221,7 +221,7 @@
 </style>
 </head>
 <body>
-  <a class="donate-float" href="#support">&#9829;&nbsp;Donate</a>
+  <a class="donate-float" href="#support">&#9829;&nbsp;Support</a>
   <nav>
     <div class="brand">
       <svg class="mk" width="30" height="30" viewBox="0 0 256 256" aria-hidden="true">
@@ -242,12 +242,6 @@
       <a class="ghost" href="https://github.com/penpro/Aphelion/releases/latest">Download</a>
     </div>
   </nav>
-
-  <!-- TEMP NOTICE: manual-update reminder for pre-0.1.3 users (builds without the in-app update check).
-       Safe to delete this whole block after ~Oct 2026, once v0.1.3+ is widespread. -->
-  <div style="max-width:920px;margin:18px auto 0;padding:11px 18px;border:1px solid var(--corona);border-radius:10px;background:linear-gradient(90deg,rgba(94,234,212,.10),rgba(192,132,252,.10));font-size:13.5px;line-height:1.55;text-align:center">
-    <b>On v0.1.2 or earlier?</b> That build can't check for updates on its own — <a href="https://github.com/penpro/Aphelion/releases/latest">download the latest</a> manually this once. From <b>v0.1.3</b> on, <b>Settings&nbsp;→&nbsp;Updates</b> checks for you.
-  </div>
 
   <main class="hero">
     <span class="bracket bk-tl"><svg viewBox="0 0 46 46" fill="none"><path d="M44 4 H4 V44" stroke="url(#bg-g)" stroke-width="2"/><defs><linearGradient id="bg-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5EEAD4"/><stop offset="1" stop-color="#FF79C6"/></linearGradient></defs></svg></span>
@@ -332,10 +326,16 @@
     </div>
   </main>
 
+  <!-- TEMP NOTICE: manual-update reminder for pre-0.1.3 users (builds without the in-app update check).
+       Safe to delete this whole block after ~Oct 2026, once v0.1.3+ is widespread. -->
+  <div style="max-width:920px;margin:0 auto;padding:10px 18px;border:1px solid var(--border);border-radius:10px;background:rgba(255,255,255,.03);font-size:13px;line-height:1.55;text-align:center;color:var(--dim)">
+    <b style="color:var(--text)">Already on v0.1.2 or earlier?</b> That build can't check for updates on its own — <a href="https://github.com/penpro/Aphelion/releases/latest">download the latest</a> manually this once. From <b style="color:var(--text)">v0.1.3</b> on, <b style="color:var(--text)">Settings&nbsp;→&nbsp;Updates</b> does it for you.
+  </div>
+
   <section class="block" id="features">
     <div class="eyebrow-sm">WHAT YOU GET</div>
     <h2 class="sec-title">A whole AI workspace — in one window.</h2>
-    <p class="sec-lead">Not a chat box bolted onto a server. Aphelion is one app where characters, stories, dialogue trees, and an expert assistant live side by side — all powered by models running on your own machine.</p>
+    <p class="sec-lead">Not a chat box bolted onto a server. Aphelion is one app where characters, stories, dialogue trees, and an expert assistant live side by side — all powered by models running on your own machine. Whether you're drafting a novel without a chaperone, querying a folder of your own research, or just want a capable AI that answers to no one — it's all one window.</p>
     <div class="cards">
       <div class="card"><span class="tag">LOCAL</span><h3>Stays on your machine</h3><p>Every prompt, model, and conversation runs and lives on your PC. Your data never leaves it — online or off.</p></div>
       <div class="card"><span class="tag">ONE APP</span><h3>One app, zero setup</h3><p>Install one program and start talking — no command line, no separate tools to download and wire together.</p></div>
@@ -355,6 +355,7 @@
       <div class="tier"><div class="vram">~12 GB VRAM</div><h4>Balanced</h4><p>A strong all-rounder like Gemma 3 12B for mid-range cards.</p><div class="sz">~7 GB download</div></div>
       <div class="tier"><div class="vram">20 GB+ VRAM</div><h4>Most capable</h4><p>Flagship models — Gemma 3 27B or SuperGemma4 26B — for high-VRAM GPUs.</p><div class="sz">~15 GB download</div></div>
     </div>
+    <p class="note" style="margin-bottom:10px"><b>Not sure how much VRAM you have?</b> You don't need to know. VRAM is just your graphics card's memory (more of it = a bigger, smarter model) — and Aphelion checks yours on first run and picks one that fits. The numbers above are only if you're curious.</p>
     <p class="note"><b>Uncensored models</b> are available behind an opt-in warning, and you can point Aphelion at <b>your own GGUF</b> file. Whatever you pick, it runs entirely on your machine.</p>
   </section>
 
@@ -411,7 +412,14 @@
     </div>
     <div style="display:flex;flex-direction:column;gap:22px;max-width:780px">
       <article style="border-left:2px solid var(--corona);padding-left:16px">
-        <h3 style="margin:0 0 8px">v0.1.7 <span style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--corona)">LATEST</span></h3>
+        <h3 style="margin:0 0 8px">v0.1.8 <span style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--corona)">LATEST</span></h3>
+        <ul style="margin:0;padding-left:18px;line-height:1.75">
+          <li><b>Smarter model fit.</b> The model's context window is now sized to your VRAM, so smaller graphics cards don't run out of memory loading a model.</li>
+          <li><b>Clarity &amp; polish.</b> Plainer wording (what VRAM is, who it's for), more honest security language, and internal cleanup — from a round of outside feedback.</li>
+        </ul>
+      </article>
+      <article style="border-left:2px solid var(--border);padding-left:16px">
+        <h3 style="margin:0 0 8px">v0.1.7</h3>
         <ul style="margin:0;padding-left:18px;line-height:1.75">
           <li><b>One-click updates.</b> "Check for updates" now downloads and installs the new version in-app with a progress bar, then relaunches — no browser, no running the installer, no uninstall prompt. Still manual and disclosed (it only reaches the internet when you press it), and every update is signature-verified.</li>
         </ul>

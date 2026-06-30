@@ -28,6 +28,14 @@ pub(crate) fn llama_server_path(app: &tauri::AppHandle) -> Option<PathBuf> {
 /// Launch llama-server hidden, serving `model` on the local port.
 pub(crate) fn spawn_engine(app: &tauri::AppHandle, model: &Path) -> Option<Child> {
     let exe = llama_server_path(app)?;
+    // Size the KV-cache context to detected VRAM — a 32K context is multiple GB on top of the
+    // model weights and can OOM smaller cards. Unknown VRAM falls back to the previous 32K.
+    let ctx: &str = match vram_total_mb() {
+        Some(mb) if mb < 7000 => "4096",
+        Some(mb) if mb < 11000 => "8192",
+        Some(mb) if mb < 20000 => "16384",
+        _ => "32768",
+    };
     let mut cmd = Command::new(&exe);
     cmd.args([
         "-m",
@@ -39,7 +47,7 @@ pub(crate) fn spawn_engine(app: &tauri::AppHandle, model: &Path) -> Option<Child
         "-ngl",
         "999",
         "-c",
-        "32768",
+        ctx,
         "--reasoning",
         "off",
     ]);

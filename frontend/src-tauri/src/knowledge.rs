@@ -130,7 +130,13 @@ pub fn retrieve_context(cache: State<KnowledgeCache>, path: String, query: Strin
 /// PDFs yield nothing.
 #[tauri::command]
 pub fn extract_pdf(data: Vec<u8>) -> Result<String, String> {
-    let tmp = std::env::temp_dir().join("aphelion-drop.pdf");
+    let tmp = std::env::temp_dir().join(format!(
+        "aphelion-drop-{}.pdf",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
     std::fs::write(&tmp, &data).map_err(|e| e.to_string())?;
     let text = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| pdf_extract::extract_text(&tmp).ok()))
         .ok()

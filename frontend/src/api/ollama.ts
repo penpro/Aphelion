@@ -159,19 +159,6 @@ export async function reloadModel(baseUrl: string, model: string, keepAlive: num
   await setKeepAlive(baseUrl, model, keepAlive)
 }
 
-/** Which models are currently loaded (native /api/ps). */
-export async function getLoadedModels(baseUrl: string): Promise<string[]> {
-  // llama.cpp reports readiness on /health once the model is loaded.
-  try {
-    const r = await fetch(`${nativeRoot(baseUrl)}/health`)
-    if (!r.ok) return []
-    const d = await r.json().catch(() => ({}))
-    return d.status === 'ok' ? ['loaded'] : []
-  } catch {
-    return []
-  }
-}
-
 /** Three-state engine readiness: down (not up yet) | loading (model loading) | ready. */
 export async function getEngineStatus(baseUrl: string): Promise<'down' | 'loading' | 'ready'> {
   try {
