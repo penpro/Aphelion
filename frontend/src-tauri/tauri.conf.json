@@ -2,7 +2,7 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Aphelion",
   "mainBinaryName": "Aphelion",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "identifier": "com.localllm.studio",
   "build": {
     "frontendDist": "../dist",

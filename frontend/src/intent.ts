@@ -206,3 +206,74 @@ export function normalizeDocFormat(f?: string): string | undefined {
   }
   return undefined
 }
+
+// ── Deterministic heuristics ──────────────────────────────────────────────────
+// The LLM classifier is fuzzy, and local models are unreliable at strict JSON, so the
+// router tries these high-signal patterns FIRST. They map straight to an action with no
+// model call — so the obvious cases always surface the Run chip instead of silently
+// falling back to chat. Confirm-first means over-offering is cheap (a dismissible chip).
+
+function cleanParams(params: Record<string, string | undefined>): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const [k, v] of Object.entries(params)) {
+    const s = (v ?? '').trim()
+    if (s) out[k] = s
+  }
+  return out
+}
+
+const LEADING_FILLER = /^(?:just|only|all|any|some|the|a|an|my|every|these|those)\s+/gi
+
+/** Best-effort pull of the "what to look for" descriptor from a folder-image request. */
+export function extractCriterion(text: string): string {
+  const t = text.trim()
+  const strip = (s: string) => s.replace(LEADING_FILLER, '').replace(LEADING_FILLER, '').trim()
+  // 1) "... for/of/with/containing X [in/from a folder]"
+  let m = t.match(
+    /\b(?:for|of|with|containing|showing|matching|that\s+(?:are|have|show)|where\s+there(?:'s| is| are))\s+(.+?)(?:\s+(?:in|from|inside|within|on)\b.*)?$/i,
+  )
+  let crit = strip(m?.[1] ?? '')
+  crit = crit.replace(/\s+and\b.*$/i, '').trim() // drop "... and put them in a pdf"
+  crit = crit.replace(/\s*\b(pictures?|photos?|images?|pics?|shots?)\b\s*$/gi, '').trim()
+  // 2) Fallback: "<X> pictures/images/photos"
+  if (!crit) {
+    m = t.match(/\b((?:[\w-]+\s+){0,1}[\w-]+)\s+(?:pictures?|photos?|images?|pics?)\b/i)
+    crit = strip(m?.[1] ?? '')
+  }
+  return crit.replace(/[.?!,;:]+$/, '').trim()
+}
+
+/**
+ * High-precision, deterministic intent detection for the obvious cases — no LLM needed, so it
+ * fires reliably. Returns null when nothing clearly matches (caller falls back to the classifier).
+ */
+export function heuristicIntent(text: string): Classification | null {
+  const t = text.toLowerCase()
+  const folder = /\b(folder|directory)\b/.test(t)
+  const imageNoun = /\b(images?|photos?|pictures?|pics?|screenshots?)\b/.test(t)
+  const findVerb = /\b(find|search|check|scan|look|locate|collect|gather|pull|grab|sort|filter)\b/.test(t)
+  const pdf = /\bpdf\b/.test(t)
+
+  // 1) Folder image-search → PDF (the headline workflow).
+  if ((folder && (imageNoun || pdf || findVerb)) || (imageNoun && (findVerb || pdf))) {
+    return { intent: 'find_images_pdf', confidence: 0.95, params: cleanParams({ criterion: extractCriterion(text) }), clarify: '' }
+  }
+
+  // 2) Edit an existing file the user names (filename with an extension) — checked BEFORE
+  //    generation so "open index.html and …" isn't mistaken for "make an HTML file".
+  const fileMatch = t.match(/\b([\w.-]+\.(?:html?|md|markdown|txt|css|jsx?|tsx?|json|py|rs|go|java|c|cpp|sh|sql|csv|xml|ya?ml|typ))\b/)
+  const editVerb = /\b(edit|open|modify|change|update|fix|rewrite|refactor|tweak|adjust|improve)\b/.test(t)
+  if (fileMatch && editVerb) {
+    return { intent: 'edit_file', confidence: 0.9, params: cleanParams({ path: fileMatch[1], change: text.trim() }), clarify: '' }
+  }
+
+  // 3) Generate a new document from a description (not a folder op, not editing a named file).
+  const makeVerb = /\b(write|create|generate|make|build|draft|compose|produce)\b/.test(t)
+  const docNoun =
+    /\b(document|pdf|report|essay|letter|memo|article|resume|résumé|cv|html|web\s?page|website|markdown|readme|script|program|spreadsheet|css|json|cover\s+letter)\b/.test(t)
+  if (makeVerb && docNoun && !folder) {
+    return { intent: 'generate_document', confidence: 0.9, params: cleanParams({ topic: text.trim(), format: normalizeDocFormat(t) }), clarify: '' }
+  }
+
+  return null
+}

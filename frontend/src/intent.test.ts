@@ -6,6 +6,8 @@ import {
   isActionable,
   describeIntent,
   normalizeDocFormat,
+  heuristicIntent,
+  extractCriterion,
   INTENTS,
   MIN_CONFIDENCE,
   type Classification,
@@ -108,5 +110,41 @@ describe('normalizeDocFormat', () => {
     expect(normalizeDocFormat('hieroglyphics')).toBeUndefined()
     expect(normalizeDocFormat('')).toBeUndefined()
     expect(normalizeDocFormat(undefined)).toBeUndefined()
+  })
+})
+
+describe('heuristicIntent (deterministic fast-path)', () => {
+  it('catches the folder image-search → PDF cases that were falling through to chat', () => {
+    expect(heuristicIntent('check my folder for cat pictures')?.intent).toBe('find_images_pdf')
+    expect(heuristicIntent('build a pdf with just the naked women in the folder')?.intent).toBe('find_images_pdf')
+    expect(heuristicIntent('ok i selected a folder, select my cat images')?.intent).toBe('find_images_pdf')
+    expect(heuristicIntent('search my attached folder for cats and put them in a pdf')?.intent).toBe('find_images_pdf')
+  })
+  it('prefills a sensible criterion', () => {
+    expect(heuristicIntent('check my folder for cat pictures')?.params.criterion).toBe('cat')
+    expect(heuristicIntent('build a pdf with just the naked women in the folder')?.params.criterion).toBe('naked women')
+    expect(heuristicIntent('search my attached folder for cats and put them in a pdf')?.params.criterion).toBe('cats')
+  })
+  it('catches document generation and file editing', () => {
+    expect(heuristicIntent('write me a report about the water cycle')?.intent).toBe('generate_document')
+    expect(heuristicIntent('generate an HTML landing page')?.intent).toBe('generate_document')
+    const e = heuristicIntent('open index.html and make the header bigger')
+    expect(e?.intent).toBe('edit_file')
+    expect(e?.params.path).toBe('index.html')
+  })
+  it('does NOT hijack ordinary chat or creative writing', () => {
+    expect(heuristicIntent('what is the capital of France?')).toBeNull()
+    expect(heuristicIntent('write me a poem about winter')).toBeNull()
+    expect(heuristicIntent('find me a good pasta recipe')).toBeNull()
+    expect(heuristicIntent('tell me about cats')).toBeNull()
+  })
+})
+
+describe('extractCriterion', () => {
+  it('pulls the descriptor, dropping image nouns, fillers, and tails', () => {
+    expect(extractCriterion('check my folder for cat pictures')).toBe('cat')
+    expect(extractCriterion('build a pdf with just the naked women in the folder')).toBe('naked women')
+    expect(extractCriterion('find pictures of dogs in my folder')).toBe('dogs')
+    expect(extractCriterion('select my cat images')).toBe('cat')
   })
 })

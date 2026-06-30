@@ -9,6 +9,7 @@ import {
   parseClassification,
   isActionable,
   looksActionable,
+  heuristicIntent,
   describeIntent,
   normalizeDocFormat,
   type Classification,
@@ -279,7 +280,17 @@ export function AskView() {
       t.length > 0 &&
       pending.length === 0 &&
       pendingText.length === 0
-    if (!canRoute || (settings.intentRouter === 'quick' && !looksActionable(t))) return sendChat(text)
+    if (!canRoute) return sendChat(text)
+    // 1) Deterministic fast-path — reliable for the obvious cases, no model call, never
+    //    silently fails. This is what guarantees the one-click action appears.
+    const hit = heuristicIntent(t)
+    if (hit) {
+      setError('')
+      setIntent({ c: hit, text })
+      return
+    }
+    // 2) LLM classifier for fuzzier phrasing (Quick gates on the keyword pre-filter).
+    if (settings.intentRouter === 'quick' && !looksActionable(t)) return sendChat(text)
     setError('')
     setClassifying(true)
     try {
