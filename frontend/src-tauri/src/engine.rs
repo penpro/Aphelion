@@ -69,6 +69,19 @@ pub(crate) fn spawn_engine(app: &tauri::AppHandle, model: &Path) -> Option<Child
     }
 }
 
+/// Stop the running model engine(s). Called before an in-app update so the installer can
+/// overwrite the engine binaries — otherwise the running llama-server keeps DLLs like
+/// ggml-base.dll locked and the update fails with "error opening file for writing."
+#[tauri::command]
+pub fn shutdown_engine(app: tauri::AppHandle) {
+    if let Some(mut child) = app.state::<Engine>().0.lock().unwrap().take() {
+        let _ = child.kill();
+    }
+    if let Some(mut child) = app.state::<VisionEngine>().0.lock().unwrap().take() {
+        let _ = child.kill();
+    }
+}
+
 /// Live GPU memory (used, total) in MiB via nvidia-smi. None on non-NVIDIA.
 #[tauri::command]
 pub fn gpu_vram() -> Option<(u64, u64)> {

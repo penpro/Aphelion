@@ -85,6 +85,7 @@ pub fn run() {
             engine::start_engine,
             engine::model_files,
             engine::delete_model,
+            engine::shutdown_engine,
             knowledge::folder_info,
             knowledge::retrieve_context,
             knowledge::extract_pdf,

@@ -53,6 +53,9 @@ export function UpdateCheck() {
     setPhase('installing')
     setPct(0)
     try {
+      // Stop the bundled engine first so its DLLs aren't locked when the installer overwrites them.
+      await invoke('shutdown_engine').catch(() => {})
+      await new Promise((r) => setTimeout(r, 700))
       let total = 0
       let got = 0
       await update.downloadAndInstall((ev) => {
