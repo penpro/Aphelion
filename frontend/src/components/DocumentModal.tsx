@@ -184,6 +184,7 @@ export function DocumentModal({
         ],
       })
       if (typeof picked !== 'string') return
+      await invoke('grant_path', { path: picked }) // scope the file commands to this file's folder
       const src = await invoke<string>('read_text_file', { path: picked })
       setFormat(fmtForExt(picked.split('.').pop() || ''))
       setContent(src)

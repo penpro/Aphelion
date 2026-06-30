@@ -412,7 +412,13 @@
     </div>
     <div style="display:flex;flex-direction:column;gap:22px;max-width:780px">
       <article style="border-left:2px solid var(--corona);padding-left:16px">
-        <h3 style="margin:0 0 8px">v0.1.10 <span style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--corona)">LATEST</span></h3>
+        <h3 style="margin:0 0 8px">v0.1.11 <span style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--corona)">LATEST</span></h3>
+        <ul style="margin:0;padding-left:18px;line-height:1.75">
+          <li><b>Stronger file safety.</b> When you open a file to edit, the app can now only read or write within that file's own folder — enforced in the core, not just the interface. Together with v0.1.10's CSP, this closes the items from a security review.</li>
+        </ul>
+      </article>
+      <article style="border-left:2px solid var(--border);padding-left:16px">
+        <h3 style="margin:0 0 8px">v0.1.10</h3>
         <ul style="margin:0;padding-left:18px;line-height:1.75">
           <li><b>Hardened security.</b> A strict Content-Security-Policy locks the app to its own code, so even malformed content (a model reply, a file) can't run injected scripts. No change to how anything works.</li>
         </ul>

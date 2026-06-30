@@ -8,8 +8,8 @@ mod state;
 mod updates;
 mod vision;
 
-use state::{model_dir, Downloads, Engine, KnowledgeCache, MainModel, VisionEngine};
-use std::collections::HashMap;
+use state::{model_dir, Downloads, Engine, Granted, KnowledgeCache, MainModel, VisionEngine};
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::Manager;
@@ -26,6 +26,7 @@ pub fn run() {
         .manage(VisionEngine(Mutex::new(None)))
         .manage(MainModel(Mutex::new(None)))
         .manage(Downloads(Mutex::new(HashMap::new())))
+        .manage(Granted(Mutex::new(HashSet::new())))
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -99,6 +100,7 @@ pub fn run() {
             documents::read_text_file,
             documents::write_to_path,
             documents::save_typst_at,
+            documents::grant_path,
             vision::vision_present,
             vision::set_vision_mode,
             vision::list_images,

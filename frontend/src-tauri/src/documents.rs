@@ -1,8 +1,40 @@
 //! Document generation (Typst → PDF), plain-text / code file output, opening files in the
 //! default app, and reading/writing files the user is editing. The app does the I/O.
+use crate::state::Granted;
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::process::Command;
 use tauri::Manager;
+
+/// True if `target` (or, for a not-yet-created file, its parent dir) resolves inside a granted
+/// folder. Both sides are canonicalized so it's robust to `.`/`..`/symlinks on every OS.
+fn path_allowed(granted: &HashSet<PathBuf>, target: &str) -> bool {
+    let p = PathBuf::from(target);
+    let canon = std::fs::canonicalize(&p).ok().or_else(|| {
+        p.parent()
+            .and_then(|par| std::fs::canonicalize(par).ok())
+            .map(|c| c.join(p.file_name().unwrap_or_default()))
+    });
+    match canon {
+        Some(c) => granted.iter().any(|g| c == *g || c.starts_with(g)),
+        None => false,
+    }
+}
+
+/// Record a folder the user explicitly picked (file or folder dialog) as granted. For a file,
+/// its parent directory is granted, so editing it / saving a PDF beside it stays in scope.
+#[tauri::command]
+pub fn grant_path(app: tauri::AppHandle, path: String) {
+    let p = PathBuf::from(&path);
+    let dir = if p.is_dir() {
+        p.clone()
+    } else {
+        p.parent().map(|x| x.to_path_buf()).unwrap_or(p)
+    };
+    if let Ok(canon) = std::fs::canonicalize(&dir) {
+        app.state::<Granted>().0.lock().unwrap().insert(canon);
+    }
+}
 
 /// The Typst CLI binary name (`.exe` only on Windows).
 fn typst_bin() -> &'static str {
@@ -185,7 +217,10 @@ pub fn write_temp_file(name: String, content: String) -> Result<String, String> 
 /// Read any text file by absolute path (for opening a file to edit). Binary/non-UTF-8
 /// files (e.g. images) return a friendly error rather than a cryptic decode failure.
 #[tauri::command]
-pub fn read_text_file(path: String) -> Result<String, String> {
+pub fn read_text_file(granted: tauri::State<Granted>, path: String) -> Result<String, String> {
+    if !path_allowed(&granted.0.lock().unwrap(), &path) {
+        return Err("That file isn't in a folder you've opened — use the Open button to pick it.".into());
+    }
     let bytes = std::fs::read(&path).map_err(|e| e.to_string())?;
     String::from_utf8(bytes)
         .map_err(|_| "That file isn't text (it looks like an image or binary). To analyze an image, drag it into the chat instead.".to_string())
@@ -193,13 +228,24 @@ pub fn read_text_file(path: String) -> Result<String, String> {
 
 /// Overwrite a text/code file at an absolute path (saving edits back to the opened file).
 #[tauri::command]
-pub fn write_to_path(path: String, content: String) -> Result<(), String> {
+pub fn write_to_path(granted: tauri::State<Granted>, path: String, content: String) -> Result<(), String> {
+    if !path_allowed(&granted.0.lock().unwrap(), &path) {
+        return Err("That location isn't in a folder you've opened.".into());
+    }
     std::fs::write(&path, content).map_err(|e| e.to_string())
 }
 
 /// Write Typst source to `typ_path` and compile a PDF beside it; returns the PDF path.
 #[tauri::command]
-pub fn save_typst_at(app: tauri::AppHandle, typ_path: String, source: String) -> Result<String, String> {
+pub fn save_typst_at(
+    app: tauri::AppHandle,
+    granted: tauri::State<Granted>,
+    typ_path: String,
+    source: String,
+) -> Result<String, String> {
+    if !path_allowed(&granted.0.lock().unwrap(), &typ_path) {
+        return Err("That location isn't in a folder you've opened.".into());
+    }
     let typ = PathBuf::from(&typ_path);
     let dir = typ.parent().map(|p| p.to_path_buf()).unwrap_or_else(std::env::temp_dir);
     std::fs::write(&typ, &source).map_err(|e| format!("couldn't write the source: {e}"))?;
@@ -218,5 +264,23 @@ mod tests {
         assert_eq!(sanitize_title("   "), "document");
         assert_eq!(sanitize_title(""), "document");
         assert_eq!(sanitize_title(&"a".repeat(100)).chars().count(), 60);
+    }
+
+    #[test]
+    fn path_allowed_scopes_to_granted_dirs() {
+        let base = std::env::temp_dir().join(format!("aph-grant-{}", std::process::id()));
+        let _ = std::fs::create_dir_all(&base);
+        std::fs::write(base.join("a.txt"), "x").unwrap();
+        let mut granted = HashSet::new();
+        granted.insert(std::fs::canonicalize(&base).unwrap());
+        // existing file inside a granted dir
+        assert!(path_allowed(&granted, &base.join("a.txt").to_string_lossy()));
+        // a not-yet-created file inside a granted dir (parent resolves)
+        assert!(path_allowed(&granted, &base.join("new.pdf").to_string_lossy()));
+        // outside any granted dir
+        assert!(!path_allowed(&granted, &std::env::temp_dir().join("aph-outside.txt").to_string_lossy()));
+        // nothing granted → nothing allowed
+        assert!(!path_allowed(&HashSet::new(), &base.join("a.txt").to_string_lossy()));
+        let _ = std::fs::remove_dir_all(&base);
     }
 }

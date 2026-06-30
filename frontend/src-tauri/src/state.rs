@@ -1,5 +1,5 @@
 //! Shared app state (managed by Tauri) and the model directory helper.
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::process::Child;
 use std::sync::Mutex;
@@ -29,6 +29,11 @@ pub struct DownloadEntry {
 
 /// Tracks in-flight model downloads so the UI can show progress and pause/resume.
 pub struct Downloads(pub Mutex<HashMap<String, DownloadEntry>>);
+
+/// Folders the user has explicitly opened/granted via a file or folder dialog. The scoped
+/// file commands (read_text_file / write_to_path / save_typst_at) only operate within these,
+/// so the "it only touches files you hand it" guarantee is enforced in Rust, not by convention.
+pub struct Granted(pub Mutex<HashSet<PathBuf>>);
 
 /// The app's own model directory (AppData/<id>/models), created if missing.
 pub(crate) fn model_dir(app: &tauri::AppHandle) -> Option<PathBuf> {
