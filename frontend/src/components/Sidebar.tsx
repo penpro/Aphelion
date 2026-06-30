@@ -1,17 +1,10 @@
 import { useStore } from '../store'
 import { ModelBar } from './ModelBar'
-import { CoronaMark } from './CoronaMark'
 import { DownloadIndicator } from './DownloadIndicator'
 import { CharAvatar } from './CharAvatar'
+import { UI_ICONS } from '../uiIcons'
 import { cx, timeAgo } from '../util'
-import type { AppView, Character } from '../types'
-
-const MODES: { id: AppView; label: string; icon: string }[] = [
-  { id: 'chat', label: 'Chat', icon: '💬' },
-  { id: 'story', label: 'Story', icon: '🎬' },
-  { id: 'tree', label: 'Trees', icon: '🌳' },
-  { id: 'ask', label: 'Ask', icon: '🪄' },
-]
+import type { Character } from '../types'
 
 export function Sidebar({
   onEditCharacter,
@@ -67,20 +60,7 @@ export function Sidebar({
 
   return (
     <aside className="sidebar">
-      <div className="brand">
-        <CoronaMark size={22} /> Aphelion
-      </div>
-
       <ModelBar />
-
-      <nav className="mode-nav">
-        {MODES.map((m) => (
-          <button key={m.id} className={cx('mode-btn', view === m.id && 'active')} onClick={() => setView(m.id)}>
-            <span>{m.icon}</span>
-            {m.label}
-          </button>
-        ))}
-      </nav>
 
       <div className="side-section">
         <div className="side-head">
@@ -286,15 +266,15 @@ export function Sidebar({
       )}
 
       <div className="side-foot">
-        <button className="btn ghost block" onClick={onOpenTutorial}>
-          ❔ How it works
+        <button className="btn ghost block foot-btn" onClick={onOpenTutorial}>
+          <img src={UI_ICONS.how} alt="" aria-hidden="true" /> How it works
         </button>
-        <button className="btn ghost block" onClick={onOpenPersona}>
-          🧑 Persona: {persona.name}
+        <button className="btn ghost block foot-btn" onClick={onOpenPersona}>
+          <img src={UI_ICONS.persona} alt="" aria-hidden="true" /> Persona: {persona.name}
         </button>
         <DownloadIndicator />
-        <button className="btn ghost block" onClick={onOpenSettings}>
-          ⚙ Settings
+        <button className="btn ghost block foot-btn" onClick={onOpenSettings}>
+          <img src={UI_ICONS.settings} alt="" aria-hidden="true" /> Settings
         </button>
       </div>
     </aside>

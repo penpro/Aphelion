@@ -158,33 +158,74 @@ select:focus {
   color: var(--text);
 }
 
-/* ── Custom frameless title bar ──────────────────────────────────────────────── */
-.titlebar {
+/* ── Main menu bar: brand + hero mode tabs + window controls ─────────────────── */
+.topbar {
   position: relative;
   z-index: 10000;
   flex: 0 0 auto;
-  height: 34px;
+  height: 52px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: color-mix(in srgb, var(--bg-2) 82%, transparent);
-  backdrop-filter: blur(12px) saturate(120%);
-  -webkit-backdrop-filter: blur(12px) saturate(120%);
+  align-items: stretch;
+  background: color-mix(in srgb, var(--bg-2) 84%, transparent);
+  backdrop-filter: blur(14px) saturate(120%);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
   border-bottom: 1px solid var(--border);
   user-select: none;
   -webkit-user-select: none;
 }
-.titlebar-brand {
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 18px;
+  font-family: var(--font-head);
+  font-size: 16px;
+  letter-spacing: 0.01em;
+  color: var(--text);
+  border-right: 1px solid var(--border);
+}
+.topbar-modes {
+  display: flex;
+  align-items: stretch;
+}
+.mode-tab {
   display: flex;
   align-items: center;
   gap: 8px;
-  height: 100%;
-  flex: 1;
-  padding: 0 12px;
+  padding: 0 18px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
   font-family: var(--font-head);
-  font-size: 13px;
-  letter-spacing: 0.02em;
+  font-size: 14px;
+  cursor: pointer;
+  transition: color 0.14s ease, background 0.14s ease, border-color 0.14s ease;
+}
+.mode-tab img {
+  width: 22px;
+  height: 22px;
+  opacity: 0.62;
+  transition: opacity 0.14s ease, filter 0.14s ease;
+}
+.mode-tab:hover {
   color: var(--text);
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+}
+.mode-tab:hover img {
+  opacity: 0.9;
+}
+.mode-tab.active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+}
+.mode-tab.active img {
+  opacity: 1;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 55%, transparent));
+}
+.topbar-spacer {
+  flex: 1;
 }
 .titlebar-controls {
   display: flex;
@@ -270,4 +311,17 @@ select:focus {
   width: 11px;
   height: 11px;
   cursor: nesw-resize;
+}
+
+/* ── Sidebar footer buttons with line icons ──────────────────────────────────── */
+.foot-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-start;
+}
+.foot-btn img {
+  width: 18px;
+  height: 18px;
+  opacity: 0.85;
 }
