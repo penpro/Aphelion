@@ -44,7 +44,7 @@ export interface SamplerParams {
 }
 
 /** Map camelCase sampler params to llama.cpp's snake_case request-body fields. */
-function samplerBody(s?: SamplerParams): Record<string, number> {
+export function samplerBody(s?: SamplerParams): Record<string, number> {
   const b: Record<string, number> = {}
   if (!s) return b
   if (s.topK !== undefined) b.top_k = s.topK

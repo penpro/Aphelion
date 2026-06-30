@@ -55,7 +55,7 @@ RULES:
 
 /** If the model wrapped its output in a ```...``` fence (often with prose around it),
  * extract the first fenced block; otherwise return the text as-is. */
-function stripCodeFences(s: string): string {
+export function stripCodeFences(s: string): string {
   const t = s.trim()
   const block = t.match(/```[a-zA-Z0-9+#-]*\s*\r?\n([\s\S]*?)\r?\n```/)
   if (block) return block[1].trim()

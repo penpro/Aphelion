@@ -267,14 +267,8 @@ fn folder_info(cache: State<KnowledgeCache>, path: String) -> (usize, usize, Vec
     (names.len(), chunks.len(), names)
 }
 
-/// Retrieve the chunks most relevant to `query` (keyword scoring), up to `max_chars`.
-#[tauri::command]
-fn retrieve_context(cache: State<KnowledgeCache>, path: String, query: String, max_chars: usize) -> String {
-    let mut map = cache.0.lock().unwrap();
-    let chunks = map.entry(path.clone()).or_insert_with(|| ingest_folder(&path));
-    if chunks.is_empty() {
-        return String::new();
-    }
+/// Score chunks by query keyword frequency; return the most relevant, up to `max_chars`.
+fn retrieve_chunks(chunks: &[(String, String)], query: &str, max_chars: usize) -> String {
     let terms: Vec<String> = query
         .to_lowercase()
         .split(|c: char| !c.is_alphanumeric())
@@ -308,6 +302,17 @@ fn retrieve_context(cache: State<KnowledgeCache>, path: String, query: String, m
         out.push_str("\n\n");
     }
     out
+}
+
+/// Retrieve the chunks most relevant to `query` (keyword scoring), up to `max_chars`.
+#[tauri::command]
+fn retrieve_context(cache: State<KnowledgeCache>, path: String, query: String, max_chars: usize) -> String {
+    let mut map = cache.0.lock().unwrap();
+    let chunks = map.entry(path.clone()).or_insert_with(|| ingest_folder(&path));
+    if chunks.is_empty() {
+        return String::new();
+    }
+    retrieve_chunks(chunks, &query, max_chars)
 }
 
 // ---------- document generator (Typst → PDF) ----------
@@ -397,6 +402,17 @@ fn open_path(path: String) -> Result<(), String> {
     cmd.spawn().map(|_| ()).map_err(|e| e.to_string())
 }
 
+/// Make a safe file base name from a document title (used for saved documents).
+fn sanitize_title(title: &str) -> String {
+    let cleaned: String = title
+        .chars()
+        .map(|c| if c.is_alphanumeric() || c == ' ' || c == '-' || c == '_' { c } else { '_' })
+        .collect();
+    let cleaned = cleaned.trim();
+    let base = if cleaned.is_empty() { "document" } else { cleaned };
+    base.chars().take(60).collect()
+}
+
 /// Save a generated document into a user-granted folder: writes `<title>.typ` and compiles
 /// `<title>.pdf` beside it. Returns the PDF path. The app writes the files; the model never does.
 #[tauri::command]
@@ -405,13 +421,7 @@ fn save_document(app: tauri::AppHandle, folder: String, title: String, source: S
     if !dir.is_dir() {
         return Err("That folder no longer exists.".into());
     }
-    let cleaned: String = title
-        .chars()
-        .map(|c| if c.is_alphanumeric() || c == ' ' || c == '-' || c == '_' { c } else { '_' })
-        .collect();
-    let cleaned = cleaned.trim();
-    let base = if cleaned.is_empty() { "document" } else { cleaned };
-    let safe: String = base.chars().take(60).collect();
+    let safe = sanitize_title(&title);
     let typ = dir.join(format!("{safe}.typ"));
     let pdf = dir.join(format!("{safe}.pdf"));
     std::fs::write(&typ, &source).map_err(|e| format!("couldn't write the source: {e}"))?;
@@ -477,13 +487,7 @@ fn save_text_document(folder: String, title: String, ext: String, content: Strin
     if !dir.is_dir() {
         return Err("That folder no longer exists.".into());
     }
-    let cleaned: String = title
-        .chars()
-        .map(|c| if c.is_alphanumeric() || c == ' ' || c == '-' || c == '_' { c } else { '_' })
-        .collect();
-    let cleaned = cleaned.trim();
-    let base = if cleaned.is_empty() { "document" } else { cleaned };
-    let safe: String = base.chars().take(60).collect();
+    let safe = sanitize_title(&title);
     let ext_clean: String = ext.chars().filter(|c| c.is_alphanumeric()).take(12).collect::<String>().to_lowercase();
     let ext_clean = if ext_clean.is_empty() { "txt".to_string() } else { ext_clean };
     let file = dir.join(format!("{safe}.{ext_clean}"));
@@ -712,4 +716,63 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn chunk_text_splits_large_text() {
+        let text = format!("para one\n\n{}\n\nlast para", "x ".repeat(800));
+        let chunks = chunk_text(&text);
+        assert!(chunks.len() >= 2, "expected multiple chunks");
+        assert!(chunks.iter().any(|c| c.contains("para one")));
+        assert!(chunks.iter().any(|c| c.contains("last para")));
+    }
+
+    #[test]
+    fn chunk_text_ignores_blank() {
+        assert!(chunk_text("   \n\n   ").is_empty());
+    }
+
+    #[test]
+    fn sanitize_title_cleans_and_defaults() {
+        assert_eq!(sanitize_title("Hello: World!"), "Hello_ World_");
+        assert_eq!(sanitize_title("   "), "document");
+        assert_eq!(sanitize_title(""), "document");
+        assert_eq!(sanitize_title(&"a".repeat(100)).chars().count(), 60);
+    }
+
+    #[test]
+    fn retrieve_picks_relevant_and_labels() {
+        let chunks = vec![
+            ("dragons.txt".to_string(), "The red dragon breathes fire on the keep.".to_string()),
+            ("meadow.txt".to_string(), "A quiet meadow full of spring flowers.".to_string()),
+        ];
+        let out = retrieve_chunks(&chunks, "dragon fire", 1000);
+        assert!(out.contains("dragon"));
+        assert!(out.contains("[dragons.txt]"));
+        assert!(!out.contains("meadow"));
+    }
+
+    #[test]
+    fn retrieve_noise_query_returns_nothing() {
+        let chunks = vec![("a.txt".to_string(), "hello world".to_string())];
+        // tokens of <=2 chars are filtered out, leaving no usable terms
+        assert_eq!(retrieve_chunks(&chunks, "  ?? a ", 1000), "");
+    }
+
+    #[test]
+    fn retrieve_respects_max_chars() {
+        let chunks = vec![
+            ("a.txt".to_string(), "alpha one".to_string()),
+            ("b.txt".to_string(), "alpha two".to_string()),
+            ("c.txt".to_string(), "alpha three".to_string()),
+        ];
+        let small = retrieve_chunks(&chunks, "alpha", 30);
+        let big = retrieve_chunks(&chunks, "alpha", 1000);
+        assert!(small.len() <= 40);
+        assert!(big.len() > small.len(), "more budget should keep more chunks");
+    }
 }
