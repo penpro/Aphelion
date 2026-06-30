@@ -21,7 +21,13 @@ export function LivePortrait({
 }) {
   const [open, setOpen] = useState(true)
   const [emotion, setEmotion] = useState<EmotionKey>('neutral')
-  const set = character.portraits
+
+  // The active named set for this chat (falls back to the first set, then the legacy single set).
+  const set = useMemo(() => {
+    const list = character.portraitSets ?? []
+    const active = list.find((s) => s.id === chat.portraitSetId) ?? list[0]
+    return active?.portraits ?? character.portraits
+  }, [character.portraitSets, character.portraits, chat.portraitSetId])
 
   const lastText = useMemo(() => {
     for (let i = chat.messages.length - 1; i >= 0; i--) {

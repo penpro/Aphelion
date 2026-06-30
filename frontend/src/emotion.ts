@@ -87,14 +87,15 @@ const ART_STYLE =
 
 /** A copy-pasteable set of image prompts — one per emotion — that share one appearance + style so
  *  the generated set stays the SAME character. */
-export function buildEmotionArtPrompts(c: { name?: string; description?: string }): string {
+export function buildEmotionArtPrompts(c: { name?: string; description?: string }, setName?: string): string {
   const name = (c.name || '').trim() || 'this character'
+  const variant = (setName || '').trim()
   const appearance = (c.description || '').trim() || `${name}, a distinctive character`
-  const slug = (c.name || 'character').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'character'
+  const slug = `${c.name || 'character'}${variant ? '-' + variant : ''}`.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'character'
   const header =
-    `Create a CONSISTENT SET of emotion portraits of the same character, "${name}".\n\n` +
+    `Create a CONSISTENT SET of emotion portraits of the same character, "${name}"${variant ? ` — the "${variant}" look` : ''}.\n\n` +
     `CHARACTER — keep this IDENTICAL in every image (same face, hair, clothing, age, and art ` +
-    `style; only the facial expression and body language change):\n${appearance}\n\n` +
+    `style; only the facial expression and body language change):\n${appearance}${variant ? `\n\nLOOK / VARIANT: ${variant}.` : ''}\n\n` +
     `STYLE for all images: ${ART_STYLE}\n\n` +
     `Generate "Neutral" FIRST, then use that image as the reference so every other one matches it ` +
     `exactly. Make each a SEPARATE image. Name the files "${slug}-<emotion>.png".\n\n` +

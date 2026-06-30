@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { Modal } from './Modal'
 import { useStore } from '../store'
 import { generateCharacter, expandCharacterField } from '../generators'
-import { cx } from '../util'
+import { cx, uid } from '../util'
 import { CharAvatar } from './CharAvatar'
 import { fileToPortrait, GENERIC_PORTRAITS } from '../image'
 import { EMOTIONS, buildEmotionArtPrompts } from '../emotion'
-import type { Character, EmotionKey } from '../types'
+import type { Character, EmotionKey, PortraitSet } from '../types'
 
 const COLORS = ['#7c5cff', '#3fb6a8', '#ff6b8b', '#f5a623', '#4a90e2', '#9b59b6', '#2ecc71', '#e74c3c']
 
@@ -30,7 +30,16 @@ export function CharacterEditor({ editing, onClose }: { editing: Character | 'ne
   const deleteCharacter = useStore((s) => s.deleteCharacter)
   const settings = useStore((s) => s.settings)
   const isNew = editing === 'new'
-  const [c, setC] = useState<Draft>(isNew ? blank() : { ...(editing as Character) })
+  const [c, setC] = useState<Draft>(() => {
+    if (isNew) return blank()
+    const e = { ...(editing as Character) } as Draft
+    // migrate a legacy single living set into a named set so it shows up in the sets manager
+    if (!e.portraitSets?.length && e.portraits && Object.keys(e.portraits).length) {
+      e.portraitSets = [{ id: uid(), name: 'Set 1', portraits: e.portraits }]
+    }
+    if (!e.portraitSets) e.portraitSets = []
+    return e
+  })
   const [criteria, setCriteria] = useState('')
   const [gen, setGen] = useState(false)
   const [genErr, setGenErr] = useState('')
@@ -56,23 +65,45 @@ export function CharacterEditor({ editing, onClose }: { editing: Character | 'ne
   }
 
   const [showPrompts, setShowPrompts] = useState(false)
-  const [emotionBusy, setEmotionBusy] = useState<EmotionKey | null>(null)
+  const [emotionBusy, setEmotionBusy] = useState<string | null>(null) // "setId:emotion"
   const [emotionErr, setEmotionErr] = useState('')
 
-  const setEmotionPortrait = (key: EmotionKey, v: string | undefined) =>
-    setC((prev) => {
-      const portraits = { ...(prev.portraits || {}) }
-      if (v) portraits[key] = v
-      else delete portraits[key]
-      return { ...prev, portraits }
-    })
+  const sets = c.portraitSets ?? []
+  const [activeSetId, setActiveSetId] = useState<string | null>(sets[0]?.id ?? null)
+  const activeSet = sets.find((s) => s.id === activeSetId) ?? sets[0] ?? null
 
-  const onPickEmotion = async (key: EmotionKey, file?: File) => {
+  const mutateSets = (fn: (list: PortraitSet[]) => PortraitSet[]) =>
+    setC((prev) => ({ ...prev, portraitSets: fn(prev.portraitSets ?? []) }))
+
+  const addSet = () => {
+    const s: PortraitSet = { id: uid(), name: `Set ${sets.length + 1}`, portraits: {} }
+    mutateSets((list) => [...list, s])
+    setActiveSetId(s.id)
+    setShowPrompts(false)
+  }
+  const renameSet = (id: string, name: string) =>
+    mutateSets((list) => list.map((s) => (s.id === id ? { ...s, name } : s)))
+  const deleteSet = (id: string) => {
+    mutateSets((list) => list.filter((s) => s.id !== id))
+    if (activeSetId === id) setActiveSetId(sets.find((s) => s.id !== id)?.id ?? null)
+  }
+  const setSetEmotion = (setId: string, key: EmotionKey, v: string | undefined) =>
+    mutateSets((list) =>
+      list.map((s) => {
+        if (s.id !== setId) return s
+        const portraits = { ...s.portraits }
+        if (v) portraits[key] = v
+        else delete portraits[key]
+        return { ...s, portraits }
+      }),
+    )
+
+  const onPickSetEmotion = async (setId: string, key: EmotionKey, file?: File) => {
     if (!file) return
-    setEmotionBusy(key)
+    setEmotionBusy(`${setId}:${key}`)
     setEmotionErr('')
     try {
-      setEmotionPortrait(key, await fileToPortrait(file))
+      setSetEmotion(setId, key, await fileToPortrait(file))
     } catch (e) {
       setEmotionErr((e as { message?: string })?.message ?? 'Could not use that image.')
     } finally {
@@ -113,8 +144,11 @@ export function CharacterEditor({ editing, onClose }: { editing: Character | 'ne
       alert('Name is required.')
       return
     }
-    if (isNew) addCharacter(c)
-    else updateCharacter((editing as Character).id, c)
+    const payload: Draft = { ...c }
+    // portraitSets supersedes the legacy single living set — drop it so we don't store it twice.
+    if (payload.portraitSets?.length) delete payload.portraits
+    if (isNew) addCharacter(payload)
+    else updateCharacter((editing as Character).id, payload)
     onClose()
   }
 
@@ -221,60 +255,106 @@ export function CharacterEditor({ editing, onClose }: { editing: Character | 'ne
         <label className="field">
           <span className="field-head">
             <span>
-              Living set <span className="muted xs">optional — emotion portraits for live mode</span>
+              Portrait sets{' '}
+              <span className="muted xs">optional — named looks (e.g. “Hair up”), each with the 8 emotions</span>
             </span>
-            <button type="button" className="btn xs ghost" onClick={() => setShowPrompts((s) => !s)}>
-              ✨ Art prompts
+            <button type="button" className="btn xs ghost" onClick={addSet}>
+              + New set
             </button>
           </span>
-          {showPrompts && (
-            <div className="prompt-block">
-              <div className="muted xs">
-                Paste into an image generator to make a matched set for {c.name || 'this character'} — generate
-                Neutral first, then reuse it as a reference so the rest stay consistent.
-              </div>
-              <textarea className="prompt-out" readOnly rows={12} value={buildEmotionArtPrompts(c)} />
-              <button
-                type="button"
-                className="btn sm"
-                onClick={() => navigator.clipboard?.writeText(buildEmotionArtPrompts(c))}
-              >
-                Copy prompts
-              </button>
+          {sets.length === 0 ? (
+            <div className="muted sm set-empty">
+              No portrait sets yet. Add one to give {c.name || 'this character'} emotion portraits for live mode.
             </div>
-          )}
-          <div className="emotion-grid">
-            {EMOTIONS.map((e) => {
-              const src = e.key === 'neutral' ? c.portraits?.neutral ?? c.portrait : c.portraits?.[e.key]
-              return (
-                <div key={e.key} className="emotion-slot">
-                  <div className="emotion-pic-wrap">
-                    <label className="emotion-pic" title={`Upload ${e.label}`}>
-                      <CharAvatar avatar={c.avatar} color={c.color} portrait={src} name={e.label} />
-                      <input
-                        type="file"
-                        accept="image/*"
-                        hidden
-                        disabled={emotionBusy === e.key}
-                        onChange={(ev) => onPickEmotion(e.key, ev.target.files?.[0])}
+          ) : (
+            <div className="sets">
+              <div className="set-tabs" role="tablist">
+                {sets.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    className={cx('set-tab', s.id === activeSet?.id && 'sel')}
+                    onClick={() => setActiveSetId(s.id)}
+                  >
+                    {s.name?.trim() || 'Untitled'}
+                  </button>
+                ))}
+              </div>
+              {activeSet && (
+                <div className="set-body">
+                  <div className="row gap set-head">
+                    <input
+                      className="set-name-input"
+                      value={activeSet.name}
+                      placeholder="Set name (e.g. Hair up)"
+                      onChange={(e) => renameSet(activeSet.id, e.target.value)}
+                    />
+                    <button type="button" className="btn xs ghost" onClick={() => setShowPrompts((p) => !p)}>
+                      ✨ Art prompts
+                    </button>
+                    <button type="button" className="btn xs ghost danger" onClick={() => deleteSet(activeSet.id)}>
+                      Delete
+                    </button>
+                  </div>
+                  {showPrompts && (
+                    <div className="prompt-block">
+                      <div className="muted xs">
+                        Paste into an image generator to make a matched set for {c.name || 'this character'}
+                        {activeSet.name?.trim() ? ` (${activeSet.name.trim()})` : ''} — generate Neutral first, then
+                        reuse it as a reference so the rest stay consistent.
+                      </div>
+                      <textarea
+                        className="prompt-out"
+                        readOnly
+                        rows={12}
+                        value={buildEmotionArtPrompts(c, activeSet.name)}
                       />
-                    </label>
-                    {c.portraits?.[e.key] && (
                       <button
                         type="button"
-                        className="emotion-clear"
-                        title={`Clear ${e.label}`}
-                        onClick={() => setEmotionPortrait(e.key, undefined)}
+                        className="btn sm"
+                        onClick={() => navigator.clipboard?.writeText(buildEmotionArtPrompts(c, activeSet.name))}
                       >
-                        ×
+                        Copy prompts
                       </button>
-                    )}
+                    </div>
+                  )}
+                  <div className="emotion-grid">
+                    {EMOTIONS.map((e) => {
+                      const src = activeSet.portraits[e.key]
+                      const busyKey = `${activeSet.id}:${e.key}`
+                      return (
+                        <div key={e.key} className="emotion-slot">
+                          <div className="emotion-pic-wrap">
+                            <label className="emotion-pic" title={`Upload ${e.label}`}>
+                              <CharAvatar avatar={c.avatar} color={c.color} portrait={src} name={e.label} />
+                              <input
+                                type="file"
+                                accept="image/*"
+                                hidden
+                                disabled={emotionBusy === busyKey}
+                                onChange={(ev) => onPickSetEmotion(activeSet.id, e.key, ev.target.files?.[0])}
+                              />
+                            </label>
+                            {src && (
+                              <button
+                                type="button"
+                                className="emotion-clear"
+                                title={`Clear ${e.label}`}
+                                onClick={() => setSetEmotion(activeSet.id, e.key, undefined)}
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
+                          <span className="emotion-label">{emotionBusy === busyKey ? '…' : e.label}</span>
+                        </div>
+                      )
+                    })}
                   </div>
-                  <span className="emotion-label">{emotionBusy === e.key ? '…' : e.label}</span>
                 </div>
-              )
-            })}
-          </div>
+              )}
+            </div>
+          )}
           {emotionErr && <div className="error-line">{emotionErr}</div>}
         </label>
 

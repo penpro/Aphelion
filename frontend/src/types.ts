@@ -10,6 +10,13 @@ export type EmotionKey =
   | 'embarrassed'
   | 'affectionate'
 
+/** A named portrait set (e.g. an outfit/look like "Hair up" or "Nude"), holding up to the 8 emotion portraits. */
+export interface PortraitSet {
+  id: string
+  name: string
+  portraits: Partial<Record<EmotionKey, string>>
+}
+
 export interface Character {
   id: string
   name: string
@@ -21,7 +28,8 @@ export interface Character {
   exampleDialogue: string
   systemPrompt: string // extra steering, appended to the base RP instruction
   portrait?: string // optional image data URL; falls back to the avatar emoji + color tile
-  portraits?: Partial<Record<EmotionKey, string>> // "living" set keyed by emotion, for live portraits
+  portraits?: Partial<Record<EmotionKey, string>> // legacy single living set (migrated into portraitSets on edit)
+  portraitSets?: PortraitSet[] // named portrait sets (outfits/looks), each with up to the 8 emotion portraits
   createdAt: number
 }
 
@@ -70,6 +78,7 @@ export interface Chat {
   scenePrompt: string // this session's opening scene (set per-chat, not per-character)
   started: boolean // false = still in the setup panel
   tuning: ChatTuning
+  portraitSetId?: string // which of the primary character's portrait sets the live portrait shows
   sources: Source[] // reference docs injected into context
   knowledgeFolder?: string // path to a user-granted folder; relevant chunks retrieved into context per message
   summary: string // rolling distilled "story so far" memory of older, summarized-out messages

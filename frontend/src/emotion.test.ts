@@ -43,4 +43,12 @@ describe('buildEmotionArtPrompts', () => {
     expect(out).toContain('Nyx')
     expect(out).toContain('Neutral')
   })
+
+  it('weaves a set name into the prompt as a named look, and omits it when absent', () => {
+    const out = buildEmotionArtPrompts({ name: 'Seraphina', description: 'a half-elf ranger' }, 'Hair up')
+    expect(out).toContain('Hair up')
+    expect(out.toLowerCase()).toContain('look')
+    const plain = buildEmotionArtPrompts({ name: 'Seraphina', description: 'a half-elf ranger' })
+    expect(plain).not.toContain('VARIANT')
+  })
 })

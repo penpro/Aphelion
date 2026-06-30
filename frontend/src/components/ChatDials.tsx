@@ -21,6 +21,8 @@ export function ChatDials({ chat }: { chat: Chat }) {
   const updateSettings = useStore((s) => s.updateSettings)
   const t = chat.tuning
   const cast = chat.castIds.map((id) => characters.find((c) => c.id === id)).filter(Boolean) as Character[]
+  const primary = cast[0] // the character shown on the live-portrait stage
+  const primarySets = primary?.portraitSets ?? []
 
   return (
     <aside className="chat-dials">
@@ -149,7 +151,7 @@ export function ChatDials({ chat }: { chat: Chat }) {
           </div>
           <span className="muted xs">
             Reads each reply's mood and shows the character's matching portrait, enlarged, above the chat. Needs a
-            Living set on the character.
+            portrait set on the character.
           </span>
         </div>
 
@@ -168,6 +170,24 @@ export function ChatDials({ chat }: { chat: Chat }) {
                 </button>
               ))}
             </div>
+          </div>
+        )}
+
+        {settings.livePortraits && primarySets.length > 1 && (
+          <div className="field">
+            <span>Portrait set</span>
+            <select
+              className="set-select"
+              value={primarySets.some((s) => s.id === chat.portraitSetId) ? chat.portraitSetId : primarySets[0].id}
+              onChange={(e) => updateChat(chat.id, { portraitSetId: e.target.value })}
+            >
+              {primarySets.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name?.trim() || 'Untitled'}
+                </option>
+              ))}
+            </select>
+            <span className="muted xs">Which of {primary?.name || 'the character'}’s looks the live portrait shows.</span>
           </div>
         )}
       </div>
