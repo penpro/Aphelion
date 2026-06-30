@@ -2,6 +2,7 @@ import { useStore } from '../store'
 import { ModelBar } from './ModelBar'
 import { CoronaMark } from './CoronaMark'
 import { DownloadIndicator } from './DownloadIndicator'
+import { CharAvatar } from './CharAvatar'
 import { cx, timeAgo } from '../util'
 import type { AppView, Character } from '../types'
 
@@ -91,9 +92,7 @@ export function Sidebar({
         <div className="char-list">
           {characters.map((c) => (
             <div key={c.id} className="char-row" onClick={() => openOrStart(c.id)}>
-              <div className="msg-avatar sm" style={{ background: c.color }}>
-                {c.avatar}
-              </div>
+              <CharAvatar avatar={c.avatar} color={c.color} portrait={c.portrait} name={c.name} small />
               <div className="char-row-name">{c.name}</div>
               <button
                 className="icon-btn sm row-action"
@@ -145,9 +144,7 @@ export function Sidebar({
               const ch = charById(c.characterId)
               return (
                 <div key={c.id} className={cx('chat-row', c.id === activeChatId && 'active')} onClick={() => openChat(c.id)}>
-                  <div className="msg-avatar sm" style={{ background: ch?.color ?? '#555' }}>
-                    {ch?.avatar ?? '?'}
-                  </div>
+                  <CharAvatar avatar={ch?.avatar ?? '?'} color={ch?.color ?? '#555'} portrait={ch?.portrait} name={ch?.name} small />
                   <div className="chat-row-main">
                     <div className="chat-row-title">{c.title}</div>
                     <div className="muted xs">

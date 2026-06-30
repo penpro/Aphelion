@@ -288,6 +288,27 @@ code, pre, kbd, .mono, .xs, .hint, .model-name, .estimate, .num-input, .field-la
   font-size: 15px;
   border-radius: 7px;
 }
+.msg-avatar.has-portrait {
+  background: transparent;
+  overflow: hidden;
+}
+.msg-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  display: block;
+}
+.portrait-row {
+  align-items: center;
+}
+.portrait-swatches {
+  margin-top: 8px;
+}
+.portrait-swatch {
+  background-size: cover;
+  background-position: center;
+}
 .msg-body {
   flex: 1;
   min-width: 0;

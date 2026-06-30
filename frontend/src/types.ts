@@ -10,6 +10,7 @@ export interface Character {
   scenario: string // the character's general backdrop/role
   exampleDialogue: string
   systemPrompt: string // extra steering, appended to the base RP instruction
+  portrait?: string // optional image data URL; falls back to the avatar emoji + color tile
   createdAt: number
 }
 

@@ -1,5 +1,6 @@
 import { useStore } from '../store'
 import { SourcesPanel } from './SourcesPanel'
+import { CharAvatar } from './CharAvatar'
 import { cx } from '../util'
 import type { Chat, Character, ResponseLength, ThinkMode } from '../types'
 
@@ -28,9 +29,7 @@ export function ChatDials({ chat }: { chat: Chat }) {
             const muted = chat.mutedIds.includes(c.id)
             return (
               <div key={c.id} className={cx('cast-row', muted && 'is-muted')}>
-                <div className="msg-avatar sm" style={{ background: c.color }}>
-                  {c.avatar}
-                </div>
+                <CharAvatar avatar={c.avatar} color={c.color} portrait={c.portrait} name={c.name} small />
                 <div className="cast-name">{c.name}</div>
                 <button
                   className="icon-btn sm"

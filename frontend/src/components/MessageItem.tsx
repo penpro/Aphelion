@@ -3,6 +3,7 @@ import type { ChatMessage } from '../types'
 import { Markdown } from './Markdown'
 import { substituteMacros } from '../prompt'
 import { detectReferences } from '../references'
+import { CharAvatar } from './CharAvatar'
 import { cx } from '../util'
 
 interface Props {
@@ -11,6 +12,7 @@ interface Props {
   userName: string
   avatar: string
   color: string
+  portrait?: string
   autoExpandReasoning: boolean
   canRegenerate: boolean
   streaming: boolean
@@ -47,9 +49,13 @@ export function MessageItem(props: Props) {
 
   return (
     <div className={cx('msg', isUser ? 'msg-user' : 'msg-assistant', m.error && 'msg-error')}>
-      <div className="msg-avatar" style={{ background: isUser ? '#444b5a' : color }}>
-        {isUser ? '🧑' : avatar}
-      </div>
+      {isUser ? (
+        <div className="msg-avatar" style={{ background: '#444b5a' }}>
+          🧑
+        </div>
+      ) : (
+        <CharAvatar avatar={avatar} color={color} portrait={props.portrait} name={charName} />
+      )}
       <div className="msg-body">
         <div className="msg-head">
           <span className="msg-name" style={{ color: isUser ? '#cdd3df' : color }}>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '../store'
 import { useGeneration } from '../useGeneration'
 import { MessageItem } from './MessageItem'
+import { CharAvatar } from './CharAvatar'
 import { MessageInput } from './MessageInput'
 import { ChatSetup } from './ChatSetup'
 import { ChatDials } from './ChatDials'
@@ -65,6 +66,7 @@ export function ChatView({ onEditCharacter }: { onEditCharacter: (c: Character) 
   const isGroup = cast.length > 1
   const dispName = isGroup ? 'Scene' : character.name
   const dispAvatar = isGroup ? '🎭' : character.avatar
+  const dispPortrait = isGroup ? undefined : character.portrait
   const userName = persona.name
   const lastAssistantId = [...chat.messages].reverse().find((m) => m.role === 'assistant')?.id
 
@@ -95,9 +97,7 @@ export function ChatView({ onEditCharacter }: { onEditCharacter: (c: Character) 
   const header = (
     <header className="chat-head">
       <div className="chat-head-id">
-        <div className="msg-avatar" style={{ background: character.color }}>
-          {dispAvatar}
-        </div>
+        <CharAvatar avatar={dispAvatar} color={character.color} portrait={dispPortrait} name={dispName} />
         <div>
           <div className="chat-title">{isGroup ? cast.map((c) => c.name).join(', ') : character.name}</div>
           <div className="muted sm">
@@ -172,6 +172,7 @@ export function ChatView({ onEditCharacter }: { onEditCharacter: (c: Character) 
               charName={dispName}
               userName={userName}
               avatar={dispAvatar}
+              portrait={dispPortrait}
               color={character.color}
               autoExpandReasoning={settings.autoExpandReasoning}
               canRegenerate={!isStreaming && m.id === lastAssistantId}

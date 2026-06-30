@@ -3,6 +3,8 @@ import { Modal } from './Modal'
 import { useStore } from '../store'
 import { generateCharacter, expandCharacterField } from '../generators'
 import { cx } from '../util'
+import { CharAvatar } from './CharAvatar'
+import { fileToPortrait, GENERIC_PORTRAITS } from '../image'
 import type { Character } from '../types'
 
 const COLORS = ['#7c5cff', '#3fb6a8', '#ff6b8b', '#f5a623', '#4a90e2', '#9b59b6', '#2ecc71', '#e74c3c']
@@ -33,6 +35,23 @@ export function CharacterEditor({ editing, onClose }: { editing: Character | 'ne
   const [expanding, setExpanding] = useState<string | null>(null)
 
   const set = (k: keyof Draft, v: string) => setC((prev) => ({ ...prev, [k]: v }))
+  const setPortrait = (v: string | undefined) => setC((prev) => ({ ...prev, portrait: v }))
+
+  const [portraitBusy, setPortraitBusy] = useState(false)
+  const [portraitErr, setPortraitErr] = useState('')
+
+  const onPickPortrait = async (file?: File) => {
+    if (!file) return
+    setPortraitBusy(true)
+    setPortraitErr('')
+    try {
+      setPortrait(await fileToPortrait(file))
+    } catch (e) {
+      setPortraitErr((e as { message?: string })?.message ?? 'Could not use that image.')
+    } finally {
+      setPortraitBusy(false)
+    }
+  }
 
   const generate = async () => {
     if (!criteria.trim() || gen) return
@@ -53,7 +72,7 @@ export function CharacterEditor({ editing, onClose }: { editing: Character | 'ne
     setExpanding(key)
     setGenErr('')
     try {
-      const text = await expandCharacterField({ field: label, current: c[key], character: c, settings })
+      const text = await expandCharacterField({ field: label, current: c[key] ?? '', character: c, settings })
       if (text) setC((prev) => ({ ...prev, [key]: text }))
     } catch (e) {
       setGenErr((e as { message?: string })?.message ?? 'Expand failed.')
@@ -133,6 +152,44 @@ export function CharacterEditor({ editing, onClose }: { editing: Character | 'ne
             <input value={c.name} onChange={(e) => set('name', e.target.value)} placeholder="Character name" />
           </label>
         </div>
+
+        <label className="field">
+          <span className="field-head">
+            <span>Portrait</span>
+            <span className="muted xs">optional — falls back to the emoji tile</span>
+          </span>
+          <div className="row gap portrait-row">
+            <CharAvatar avatar={c.avatar} color={c.color} portrait={c.portrait} name={c.name} />
+            <label className={cx('btn sm ghost', portraitBusy && 'disabled')}>
+              {portraitBusy ? 'Processing…' : '📁 Upload image'}
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                disabled={portraitBusy}
+                onChange={(e) => onPickPortrait(e.target.files?.[0])}
+              />
+            </label>
+            {c.portrait && (
+              <button type="button" className="btn sm ghost" onClick={() => setPortrait(undefined)}>
+                Remove
+              </button>
+            )}
+          </div>
+          <div className="swatches portrait-swatches">
+            {GENERIC_PORTRAITS.map((p) => (
+              <button
+                key={p}
+                type="button"
+                className={cx('swatch portrait-swatch', c.portrait === p && 'sel')}
+                style={{ backgroundImage: `url("${p}")` }}
+                title="Use a generic portrait"
+                onClick={() => setPortrait(p)}
+              />
+            ))}
+          </div>
+          {portraitErr && <div className="error-line">{portraitErr}</div>}
+        </label>
 
         <label className="field">
           <span>Accent color</span>

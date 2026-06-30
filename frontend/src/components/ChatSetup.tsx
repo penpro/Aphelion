@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useStore } from '../store'
 import { generateScenePrompt, expandScenePrompt } from '../generators'
+import { CharAvatar } from './CharAvatar'
 import type { Character, Persona, Chat } from '../types'
 
 export function ChatSetup({
@@ -50,9 +51,7 @@ export function ChatSetup({
     <div className="messages">
       <div className="setup-card">
         <div className="setup-title">
-          <div className="msg-avatar" style={{ background: character.color }}>
-            {character.avatar}
-          </div>
+          <CharAvatar avatar={character.avatar} color={character.color} portrait={character.portrait} name={character.name} />
           <div>
             <div className="chat-title">New chat with {character.name}</div>
             <div className="muted sm">Set the opening scene, then start.</div>
