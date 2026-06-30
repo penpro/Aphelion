@@ -13,6 +13,7 @@ import { SetupWizard } from './components/SetupWizard'
 import { Tutorial } from './components/Tutorial'
 import { TitleBar } from './components/TitleBar'
 import { ResizeHandles } from './components/ResizeHandles'
+import { SplashScreen } from './components/SplashScreen'
 import type { Character } from './types'
 
 export default function App() {
@@ -82,6 +83,7 @@ export default function App() {
       {needsSetup && <SetupWizard onReady={() => setNeedsSetup(false)} />}
       </div>
       <ResizeHandles />
+      <SplashScreen />
     </>
   )
 }

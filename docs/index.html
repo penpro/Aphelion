@@ -444,7 +444,13 @@
     </div>
     <div id="changelog" style="display:flex;flex-direction:column;gap:22px;max-width:780px">
       <article style="border-left:2px solid var(--corona);padding-left:16px">
-        <h3 style="margin:0 0 8px">v0.1.21 <span style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--corona)">LATEST</span></h3>
+        <h3 style="margin:0 0 8px">v0.1.22 <span style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--corona)">LATEST</span></h3>
+        <ul style="margin:0;padding-left:18px;line-height:1.75">
+          <li><b>A startup splash.</b> Loading the model into your GPU at launch can briefly hitch the interface — now a polished loading screen (the glowing eclipse, with the VRAM gauge <em>filling</em> as the model loads) covers that moment and fades away the instant the engine is ready. It's GPU-animated, so it stays smooth through the load.</li>
+        </ul>
+      </article>
+      <article style="border-left:2px solid var(--border);padding-left:16px">
+        <h3 style="margin:0 0 8px">v0.1.21</h3>
         <ul style="margin:0;padding-left:18px;line-height:1.75">
           <li><b>Steadier live portraits + expert emblems in the picker.</b> The reactive character portrait now reads the tone of the <em>finished</em> reply and settles on one mood, instead of flickering word-by-word as it streams. And the Ask expert dropdown now shows each expert's eclipse emblem instead of cartoon emoji.</li>
         </ul>

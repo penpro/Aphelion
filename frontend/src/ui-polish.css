@@ -452,3 +452,80 @@ select:focus {
 .expert-opt.sel {
   background: color-mix(in srgb, var(--accent) 14%, transparent);
 }
+
+/* ── Startup splash (engine + model loading) ─────────────────────────────────── */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 10002;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(58% 48% at 50% 42%, color-mix(in srgb, var(--accent) 11%, transparent), transparent 70%),
+    var(--bg);
+  opacity: 1;
+  transition: opacity 0.5s ease;
+}
+.splash.is-out {
+  opacity: 0;
+  pointer-events: none;
+}
+.splash-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  padding: 24px;
+}
+.splash-mark {
+  animation: splash-pulse 2.4s ease-in-out infinite;
+  filter: drop-shadow(0 0 26px color-mix(in srgb, var(--accent) 50%, transparent));
+}
+@keyframes splash-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.06); opacity: 1; }
+}
+.splash-title {
+  font-family: var(--font-head);
+  font-size: 30px;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  margin-top: 4px;
+}
+.splash-msg {
+  color: var(--muted);
+  font-size: 14px;
+}
+.splash-vram {
+  margin-top: 10px;
+  width: 300px;
+  max-width: 70vw;
+}
+.splash-bar {
+  height: 8px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+}
+.splash-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 5px;
+  background: linear-gradient(90deg, var(--accent), var(--flare, var(--accent)));
+  box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 60%, transparent);
+  transition: width 0.5s ease;
+}
+.splash-vram-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 7px;
+}
+.splash-hint {
+  color: var(--muted);
+  opacity: 0.7;
+  font-size: 12px;
+  max-width: 320px;
+  margin-top: 10px;
+}
