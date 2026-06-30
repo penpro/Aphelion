@@ -1,0 +1,75 @@
+/* Accessibility — WCAG 2.2 AA support. Loaded after styles.css so it can override.
+ * Covers visible keyboard focus (2.4.7), reduced motion (2.3.3), a skip link (2.4.1),
+ * the content landmark's layout, and an opt-in high-contrast mode. */
+
+/* ── Visible keyboard focus on every interactive element ──────────────────────
+ * :focus-visible shows only for keyboard / assistive-tech users, not mouse clicks.
+ * A near-white ring keeps ≥3:1 contrast against both the dark voids and the
+ * accent-colored buttons. */
+:focus-visible {
+  outline: 2px solid var(--penumbra-text, #ecfeff);
+  outline-offset: 2px;
+}
+/* The dialog container is focused on open for screen-reader announcement; it
+ * shouldn't draw a ring around the whole modal. */
+.modal:focus,
+.modal:focus-visible {
+  outline: none;
+}
+
+/* ── Skip to content — lets keyboard users jump past the sidebar nav ────────── */
+.skip-link {
+  position: absolute;
+  left: 12px;
+  top: -48px;
+  z-index: 1000;
+  background: var(--accent);
+  color: var(--on-accent);
+  padding: 9px 16px;
+  border-radius: 0 0 10px 10px;
+  font-weight: 600;
+  transition: top 0.16s ease;
+}
+.skip-link:focus {
+  top: 0;
+}
+
+/* ── Content landmark wrapper (semantic <main>; layout-neutral vs. the old flex child) ── */
+.view-region {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* ── Reduced motion: honor the OS setting AND an in-app override ─────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+html[data-reduce-motion='true'] *,
+html[data-reduce-motion='true'] *::before,
+html[data-reduce-motion='true'] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* ── High contrast: full-strength secondary text + stronger borders ──────────── */
+html[data-contrast='high'] {
+  --muted: var(--penumbra-text);
+  --text-2: var(--penumbra-text);
+  --border: color-mix(in srgb, var(--accent) 50%, transparent);
+  --border-2: var(--accent);
+}
+html[data-contrast='high'] .btn.ghost {
+  border-color: var(--accent);
+}

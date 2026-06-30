@@ -81,6 +81,8 @@ export interface Settings {
   theme: string // accent/void preset: penumbra | synthwave | cyber | ember | bloodmoon
   visionModel: string // '' = off, else a VISION_MODELS id — a vision-capable model for image tasks
   intentRouter: 'off' | 'quick' | 'full' // control-net: off | classify only action-like prompts | classify every prompt
+  reduceMotion: boolean // accessibility: force-disable animations/transitions (also auto-on via OS prefers-reduced-motion)
+  highContrast: boolean // accessibility: full-strength secondary text + stronger borders
   // advanced sampling — defaults match llama.cpp, so behavior is unchanged until tuned
   topK: number
   minP: number

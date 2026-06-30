@@ -469,6 +469,28 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           doubles generation time — off by default.
         </em>
 
+        <label className="checkbox">
+          <input
+            type="checkbox"
+            checked={settings.reduceMotion}
+            onChange={(e) => updateSettings({ reduceMotion: e.target.checked })}
+          />
+          <span>Reduce motion</span>
+        </label>
+        <em className="hint">
+          Minimizes animations and transitions. Applied automatically when your system's “reduce motion” setting is on.
+        </em>
+
+        <label className="checkbox">
+          <input
+            type="checkbox"
+            checked={settings.highContrast}
+            onChange={(e) => updateSettings({ highContrast: e.target.checked })}
+          />
+          <span>High contrast</span>
+        </label>
+        <em className="hint">Full-strength secondary text and stronger borders for better legibility.</em>
+
         <UpdateCheck />
       </div>
     </Modal>

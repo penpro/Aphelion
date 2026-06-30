@@ -494,7 +494,11 @@ export function AskView() {
             👁 Image mode — drop or attach an image and ask about it. Switch back to 💬 Text for your main model.
           </div>
         )}
-        {error && <div className="error-line">{error}</div>}
+        {error && (
+          <div className="error-line" role="alert">
+            {error}
+          </div>
+        )}
       </div>
 
       {pending.length > 0 && (
@@ -537,12 +541,13 @@ export function AskView() {
         </div>
       )}
       {classifying && (
-        <div className="row gap" style={{ padding: '8px 14px 0', alignItems: 'center' }}>
+        <div className="row gap" role="status" style={{ padding: '8px 14px 0', alignItems: 'center' }}>
           <span className="muted xs">🧭 Reading your request…</span>
         </div>
       )}
       {intent && (
         <div
+          aria-live="polite"
           style={{
             margin: '8px 14px 0',
             padding: '10px 12px',

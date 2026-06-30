@@ -16,6 +16,8 @@ import type { Character } from './types'
 export default function App() {
   const view = useStore((s) => s.view)
   const theme = useStore((s) => s.settings.theme)
+  const reduceMotion = useStore((s) => s.settings.reduceMotion)
+  const highContrast = useStore((s) => s.settings.highContrast)
   const [editingChar, setEditingChar] = useState<Character | 'new' | null>(null)
   const [showPersona, setShowPersona] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
@@ -35,11 +37,17 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme)
-  }, [theme])
+    const r = document.documentElement
+    r.setAttribute('data-theme', theme)
+    r.setAttribute('data-reduce-motion', String(reduceMotion))
+    r.setAttribute('data-contrast', highContrast ? 'high' : 'normal')
+  }, [theme, reduceMotion, highContrast])
 
   return (
     <div className="app">
+      <a className="skip-link" href="#main-view">
+        Skip to content
+      </a>
       <Sidebar
         onEditCharacter={(c) => setEditingChar(c)}
         onNewCharacter={() => setEditingChar('new')}
@@ -48,10 +56,12 @@ export default function App() {
         onOpenTutorial={() => setShowTutorial(true)}
       />
 
-      {view === 'chat' && <ChatView onEditCharacter={(c) => setEditingChar(c)} />}
-      {view === 'story' && <StoryView />}
-      {view === 'tree' && <TreeView />}
-      {view === 'ask' && <AskView />}
+      <main id="main-view" className="view-region">
+        {view === 'chat' && <ChatView onEditCharacter={(c) => setEditingChar(c)} />}
+        {view === 'story' && <StoryView />}
+        {view === 'tree' && <TreeView />}
+        {view === 'ask' && <AskView />}
+      </main>
 
       {editingChar && <CharacterEditor editing={editingChar} onClose={() => setEditingChar(null)} />}
       {showPersona && <PersonaEditor onClose={() => setShowPersona(false)} />}

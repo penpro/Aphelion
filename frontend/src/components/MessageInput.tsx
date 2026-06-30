@@ -39,6 +39,7 @@ export function MessageInput({
     <div className="composer">
       <textarea
         value={text}
+        aria-label="Message"
         placeholder={
           onContinue
             ? 'Write a message…  (Enter to send · empty Enter to continue the scene · Shift+Enter = new line)'
@@ -49,7 +50,7 @@ export function MessageInput({
         rows={2}
       />
       {streaming ? (
-        <button className="btn stop" onClick={onStop} type="button">
+        <button className="btn stop" onClick={onStop} type="button" aria-label="Stop generating">
           ■ Stop
         </button>
       ) : (
