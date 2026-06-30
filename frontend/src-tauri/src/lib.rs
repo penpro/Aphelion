@@ -5,6 +5,7 @@ mod downloads;
 mod engine;
 mod knowledge;
 mod state;
+mod updates;
 mod vision;
 
 use state::{model_dir, Downloads, Engine, KnowledgeCache, MainModel, VisionEngine};
@@ -101,7 +102,9 @@ pub fn run() {
             vision::read_image_data,
             downloads::start_download,
             downloads::pause_download,
-            downloads::download_status
+            downloads::download_status,
+            updates::app_version,
+            updates::check_for_update
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

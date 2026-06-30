@@ -5,6 +5,7 @@ import { friendlyModelName } from '../models'
 import { defaultSettings } from '../seed'
 import { VisionSettings } from './VisionSettings'
 import { ModelsModal } from './ModelsModal'
+import { UpdateCheck } from './UpdateCheck'
 import { cx } from '../util'
 
 type Tip = { body: string; low?: string; high?: string }
@@ -451,6 +452,8 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           Re-runs each finished reply through the model to fix typos and grammar without changing the content. Roughly
           doubles generation time — off by default.
         </em>
+
+        <UpdateCheck />
       </div>
     </Modal>
     {showModels && <ModelsModal onClose={() => setShowModels(false)} />}
