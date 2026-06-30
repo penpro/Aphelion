@@ -632,6 +632,20 @@ fn set_vision_mode(app: tauri::AppHandle, on: bool, text_file: String, mmproj_fi
     }
 }
 
+/// Extract text from dropped PDF bytes (for attaching a PDF to a chat). Scanned/image-only
+/// PDFs yield nothing.
+#[tauri::command]
+fn extract_pdf(data: Vec<u8>) -> Result<String, String> {
+    let tmp = std::env::temp_dir().join("aphelion-drop.pdf");
+    std::fs::write(&tmp, &data).map_err(|e| e.to_string())?;
+    let text = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| pdf_extract::extract_text(&tmp).ok()))
+        .ok()
+        .flatten();
+    let _ = std::fs::remove_file(&tmp);
+    text.filter(|t| !t.trim().is_empty())
+        .ok_or_else(|| "Couldn't extract text from that PDF (it may be scanned / image-only).".to_string())
+}
+
 // ---------- model management (list with sizes, delete) ----------
 
 /// List model files: (filename, size_bytes, is_loaded_main). Includes vision files + projectors.
@@ -903,7 +917,8 @@ pub fn run() {
             pause_download,
             download_status,
             model_files,
-            delete_model
+            delete_model,
+            extract_pdf
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

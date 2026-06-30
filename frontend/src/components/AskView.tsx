@@ -23,6 +23,8 @@ const fileToDataUrl = (f: File): Promise<string> =>
     r.readAsDataURL(f)
   })
 
+const TEXT_RE = /\.(txt|md|markdown|text|html?|css|jsx?|tsx?|json|csv|xml|ya?ml|java|py|rs|go|c|cpp|h|sh|sql|log|ini|toml)$/i
+
 export function AskView() {
   const asks = useStore((s) => s.asks)
   const activeAskId = useStore((s) => s.activeAskId)
@@ -41,6 +43,7 @@ export function AskView() {
   const [showDoc, setShowDoc] = useState(false)
   const [pending, setPending] = useState<{ name: string; url: string }[]>([])
   const [lastImages, setLastImages] = useState<{ name: string; url: string }[]>([])
+  const [pendingText, setPendingText] = useState<{ name: string; text: string }[]>([])
   const [dragOver, setDragOver] = useState(false)
   const [mode, setMode] = useState<'text' | 'image'>('text')
   const [swapping, setSwapping] = useState(false)
@@ -77,10 +80,32 @@ export function AskView() {
   const expert = experts.find((e) => e.id === ask.expertId) ?? experts[0] ?? null
 
   const addFiles = async (files: File[]) => {
-    const imgs = files.filter((f) => f.type.startsWith('image/'))
-    if (!imgs.length) return
-    const urls = await Promise.all(imgs.map(async (f) => ({ name: f.name, url: await fileToDataUrl(f) })))
-    setPending((prev) => [...prev, ...urls].slice(0, 6))
+    const imgs: { name: string; url: string }[] = []
+    const texts: { name: string; text: string }[] = []
+    for (const f of files) {
+      if (f.type.startsWith('image/')) {
+        imgs.push({ name: f.name, url: await fileToDataUrl(f) })
+      } else if (f.type === 'application/pdf' || /\.pdf$/i.test(f.name)) {
+        try {
+          const buf = new Uint8Array(await f.arrayBuffer())
+          const text = await invoke<string>('extract_pdf', { data: Array.from(buf) })
+          if (text.trim()) texts.push({ name: f.name, text })
+        } catch (e) {
+          setError(`Couldn't read ${f.name}: ${(e as { message?: string })?.message ?? e}`)
+        }
+      } else if (TEXT_RE.test(f.name) || f.type.startsWith('text/')) {
+        try {
+          const text = await f.text()
+          if (text.trim()) texts.push({ name: f.name, text })
+        } catch {
+          /* unreadable — skip */
+        }
+      } else {
+        setError(`${f.name} isn't supported — drop an image, PDF, or text / code file.`)
+      }
+    }
+    if (imgs.length) setPending((p) => [...p, ...imgs].slice(0, 6))
+    if (texts.length) setPendingText((p) => [...p, ...texts].slice(0, 8))
   }
 
   const waitReady = async () => {
@@ -118,29 +143,39 @@ export function AskView() {
   }
 
   const send = async (text: string) => {
-    if ((!text.trim() && pending.length === 0) || busy || swapping) return
+    if ((!text.trim() && pending.length === 0 && pendingText.length === 0) || busy || swapping) return
     if (pending.length && mode === 'text') {
       setError('Switch to 👁 Image mode to analyze the attached image(s).')
       return
     }
-    // In image mode, reuse the last image when none is newly attached; require at least one ever.
+    // In image mode, reuse the last image when none is newly attached.
     const imgs = mode === 'image' ? (pending.length ? pending : lastImages) : []
-    if (mode === 'image' && imgs.length === 0) {
-      setError('Please attach an image to analyze — drag one in or use 📎 Image (or switch to 💬 Text mode).')
+    const texts = pendingText
+    if (mode === 'image' && imgs.length === 0 && texts.length === 0) {
+      setError('Attach an image or a file — drag one in or use 📎 (or switch to 💬 Text mode).')
       return
     }
     const sys =
       expert?.systemPrompt?.trim() ||
       'You are a decisive, knowledgeable expert assistant. Answer the question directly and usefully.'
-    const userText = text.trim() || (imgs.length ? 'Describe and answer about the attached image(s).' : '')
-    if (!userText && !imgs.length) return
+    const userText =
+      text.trim() ||
+      (imgs.length ? 'Describe and answer about the attached image(s).' : texts.length ? 'Use the attached file(s) to answer.' : '')
+    if (!userText && !imgs.length && !texts.length) return
+    // Attached file text becomes context prepended to the question.
+    const attached = texts.map((a) => `--- Attached file: ${a.name} ---\n${a.text.slice(0, 12000)}`).join('\n\n')
+    const body = attached ? `${attached}\n\n${userText}` : userText
 
     if (!ask.title.trim() && text.trim()) updateAsk(ask.id, { title: text.slice(0, 60) })
-    const note = imgs.length ? `\n\n_[${imgs.length} image${imgs.length > 1 ? 's' : ''}: ${imgs.map((i) => i.name).join(', ')}]_` : ''
+    const noteBits: string[] = []
+    if (imgs.length) noteBits.push(`${imgs.length} image${imgs.length > 1 ? 's' : ''}`)
+    if (texts.length) noteBits.push(texts.map((t) => t.name).join(', '))
+    const note = noteBits.length ? `\n\n_[attached: ${noteBits.join(' · ')}]_` : ''
     const userId = addAskMessage(ask.id, { role: 'user', content: userText + note })
     const assistantId = addAskMessage(ask.id, { role: 'assistant', content: '', reasoning: '' })
     setPending([])
-    if (mode === 'image') setLastImages(imgs) // remember for follow-up questions ("describe", "make a prompt"…)
+    setPendingText([])
+    if (mode === 'image') setLastImages(imgs)
 
     // Prior thread (exclude the just-added user + placeholder); the new user turn is appended below.
     const cur = useStore.getState().asks.find((a) => a.id === ask.id)
@@ -169,20 +204,24 @@ export function AskView() {
         onReasoning: (d: string) => useStore.getState().appendToAskMessage(ask.id, assistantId, { reasoning: d }),
         onContent: (d: string) => useStore.getState().appendToAskMessage(ask.id, assistantId, { content: d }),
       }
-      // Both modes hit the main port; the toggle controls which model is loaded there.
-      // Gemma's vision template is strict (no system role, must alternate user/assistant),
-      // so for image turns fold the system prompt into a single user message and drop history.
-      const messages = imgs.length
-        ? [
-            {
-              role: 'user',
-              content: [
-                { type: 'text', text: sysFull ? `${sysFull}\n\n${userText}` : userText },
-                ...imgs.map((i) => ({ type: 'image_url' as const, image_url: { url: i.url } })),
-              ] as ContentPart[],
-            },
-          ]
-        : [{ role: 'system', content: sysFull }, ...histPrev, { role: 'user', content: userText }]
+      // Image mode = a single user turn (no system role / history) so Gemma's strict template
+      // is satisfied; the system prompt + attached-file text fold into that turn. Text mode =
+      // normal system + history to the main model.
+      const foldedBody = sysFull ? `${sysFull}\n\n${body}` : body
+      const messages =
+        mode === 'image'
+          ? [
+              {
+                role: 'user',
+                content: imgs.length
+                  ? ([
+                      { type: 'text', text: foldedBody },
+                      ...imgs.map((i) => ({ type: 'image_url' as const, image_url: { url: i.url } })),
+                    ] as ContentPart[])
+                  : foldedBody,
+              },
+            ]
+          : [{ role: 'system', content: sysFull }, ...histPrev, { role: 'user', content: body }]
       await streamChatNative({
         baseUrl: settings.baseUrl,
         model: settings.model,
@@ -377,6 +416,26 @@ export function AskView() {
                 {p.name}
               </span>
               <button className="icon-btn sm" title="Remove" onClick={() => setPending(pending.filter((_, j) => j !== i))}>
+                ✕
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      {pendingText.length > 0 && (
+        <div className="row gap wrap" style={{ padding: '6px 14px 0' }}>
+          {pendingText.map((p, i) => (
+            <span
+              key={i}
+              className="row gap"
+              style={{ alignItems: 'center', border: '1px solid var(--border)', borderRadius: 6, padding: '2px 6px', fontSize: 12 }}
+              title={`${p.name} · ${p.text.length.toLocaleString()} chars`}
+            >
+              📄
+              <span className="muted xs" style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {p.name}
+              </span>
+              <button className="icon-btn sm" title="Remove" onClick={() => setPendingText(pendingText.filter((_, j) => j !== i))}>
                 ✕
               </button>
             </span>
