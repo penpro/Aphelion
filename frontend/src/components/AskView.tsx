@@ -40,6 +40,7 @@ export function AskView() {
   const [managing, setManaging] = useState(false)
   const [showDoc, setShowDoc] = useState(false)
   const [pending, setPending] = useState<{ name: string; url: string }[]>([])
+  const [lastImages, setLastImages] = useState<{ name: string; url: string }[]>([])
   const [dragOver, setDragOver] = useState(false)
   const [mode, setMode] = useState<'text' | 'image'>('text')
   const [swapping, setSwapping] = useState(false)
@@ -122,7 +123,12 @@ export function AskView() {
       setError('Switch to 👁 Image mode to analyze the attached image(s).')
       return
     }
-    const imgs = mode === 'image' ? pending : []
+    // In image mode, reuse the last image when none is newly attached; require at least one ever.
+    const imgs = mode === 'image' ? (pending.length ? pending : lastImages) : []
+    if (mode === 'image' && imgs.length === 0) {
+      setError('Please attach an image to analyze — drag one in or use 📎 Image (or switch to 💬 Text mode).')
+      return
+    }
     const sys =
       expert?.systemPrompt?.trim() ||
       'You are a decisive, knowledgeable expert assistant. Answer the question directly and usefully.'
@@ -134,6 +140,7 @@ export function AskView() {
     const userId = addAskMessage(ask.id, { role: 'user', content: userText + note })
     const assistantId = addAskMessage(ask.id, { role: 'assistant', content: '', reasoning: '' })
     setPending([])
+    if (mode === 'image') setLastImages(imgs) // remember for follow-up questions ("describe", "make a prompt"…)
 
     // Prior thread (exclude the just-added user + placeholder); the new user turn is appended below.
     const cur = useStore.getState().asks.find((a) => a.id === ask.id)
