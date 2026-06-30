@@ -2,7 +2,12 @@ import { useEffect, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { urlForFile } from '../visionModels'
 
-type DL = [string, number, number, string] // filename, received, total, status
+interface DL {
+  filename: string
+  received: number
+  total: number
+  status: string
+}
 
 const short = (f: string) =>
   f
@@ -31,12 +36,12 @@ export function DownloadIndicator() {
     }
   }, [])
 
-  const active = items.filter(([, , , s]) => s !== 'done')
+  const active = items.filter((d) => d.status !== 'done')
   if (!active.length) return null
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 5, padding: '2px 2px 4px' }}>
-      {active.map(([name, recv, total, status]) => {
+      {active.map(({ filename: name, received: recv, total, status }) => {
         const pct = total > 0 ? Math.round((recv / total) * 100) : 0
         const failed = status === 'failed'
         const running = status === 'downloading' || status === 'resuming'

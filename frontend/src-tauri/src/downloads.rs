@@ -4,15 +4,29 @@ use crate::state::{model_dir, DownloadEntry, Downloads};
 use std::path::Path;
 use tauri::Manager;
 
-/// Snapshot of all downloads: (filename, received_bytes, total_bytes, status).
+/// One download's progress, as sent to the UI.
+#[derive(Clone, serde::Serialize)]
+pub struct DownloadInfo {
+    pub filename: String,
+    pub received: u64,
+    pub total: u64,
+    pub status: String,
+}
+
+/// Snapshot of all downloads for the UI.
 #[tauri::command]
-pub fn download_status(downloads: tauri::State<Downloads>) -> Vec<(String, u64, u64, String)> {
+pub fn download_status(downloads: tauri::State<Downloads>) -> Vec<DownloadInfo> {
     downloads
         .0
         .lock()
         .unwrap()
         .iter()
-        .map(|(f, e)| (f.clone(), e.received, e.total, e.status.clone()))
+        .map(|(f, e)| DownloadInfo {
+            filename: f.clone(),
+            received: e.received,
+            total: e.total,
+            status: e.status.clone(),
+        })
         .collect()
 }
 

@@ -3,7 +3,12 @@ import { invoke } from '@tauri-apps/api/core'
 import { useStore } from '../store'
 import { VISION_MODELS, findVisionModel } from '../visionModels'
 
-type DL = [string, number, number, string] // filename, received, total, status
+interface DL {
+  filename: string
+  received: number
+  total: number
+  status: string
+}
 
 /** Settings control: pick + download (resumable, background) a vision model for image tasks. */
 export function VisionSettings() {
@@ -45,13 +50,13 @@ export function VisionSettings() {
   }, [visionModel])
 
   // Combined progress for this model's two files (text + projector).
-  const mine = vm ? dls.filter(([f]) => f === vm.textFile || f === vm.mmprojFile) : []
-  const received = mine.reduce((n, [, r]) => n + r, 0)
-  const total = mine.reduce((n, [, , t]) => n + t, 0)
-  const anyActive = mine.some(([, , , s]) => s === 'downloading' || s === 'resuming')
-  const anyResuming = mine.some(([, , , s]) => s === 'resuming')
-  const anyPaused = mine.some(([, , , s]) => s === 'paused')
-  const anyFailed = mine.some(([, , , s]) => s === 'failed')
+  const mine = vm ? dls.filter((d) => d.filename === vm.textFile || d.filename === vm.mmprojFile) : []
+  const received = mine.reduce((n, d) => n + d.received, 0)
+  const total = mine.reduce((n, d) => n + d.total, 0)
+  const anyActive = mine.some((d) => d.status === 'downloading' || d.status === 'resuming')
+  const anyResuming = mine.some((d) => d.status === 'resuming')
+  const anyPaused = mine.some((d) => d.status === 'paused')
+  const anyFailed = mine.some((d) => d.status === 'failed')
   const pct = total > 0 ? Math.round((received / total) * 100) : 0
 
   const startDownload = async () => {
