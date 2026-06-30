@@ -339,28 +339,30 @@
   <section class="block" id="safe">
     <div class="eyebrow-sm">IS IT SAFE?</div>
     <h2 class="sec-title">It's a model, not an agent.</h2>
-    <p class="sec-lead">Some "AI" tools are autonomous <em>agents</em> — deliberately given permission to run commands, browse the web, and change files on your computer (think AutoGPT, OpenClaw, and computer-use bots). That power is also the risk. Aphelion is the opposite: a language model in a box that only speaks text.</p>
+    <p class="sec-lead">Some "AI" tools are autonomous <em>agents</em> — deliberately given permission to run commands, browse the web, and change files on your computer (think AutoGPT, OpenClaw, and computer-use bots). That power is also the risk. Aphelion is the opposite: the model only ever speaks text — it has no autonomy and no reach into your system.</p>
     <div class="safe-panel">
       <div class="safe-cols">
         <div>
           <div class="safe-head yes">WHAT IT DOES</div>
           <ul>
-            <li class="yes">Reads your prompt and writes text back — that's the whole job</li>
+            <li class="yes">Reads your prompt and writes text back — that's the core job</li>
             <li class="yes">Runs a model on your GPU, on your machine</li>
             <li class="yes">Saves the chats and characters you make, on your own disk</li>
+            <li class="yes">Reads files only from folders you explicitly grant, as reference</li>
+            <li class="yes">Saves the documents you ask it to create, where you choose</li>
           </ul>
         </div>
         <div>
           <div class="safe-head no">WHAT IT CANNOT DO</div>
           <ul>
             <li class="no">Run programs, scripts, or shell commands</li>
-            <li class="no">Read, change, or delete your files</li>
             <li class="no">Reach the internet, your accounts, or other apps</li>
             <li class="no">Click, type, or control anything on your computer</li>
+            <li class="no">Touch any file you haven't handed it — it never goes looking on its own</li>
           </ul>
         </div>
       </div>
-      <p class="note" style="margin-top:18px">There are <b>no system permissions to grant and nothing to sandbox</b> — because the model was never given any. It can write a villain's monologue; it can't go rummaging through your hard drive.</p>
+      <p class="note" style="margin-top:18px">The <b>model itself never touches your disk</b> — when you grant a folder, the app reads the files and feeds the model plain text. It can write a villain's monologue; it can't go rummaging through your hard drive on its own.</p>
     </div>
   </section>
 
@@ -370,7 +372,7 @@
     <div class="faq">
       <details><summary>Is it really free?</summary><p>Yes — completely. MIT open source, no account, no trial, no upsell.</p></details>
       <details><summary>Does it send my conversations anywhere?</summary><p>No, never. The AI runs on your own computer. Disconnect from the internet and it keeps working.</p></details>
-      <details><summary>Is this an "AI agent"? Can it do things to my computer?</summary><p>No. Aphelion only generates text inside the app — it can't run commands, read or change your files, or touch anything else on your system. Unlike autonomous agents, it has <span class="hl">no permissions at all</span>. See <a href="#safe">"It's a model, not an agent"</a> above.</p></details>
+      <details><summary>Is this an "AI agent"? Can it do things to my computer?</summary><p>No. The model only generates text — it has no autonomy. The app reads files only from folders you explicitly point it at, and saves documents you ask it to create; it never runs commands, browses the web, or goes through your files on its own. Unlike autonomous agents, it has <span class="hl">no free rein over your system</span>. See <a href="#safe">"It's a model, not an agent"</a> above.</p></details>
       <details><summary>What's a "model"?</summary><p>The AI's "brain" — a file the app downloads once. Setup picks a good one for your hardware; you can change it in Settings.</p></details>
       <details><summary>Windows says it "protected my PC" — is that bad?</summary><p>No — it just means the app isn't code-signed yet, and that certificate is a <b>recurring monthly cost</b>, so while Aphelion is free I haven't bought one. Click <b>More info → Run anyway</b> (the source is all public). If enough folks <a href="#support">chip in</a>, I can sign it and the warning goes away.</p></details>
       <details><summary>What platforms and hardware do I need?</summary><p>Windows 10/11, macOS (Apple Silicon), or Linux (x64). A graphics card (GPU) is recommended — more VRAM means a bigger, smarter model — but setup fits a model to whatever you have. <span class="hl">macOS and Linux builds are brand-new (beta)</span> and less battle-tested than Windows — please report anything odd.</p></details>

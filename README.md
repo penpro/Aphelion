@@ -50,7 +50,10 @@
 - **Stays on your machine.** Every prompt, model, and conversation runs and lives locally — your data never leaves your PC, online or off.
 - **Zero setup, not a stack.** Install one app and start talking. No servers, no containers, no Ollama-plus-six-other-things to glue together.
 - **Auto-fits your hardware.** Aphelion reads your GPU and VRAM and loads the best model that'll run fast — no config files, no guesswork.
-- **A real workspace, not just a chat box.** Characters & roleplay, group chats, story writing, dialogue trees, and an expert assistant (a coding expert, a blunt straight-answers expert, and more) all live in one window.
+- **A real workspace, not just a chat box.** Characters & roleplay, group chats, story writing, dialogue trees, and an expert assistant (a coding expert, an image-describer for coders, a blunt straight-answers expert, and more) all live in one window.
+- **Bring your own knowledge.** Point it at a folder of PDFs or notes (a rulebook, a manual, research) and it answers from them — your files stay on disk; only the relevant passages are read into context.
+- **Make real documents.** Describe what you want and get a polished **PDF** (math, tables, and structure, via Typst) or a ready-to-use **code / HTML / Markdown** file, saved into your folder. You can also open and edit an existing file.
+- **See images (optional).** Add a vision model and it can describe a picture in coder-ready detail, answer questions about images you drop in, or scan a folder and build a PDF of the ones matching a description ("find the cats").
 - **Total privacy by default.** No account, no telemetry, no phone-home. The lock icon means what it says.
 - **Open and yours.** Free, MIT-licensed, and built to be inspected, extended, and trusted.
 
@@ -60,17 +63,17 @@ There's a built-in **"How it works"** guide (bottom-left in the app) with a diag
 
 ## 🛡️ Safe by design — it's a model, not an agent
 
-Some "AI" tools are autonomous **agents** — deliberately given permission to run commands, browse the web, and change files on your computer (think AutoGPT, OpenClaw, and computer-use bots). That power is also the risk. **Aphelion is the opposite:** a language model in a box that only speaks text.
+Some "AI" tools are autonomous **agents** — deliberately given permission to run commands, browse the web, and change files on your computer (think AutoGPT, OpenClaw, and computer-use bots). That power is also the risk. **Aphelion is the opposite:** the model only ever speaks text — it has no autonomy and no reach into your system.
 
-**What it does:** reads your prompt and writes text back, runs a model on your GPU, and saves the chats you make — all on your own machine.
+**What the app does:** reads your prompt and writes text back, runs a model on your GPU, saves your chats, reads files **only** from folders you explicitly grant (to use as reference), and saves the documents you ask it to create — all on your own machine, all at your direction.
 
 **What it cannot do:**
 - ❌ Run programs, scripts, or shell commands
-- ❌ Read, change, or delete your files
 - ❌ Reach the internet, your accounts, or other apps
 - ❌ Click, type, or control anything on your computer
+- ❌ Touch any file or folder you haven't explicitly handed it — it never goes looking on its own
 
-There are **no system permissions to grant and nothing to sandbox** — because the model was never given any. It can write a villain's monologue; it can't go rummaging through your hard drive.
+Crucially, the **model itself never touches your disk.** When you grant a folder, the *app* reads the files and feeds the model plain text — the model just sees words. There's nothing autonomous to sandbox.
 
 ---
 
@@ -80,7 +83,7 @@ There are **no system permissions to grant and nothing to sandbox** — because 
 
 **Does it send my conversations anywhere?** No — never. The AI runs on your own computer; disconnect from the internet and it keeps working.
 
-**Is this an "AI agent"? Can it do things to my computer?** No. Aphelion only generates text inside the app — it can't run commands, read or change your files, or touch anything else on your system. Unlike autonomous agents (AutoGPT, OpenClaw, computer-use bots), it has **no system permissions at all**. See *Safe by design* above.
+**Is this an "AI agent"? Can it do things to my computer?** No. The model only generates text — it has no autonomy. The app reads files only from folders you explicitly point it at (as reference) and saves documents you ask it to create; it never runs commands, browses the web, touches your accounts, or goes through files on its own. Unlike autonomous agents (AutoGPT, OpenClaw, computer-use bots), it has **no free rein over your system**. See *Safe by design* above.
 
 **What's a "model"?** The AI's "brain" — a file the app downloads once. Setup picks a good one for your hardware; you can change it in Settings.
 
