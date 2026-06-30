@@ -9,6 +9,7 @@ import { MessageInput } from './MessageInput'
 import { ExpertEditor } from './ExpertEditor'
 import { FolderGrant } from './FolderGrant'
 import { DocumentModal } from './DocumentModal'
+import { ImageFinderModal } from './ImageFinderModal'
 import { cx } from '../util'
 
 // A roomy-but-safe context window for Q&A threads (the model/Modelfile default
@@ -41,6 +42,7 @@ export function AskView() {
   const [error, setError] = useState('')
   const [managing, setManaging] = useState(false)
   const [showDoc, setShowDoc] = useState(false)
+  const [showFinder, setShowFinder] = useState(false)
   const [pending, setPending] = useState<{ name: string; url: string }[]>([])
   const [lastImages, setLastImages] = useState<{ name: string; url: string }[]>([])
   const [pendingText, setPendingText] = useState<{ name: string; text: string }[]>([])
@@ -324,6 +326,13 @@ export function AskView() {
         >
           📄 Document
         </button>
+        <button
+          className="btn sm ghost"
+          onClick={() => setShowFinder(true)}
+          title="Scan a folder of images, keep the ones matching a description, build a PDF"
+        >
+          🔎 Images→PDF
+        </button>
         {mode === 'image' && (
           <>
             <button className="btn sm ghost" onClick={() => fileRef.current?.click()} title="Attach image(s) to analyze">
@@ -457,6 +466,13 @@ export function AskView() {
             build: () => ask.messages.map((m) => `${m.role === 'user' ? 'You' : modelName}: ${m.content}`).join('\n\n'),
           }}
           onClose={() => setShowDoc(false)}
+        />
+      )}
+      {showFinder && (
+        <ImageFinderModal
+          folder={ask.knowledgeFolder}
+          onSetFolder={(p) => updateAsk(ask.id, { knowledgeFolder: p ?? undefined })}
+          onClose={() => setShowFinder(false)}
         />
       )}
     </div>

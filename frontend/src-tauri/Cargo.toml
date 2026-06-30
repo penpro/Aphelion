@@ -28,6 +28,7 @@ tauri-plugin-dialog = "2"
 pdf-extract = "0.12"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream"] }
 futures-util = "0.3"
+base64 = "0.22"
 
 # Windows-only — DXGI VRAM detection (used under #[cfg(windows)]); not built on macOS/Linux.
 [target.'cfg(windows)'.dependencies]

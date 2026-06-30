@@ -646,6 +646,46 @@ fn extract_pdf(data: Vec<u8>) -> Result<String, String> {
         .ok_or_else(|| "Couldn't extract text from that PDF (it may be scanned / image-only).".to_string())
 }
 
+// ---------- image folder workflow (classify with vision → embed in a PDF) ----------
+
+/// List image filenames in a folder (non-recursive), sorted.
+#[tauri::command]
+fn list_images(folder: String) -> Vec<String> {
+    let mut out = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(&folder) {
+        for e in entries.flatten() {
+            let p = e.path();
+            if p.is_file() {
+                let ext = p.extension().map(|x| x.to_string_lossy().to_lowercase()).unwrap_or_default();
+                if matches!(ext.as_str(), "jpg" | "jpeg" | "png" | "gif" | "webp" | "bmp") {
+                    if let Some(n) = p.file_name() {
+                        out.push(n.to_string_lossy().to_string());
+                    }
+                }
+            }
+        }
+    }
+    out.sort();
+    out
+}
+
+/// Read an image file from a folder as a base64 data URL (to send to the vision model).
+#[tauri::command]
+fn read_image_data(folder: String, name: String) -> Result<String, String> {
+    use base64::{engine::general_purpose::STANDARD, Engine};
+    let p = PathBuf::from(&folder).join(&name);
+    let bytes = std::fs::read(&p).map_err(|e| e.to_string())?;
+    let ext = p.extension().map(|x| x.to_string_lossy().to_lowercase()).unwrap_or_default();
+    let mime = match ext.as_str() {
+        "png" => "image/png",
+        "gif" => "image/gif",
+        "webp" => "image/webp",
+        "bmp" => "image/bmp",
+        _ => "image/jpeg",
+    };
+    Ok(format!("data:{mime};base64,{}", STANDARD.encode(&bytes)))
+}
+
 // ---------- model management (list with sizes, delete) ----------
 
 /// List model files: (filename, size_bytes, is_loaded_main). Includes vision files + projectors.
@@ -918,7 +958,9 @@ pub fn run() {
             download_status,
             model_files,
             delete_model,
-            extract_pdf
+            extract_pdf,
+            list_images,
+            read_image_data
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
