@@ -1,17 +1,16 @@
 import { useEffect, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
-import { download } from '@tauri-apps/plugin-upload'
 import { useStore } from '../store'
 import { VISION_MODELS, findVisionModel } from '../visionModels'
 
-/** Settings control: pick + download a vision model. Used by image tasks (runs as a
- * second engine). Large models may need to load/unload dynamically — warned below. */
+type DL = [string, number, number, string] // filename, received, total, status
+
+/** Settings control: pick + download (resumable, background) a vision model for image tasks. */
 export function VisionSettings() {
   const visionModel = useStore((s) => s.settings.visionModel)
   const updateSettings = useStore((s) => s.updateSettings)
   const [present, setPresent] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [pct, setPct] = useState(0)
+  const [dls, setDls] = useState<DL[]>([])
   const [err, setErr] = useState('')
 
   const vm = findVisionModel(visionModel)
@@ -22,41 +21,53 @@ export function VisionSettings() {
       return
     }
     let alive = true
-    invoke<boolean>('vision_present', { textFile: vm.textFile, mmprojFile: vm.mmprojFile })
-      .then((ok) => {
+    const tick = async () => {
+      try {
+        const ok = await invoke<boolean>('vision_present', { textFile: vm.textFile, mmprojFile: vm.mmprojFile })
         if (alive) setPresent(ok)
-      })
-      .catch(() => {
+      } catch {
         if (alive) setPresent(false)
-      })
+      }
+      try {
+        const status = await invoke<DL[]>('download_status')
+        if (alive) setDls(status)
+      } catch {
+        /* ignore */
+      }
+    }
+    tick()
+    const id = setInterval(tick, 1500)
     return () => {
       alive = false
+      clearInterval(id)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visionModel])
 
-  const downloadModel = async () => {
-    if (!vm || busy) return
-    setBusy(true)
+  // Combined progress for this model's two files (text + projector).
+  const mine = vm ? dls.filter(([f]) => f === vm.textFile || f === vm.mmprojFile) : []
+  const received = mine.reduce((n, [, r]) => n + r, 0)
+  const total = mine.reduce((n, [, , t]) => n + t, 0)
+  const anyActive = mine.some(([, , , s]) => s === 'downloading' || s === 'resuming')
+  const anyResuming = mine.some(([, , , s]) => s === 'resuming')
+  const anyPaused = mine.some(([, , , s]) => s === 'paused')
+  const anyFailed = mine.some(([, , , s]) => s === 'failed')
+  const pct = total > 0 ? Math.round((received / total) * 100) : 0
+
+  const startDownload = async () => {
+    if (!vm) return
     setErr('')
-    setPct(0)
     try {
-      const dir = await invoke<string | null>('model_dir_path')
-      if (!dir) throw new Error('No model directory available.')
-      // Two files; weight the bar roughly (text is the bulk, projector the tail).
-      await download(vm.textUrl, `${dir}/${vm.textFile}`, (p) => {
-        if (p.total > 0) setPct((p.progressTotal / p.total) * 90)
-      })
-      await download(vm.mmprojUrl, `${dir}/${vm.mmprojFile}`, (p) => {
-        if (p.total > 0) setPct(90 + (p.progressTotal / p.total) * 10)
-      })
-      setPct(100)
-      setPresent(true)
+      await invoke('start_download', { url: vm.textUrl, filename: vm.textFile })
+      await invoke('start_download', { url: vm.mmprojUrl, filename: vm.mmprojFile })
     } catch (e) {
       setErr((e as Error)?.message ?? String(e))
-    } finally {
-      setBusy(false)
     }
+  }
+  const pause = async () => {
+    if (!vm) return
+    await invoke('pause_download', { filename: vm.textFile })
+    await invoke('pause_download', { filename: vm.mmprojFile })
   }
 
   return (
@@ -76,17 +87,30 @@ export function VisionSettings() {
           <div style={{ marginTop: 6 }}>
             {present ? (
               <span style={{ color: 'var(--corona, #5EEAD4)' }}>✓ Downloaded and ready.</span>
-            ) : busy ? (
-              <span>Downloading… {Math.round(pct)}% (keep the app open)</span>
+            ) : anyActive ? (
+              <span>
+                {anyResuming ? 'Resuming' : 'Downloading'}… {pct}%{' '}
+                <button className="btn sm ghost" onClick={pause}>
+                  ⏸ Pause
+                </button>
+              </span>
+            ) : anyPaused || anyFailed ? (
+              <span>
+                {anyFailed ? 'Failed' : 'Paused'} at {pct}%{' '}
+                <button className="btn sm" onClick={startDownload}>
+                  ▶ Resume
+                </button>
+              </span>
             ) : (
-              <button className="btn sm" onClick={downloadModel}>
+              <button className="btn sm" onClick={startDownload}>
                 ⬇ Download (~{vm.approxGb} GB)
               </button>
             )}
           </div>
           <div style={{ marginTop: 6, opacity: 0.9 }}>
-            ⚠ The vision model runs as a separate engine and may <b>load and unload models dynamically</b> — a large one can
-            briefly unload your main model while it works, so a reply may pause during the swap.
+            ⚠ The vision model runs as a separate engine and may load/unload models dynamically — a large one can briefly
+            unload your main model while it works. Downloads resume automatically and run in the background (progress shows
+            bottom-left).
           </div>
           {err && <div style={{ color: '#ff6b6b', marginTop: 4 }}>{err}</div>}
         </div>

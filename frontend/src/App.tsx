@@ -11,6 +11,7 @@ import { PersonaEditor } from './components/PersonaEditor'
 import { SettingsPanel } from './components/SettingsPanel'
 import { SetupWizard } from './components/SetupWizard'
 import { Tutorial } from './components/Tutorial'
+import { DownloadIndicator } from './components/DownloadIndicator'
 import type { Character } from './types'
 
 export default function App() {
@@ -66,6 +67,8 @@ export default function App() {
       )}
 
       {needsSetup && <SetupWizard onReady={() => setNeedsSetup(false)} />}
+
+      <DownloadIndicator />
     </div>
   )
 }

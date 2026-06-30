@@ -99,8 +99,10 @@ checksum = "2a4385e2e34eb35d6b3efe798b9eb88096925d87726c0798709bf56d9ed84af3"
 name = "app"
 version = "0.1.1"
 dependencies = [
+ "futures-util",
  "log",
  "pdf-extract",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "tauri",

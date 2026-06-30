@@ -47,3 +47,13 @@ export const VISION_MODELS: VisionModel[] = [
 ]
 
 export const findVisionModel = (id: string): VisionModel | null => VISION_MODELS.find((v) => v.id === id) ?? null
+
+/** Resolve the source URL for a downloaded filename (used to resume a paused/failed download). */
+export function urlForFile(filename: string): string | null {
+  for (const v of VISION_MODELS) {
+    if (v.textFile === filename) return v.textUrl
+    if (v.mmprojFile === filename) return v.mmprojUrl
+  }
+  return null
+}
+
