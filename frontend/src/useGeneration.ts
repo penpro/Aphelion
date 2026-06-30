@@ -18,7 +18,7 @@ export function useGeneration() {
   const lastCastRef = useRef<Record<string, string>>({})
   const [memoryStatus, setMemoryStatus] = useState('')
 
-  const run = useCallback(async (chatId: string, assistantId: string) => {
+  const run = useCallback(async (chatId: string, assistantId: string, opts?: { continueScene?: boolean }) => {
     const st = useStore.getState()
     const chat = st.chats.find((c) => c.id === chatId)
     if (!chat) return
@@ -84,6 +84,13 @@ export function useGeneration() {
       apiMessages.push({
         role: 'user',
         content: 'Begin the scene now: write your opening message in character, establishing the moment.',
+      })
+    } else if (opts?.continueScene) {
+      // "Continue / wait": advance the scene with no new user input.
+      apiMessages.push({
+        role: 'user',
+        content:
+          '(Continue the scene from here — advance the moment naturally and in character. Do not repeat or summarize what has already happened.)',
       })
     }
 
@@ -227,7 +234,17 @@ export function useGeneration() {
     [run],
   )
 
+  // "Continue / wait": generate the next beat with no user message.
+  const continueScene = useCallback(
+    async (chatId: string) => {
+      const assistantId = useStore.getState().addMessage(chatId, { role: 'assistant', content: '', reasoning: '' })
+      await run(chatId, assistantId, { continueScene: true })
+      await maintainMemory(chatId)
+    },
+    [run, maintainMemory],
+  )
+
   const stop = useCallback(() => abortRef.current?.abort(), [])
 
-  return { isStreaming, memoryStatus, send, regenerate, begin, stop }
+  return { isStreaming, memoryStatus, send, regenerate, begin, stop, continueScene }
 }

@@ -26,7 +26,7 @@ export function ChatView({ onEditCharacter }: { onEditCharacter: (c: Character) 
   const addToCast = useStore((s) => s.addToCast)
   const updateChat = useStore((s) => s.updateChat)
 
-  const { isStreaming, memoryStatus, send, regenerate, begin, stop } = useGeneration()
+  const { isStreaming, memoryStatus, send, regenerate, begin, stop, continueScene } = useGeneration()
   const [creatingRef, setCreatingRef] = useState<string | null>(null)
   const [showMemory, setShowMemory] = useState(false)
   const [showDoc, setShowDoc] = useState(false)
@@ -194,6 +194,7 @@ export function ChatView({ onEditCharacter }: { onEditCharacter: (c: Character) 
           streaming={isStreaming}
           onSend={(text) => send(chat.id, text)}
           onStop={stop}
+          onContinue={() => continueScene(chat.id)}
         />
       </div>
       <ChatDials chat={chat} />
