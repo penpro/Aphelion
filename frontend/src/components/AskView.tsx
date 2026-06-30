@@ -47,7 +47,8 @@ export function AskView() {
   const [lastImages, setLastImages] = useState<{ name: string; url: string }[]>([])
   const [pendingText, setPendingText] = useState<{ name: string; text: string }[]>([])
   const [dragOver, setDragOver] = useState(false)
-  const [mode, setMode] = useState<'text' | 'image'>('text')
+  const mode = useStore((s) => s.engineMode)
+  const setEngineMode = useStore((s) => s.setEngineMode)
   const [swapping, setSwapping] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -135,7 +136,7 @@ export function AskView() {
     try {
       await invoke('set_vision_mode', { on: next === 'image', textFile: vm?.textFile ?? '', mmprojFile: vm?.mmprojFile ?? '' })
       await waitReady()
-      setMode(next)
+      setEngineMode(next)
       if (next === 'text') setPending([])
     } catch (e) {
       setError((e as { message?: string })?.message ?? 'Could not switch mode.')

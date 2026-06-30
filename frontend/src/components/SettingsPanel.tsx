@@ -1,7 +1,6 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Modal } from './Modal'
 import { useStore } from '../store'
-import { listModels } from '../api/ollama'
 import { friendlyModelName } from '../models'
 import { defaultSettings } from '../seed'
 import { VisionSettings } from './VisionSettings'
@@ -149,20 +148,8 @@ function Control({ label, value, info, children }: { label: string; value?: stri
 export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const settings = useStore((s) => s.settings)
   const updateSettings = useStore((s) => s.updateSettings)
-  const [models, setModels] = useState<string[]>([])
-  const [loading, setLoading] = useState(false)
   const [showModels, setShowModels] = useState(false)
   const loadedModel = useStore((s) => s.loadedModel)
-
-  const refresh = async () => {
-    setLoading(true)
-    setModels(await listModels(settings.baseUrl))
-    setLoading(false)
-  }
-  useEffect(() => {
-    refresh()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   const resetAdvanced = () =>
     updateSettings({

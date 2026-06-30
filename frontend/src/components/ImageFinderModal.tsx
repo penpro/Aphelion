@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { open } from '@tauri-apps/plugin-dialog'
 import { invoke } from '@tauri-apps/api/core'
 import { useStore } from '../store'
-import { getEngineStatus } from '../api/ollama'
+import { classifyImage, getEngineStatus } from '../api/ollama'
 import { findVisionModel } from '../visionModels'
 import { Modal } from './Modal'
 
@@ -21,6 +21,7 @@ export function ImageFinderModal({
   onClose: () => void
 }) {
   const settings = useStore((s) => s.settings)
+  const setEngineMode = useStore((s) => s.setEngineMode)
   const [criterion, setCriterion] = useState('')
   const [phase, setPhase] = useState<Phase>('idle')
   const [checked, setChecked] = useState(0)
@@ -55,38 +56,11 @@ export function ImageFinderModal({
     }
   }
 
-  const classify = async (dataUrl: string, signal: AbortSignal): Promise<boolean> => {
-    const body = {
-      model: 'vision',
-      max_tokens: 5,
-      temperature: 0,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: `Does this image show ${criterion.trim()}? Answer with only "yes" or "no".` },
-            { type: 'image_url', image_url: { url: dataUrl } },
-          ],
-        },
-      ],
-    }
-    const resp = await fetch(`${baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal,
-    })
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
-    const json = await resp.json()
-    return String(json.choices?.[0]?.message?.content ?? '')
-      .toLowerCase()
-      .includes('yes')
-  }
-
   const restoreMain = async () => {
     try {
       await invoke('set_vision_mode', { on: false, textFile: vm?.textFile ?? '', mmprojFile: vm?.mmprojFile ?? '' })
       await waitReady()
+      setEngineMode('text')
     } catch {
       /* best effort */
     }
@@ -107,6 +81,7 @@ export function ImageFinderModal({
       setPhase('loading')
       await invoke('set_vision_mode', { on: true, textFile: vm.textFile, mmprojFile: vm.mmprojFile })
       await waitReady()
+      setEngineMode('image')
       const names = await invoke<string[]>('list_images', { folder })
       if (!names.length) throw new Error('No images found in that folder.')
       setTotal(names.length)
@@ -116,7 +91,7 @@ export function ImageFinderModal({
         if (ctrl.signal.aborted) break
         try {
           const dataUrl = await invoke<string>('read_image_data', { folder, name })
-          if (await classify(dataUrl, ctrl.signal)) {
+          if (await classifyImage(baseUrl, dataUrl, criterion.trim(), ctrl.signal)) {
             found.push(name)
             setMatches([...found])
           }

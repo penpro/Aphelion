@@ -48,6 +48,8 @@ interface AppState {
   // live engine state (runtime-only, not persisted)
   loadedModel: string | null
   setLoadedModel: (m: string | null) => void
+  engineMode: 'text' | 'image' // which model the engine currently serves — single source of truth
+  setEngineMode: (m: 'text' | 'image') => void
 
   // chats
   startChat: (characterId: string) => string
@@ -161,6 +163,8 @@ export const useStore = create<AppState>()(
 
       loadedModel: null,
       setLoadedModel: (m) => set({ loadedModel: m }),
+      engineMode: 'text',
+      setEngineMode: (m) => set({ engineMode: m }),
 
       startChat: (characterId) => {
         const character = get().characters.find((c) => c.id === characterId)

@@ -84,6 +84,35 @@ export function samplerFromSettings(s: Settings): SamplerParams {
   }
 }
 
+/** One-shot yes/no vision classification: does the image match `question`? Used by the folder
+ * image-finder. Non-streaming call to the engine's OpenAI-compatible endpoint. */
+export async function classifyImage(baseUrl: string, dataUrl: string, question: string, signal?: AbortSignal): Promise<boolean> {
+  const resp = await fetch(`${baseUrl}/chat/completions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'vision',
+      max_tokens: 5,
+      temperature: 0,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: `Does this image show ${question}? Answer with only "yes" or "no".` },
+            { type: 'image_url', image_url: { url: dataUrl } },
+          ],
+        },
+      ],
+    }),
+    signal,
+  })
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+  const json = await resp.json()
+  return String(json.choices?.[0]?.message?.content ?? '')
+    .toLowerCase()
+    .includes('yes')
+}
+
 /** Strip the trailing /v1 to reach Ollama's native API root. */
 function nativeRoot(baseUrl: string): string {
   return baseUrl.endsWith('/v1') ? baseUrl.slice(0, -3) : baseUrl
