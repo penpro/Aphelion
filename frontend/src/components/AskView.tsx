@@ -1,9 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { useStore } from '../store'
-import { streamChatNative, samplerFromSettings, getEngineStatus, type ContentPart } from '../api/ollama'
+import { streamChatNative, samplerFromSettings, getEngineStatus, runIntentClassifier, type ContentPart } from '../api/ollama'
 import { friendlyModelName } from '../models'
 import { findVisionModel } from '../visionModels'
+import {
+  buildClassifierPrompt,
+  parseClassification,
+  isActionable,
+  looksActionable,
+  describeIntent,
+  normalizeDocFormat,
+  type Classification,
+} from '../intent'
 import { Markdown } from './Markdown'
 import { MessageInput } from './MessageInput'
 import { ExpertEditor } from './ExpertEditor'
@@ -50,6 +59,11 @@ export function AskView() {
   const mode = useStore((s) => s.engineMode)
   const setEngineMode = useStore((s) => s.setEngineMode)
   const [swapping, setSwapping] = useState(false)
+  const [intent, setIntent] = useState<{ c: Classification; text: string } | null>(null)
+  const [classifying, setClassifying] = useState(false)
+  const [finderCriterion, setFinderCriterion] = useState('')
+  const [docPrefill, setDocPrefill] = useState<{ request: string; format?: string } | null>(null)
+  const classifyCache = useRef<Map<string, Classification | null>>(new Map())
   const abortRef = useRef<AbortController | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -145,7 +159,7 @@ export function AskView() {
     }
   }
 
-  const send = async (text: string) => {
+  const sendChat = async (text: string) => {
     if ((!text.trim() && pending.length === 0 && pendingText.length === 0) || busy || swapping) return
     if (pending.length && mode === 'text') {
       setError('Switch to 👁 Image mode to analyze the attached image(s).')
@@ -252,6 +266,70 @@ export function AskView() {
     }
   }
 
+  // Control net: route the prompt through intent classification first (text mode only).
+  // Off → never; Quick → only when it looks like a task; Full → always. On a confident
+  // match we surface a one-click suggestion instead of sending; otherwise it's a normal chat.
+  const send = async (text: string) => {
+    const t = text.trim()
+    const canRoute =
+      settings.intentRouter !== 'off' &&
+      mode === 'text' &&
+      !busy &&
+      !swapping &&
+      t.length > 0 &&
+      pending.length === 0 &&
+      pendingText.length === 0
+    if (!canRoute || (settings.intentRouter === 'quick' && !looksActionable(t))) return sendChat(text)
+    setError('')
+    setClassifying(true)
+    try {
+      let c = classifyCache.current.get(t)
+      if (c === undefined) {
+        const raw = await runIntentClassifier(settings.baseUrl, buildClassifierPrompt(t))
+        c = parseClassification(raw)
+        classifyCache.current.set(t, c)
+      }
+      if (isActionable(c)) {
+        setIntent({ c, text })
+        return
+      }
+    } catch {
+      /* classifier unreachable / bad output — fall through to a normal chat */
+    } finally {
+      setClassifying(false)
+    }
+    return sendChat(text)
+  }
+
+  // Map a confirmed suggestion onto the matching workflow (prefilled where we can).
+  const runIntent = (sel: { c: Classification; text: string }) => {
+    const { c, text } = sel
+    setIntent(null)
+    switch (c.intent) {
+      case 'find_images_pdf':
+        setFinderCriterion(c.params.criterion || '')
+        setShowFinder(true)
+        break
+      case 'generate_document':
+        setDocPrefill({ request: c.params.topic || text, format: normalizeDocFormat(c.params.format) })
+        setShowDoc(true)
+        break
+      case 'edit_file':
+        setDocPrefill({ request: c.params.change || text })
+        setShowDoc(true)
+        break
+      case 'analyze_image':
+        switchMode('image')
+        break
+      case 'answer_from_folder':
+        if (ask.knowledgeFolder) sendChat(text)
+        else setError('Attach a folder first (📁 above), then ask again — I’ll answer from it.')
+        break
+      default:
+        sendChat(text)
+    }
+  }
+
   return (
     <div
       className="chat"
@@ -322,14 +400,20 @@ export function AskView() {
         />
         <button
           className="btn sm ghost"
-          onClick={() => setShowDoc(true)}
+          onClick={() => {
+            setDocPrefill(null)
+            setShowDoc(true)
+          }}
           title="Generate a document (PDF or text / code) and save it to your folder"
         >
           📄 Document
         </button>
         <button
           className="btn sm ghost"
-          onClick={() => setShowFinder(true)}
+          onClick={() => {
+            setFinderCriterion('')
+            setShowFinder(true)
+          }}
           title="Scan a folder of images, keep the ones matching a description, build a PDF"
         >
           🔎 Images→PDF
@@ -452,6 +536,44 @@ export function AskView() {
           ))}
         </div>
       )}
+      {classifying && (
+        <div className="row gap" style={{ padding: '8px 14px 0', alignItems: 'center' }}>
+          <span className="muted xs">🧭 Reading your request…</span>
+        </div>
+      )}
+      {intent && (
+        <div
+          style={{
+            margin: '8px 14px 0',
+            padding: '10px 12px',
+            border: '1px solid var(--corona, #5EEAD4)',
+            borderRadius: 10,
+            background: 'rgba(94,234,212,.06)',
+          }}
+        >
+          <div style={{ fontSize: 13, marginBottom: 8 }}>
+            <span style={{ opacity: 0.8 }}>Looks like: </span>
+            <b>{describeIntent(intent.c)}</b>
+            {intent.c.clarify ? <span className="muted"> — {intent.c.clarify}</span> : null}
+          </div>
+          <div className="row gap">
+            <button className="btn sm" onClick={() => intent && runIntent(intent)}>
+              ⚡ Run
+            </button>
+            <button
+              className="btn sm ghost"
+              onClick={() => {
+                if (!intent) return
+                const t = intent.text
+                setIntent(null)
+                sendChat(t)
+              }}
+            >
+              💬 Just chat
+            </button>
+          </div>
+        </div>
+      )}
       <MessageInput disabled={busy || swapping} streaming={busy} onSend={send} onStop={() => abortRef.current?.abort()} />
 
       {managing && <ExpertEditor onClose={() => setManaging(false)} />}
@@ -461,6 +583,8 @@ export function AskView() {
           onSetFolder={(p) => updateAsk(ask.id, { knowledgeFolder: p ?? undefined })}
           defaultTitle={ask.title || 'document'}
           defaultExpertId={ask.expertId}
+          defaultRequest={docPrefill?.request}
+          defaultFormat={docPrefill?.format}
           transcript={{
             label: 'this conversation',
             has: ask.messages.length > 0,
@@ -473,6 +597,7 @@ export function AskView() {
         <ImageFinderModal
           folder={ask.knowledgeFolder}
           onSetFolder={(p) => updateAsk(ask.id, { knowledgeFolder: p ?? undefined })}
+          defaultCriterion={finderCriterion}
           onClose={() => setShowFinder(false)}
         />
       )}

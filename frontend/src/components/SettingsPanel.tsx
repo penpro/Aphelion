@@ -12,6 +12,11 @@ type Tip = { body: string; low?: string; high?: string }
 
 // In-depth, A/B-style explanations for every sampler.
 const TIP: Record<string, Tip> = {
+  intentRouter: {
+    body: 'The "control net": it reads your Ask prompt and, when it recognizes a task the app can do — find images → PDF, generate a document, edit a file, answer from your folder — offers a one-click action instead of just chatting. Nothing ever runs until you click it.',
+    low: 'Off · never classify. Quick · only classify prompts that look like a task (a fast keyword pre-filter), so normal chat stays instant.',
+    high: 'Full · classify every prompt through the model. Most thorough at catching intent, but adds a short beat before each send.',
+  },
   temperature: {
     body: 'The master randomness dial — scales how sharply the model favors its most-likely next token.',
     low: '0.2 · focused, consistent, near-deterministic. Best for code and facts; can get repetitive.',
@@ -215,6 +220,17 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         </label>
 
         <VisionSettings />
+
+        <Control label="Smart actions (control net)" value={settings.intentRouter} info={TIP.intentRouter}>
+          <select
+            value={settings.intentRouter}
+            onChange={(e) => updateSettings({ intentRouter: e.target.value as 'off' | 'quick' | 'full' })}
+          >
+            <option value="off">Off</option>
+            <option value="quick">Quick — only task-like prompts</option>
+            <option value="full">Full — classify every prompt</option>
+          </select>
+        </Control>
 
         <Control label="Temperature" value={settings.temperature.toFixed(2)} info={TIP.temperature}>
           <input

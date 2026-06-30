@@ -15,14 +15,16 @@ export function ImageFinderModal({
   folder,
   onSetFolder,
   onClose,
+  defaultCriterion,
 }: {
   folder?: string
   onSetFolder: (path: string | null) => void
   onClose: () => void
+  defaultCriterion?: string
 }) {
   const settings = useStore((s) => s.settings)
   const setEngineMode = useStore((s) => s.setEngineMode)
-  const [criterion, setCriterion] = useState('')
+  const [criterion, setCriterion] = useState(defaultCriterion ?? '')
   const [phase, setPhase] = useState<Phase>('idle')
   const [checked, setChecked] = useState(0)
   const [total, setTotal] = useState(0)

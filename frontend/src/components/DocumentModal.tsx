@@ -43,6 +43,8 @@ export function DocumentModal({
   onSetFolder,
   defaultTitle,
   defaultExpertId,
+  defaultRequest,
+  defaultFormat,
   transcript,
   onClose,
 }: {
@@ -50,13 +52,15 @@ export function DocumentModal({
   onSetFolder: (path: string | null) => void
   defaultTitle: string
   defaultExpertId?: string | null
+  defaultRequest?: string
+  defaultFormat?: string
   transcript?: { label: string; has: boolean; build: () => string }
   onClose: () => void
 }) {
   const settings = useStore((s) => s.settings)
   const experts = useStore((s) => s.experts)
-  const [request, setRequest] = useState('')
-  const [format, setFormat] = useState<Fmt>(FORMATS[0])
+  const [request, setRequest] = useState(defaultRequest ?? '')
+  const [format, setFormat] = useState<Fmt>(defaultFormat ? fmtForExt(defaultFormat) : FORMATS[0])
   const [expertId, setExpertId] = useState<string>(defaultExpertId ?? 'plain')
   const [includeChat, setIncludeChat] = useState(!!transcript?.has)
   const [includeFolder, setIncludeFolder] = useState(!!folder)

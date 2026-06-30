@@ -35,6 +35,7 @@ export const defaultSettings: Settings = {
   seenTutorial: false,
   theme: 'penumbra',
   visionModel: '',
+  intentRouter: 'quick',
   // advanced sampling — llama.cpp defaults (behavior-preserving until changed)
   topK: 40,
   minP: 0.05,

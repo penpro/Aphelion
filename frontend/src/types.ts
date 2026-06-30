@@ -80,6 +80,7 @@ export interface Settings {
   seenTutorial: boolean // the first-run tutorial has been shown
   theme: string // accent/void preset: penumbra | synthwave | cyber | ember | bloodmoon
   visionModel: string // '' = off, else a VISION_MODELS id — a vision-capable model for image tasks
+  intentRouter: 'off' | 'quick' | 'full' // control-net: off | classify only action-like prompts | classify every prompt
   // advanced sampling — defaults match llama.cpp, so behavior is unchanged until tuned
   topK: number
   minP: number

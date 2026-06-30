@@ -113,6 +113,25 @@ export async function classifyImage(baseUrl: string, dataUrl: string, question: 
     .includes('yes')
 }
 
+/** Run the intent-classifier prompt through the loaded model (non-streaming, deterministic).
+ * Returns the raw model text for intent.ts to parse — robust to stray prose. */
+export async function runIntentClassifier(baseUrl: string, prompt: string, signal?: AbortSignal): Promise<string> {
+  const resp = await fetch(`${baseUrl}/chat/completions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'intent',
+      max_tokens: 256,
+      temperature: 0,
+      messages: [{ role: 'user', content: prompt }],
+    }),
+    signal,
+  })
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+  const json = await resp.json()
+  return String(json.choices?.[0]?.message?.content ?? '')
+}
+
 /** Strip the trailing /v1 to reach Ollama's native API root. */
 function nativeRoot(baseUrl: string): string {
   return baseUrl.endsWith('/v1') ? baseUrl.slice(0, -3) : baseUrl
