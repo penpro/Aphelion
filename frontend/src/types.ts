@@ -1,5 +1,15 @@
 export type Role = 'user' | 'assistant' | 'system'
 
+export type EmotionKey =
+  | 'neutral'
+  | 'happy'
+  | 'sad'
+  | 'angry'
+  | 'surprised'
+  | 'fearful'
+  | 'embarrassed'
+  | 'affectionate'
+
 export interface Character {
   id: string
   name: string
@@ -11,6 +21,7 @@ export interface Character {
   exampleDialogue: string
   systemPrompt: string // extra steering, appended to the base RP instruction
   portrait?: string // optional image data URL; falls back to the avatar emoji + color tile
+  portraits?: Partial<Record<EmotionKey, string>> // "living" set keyed by emotion, for live portraits
   createdAt: number
 }
 

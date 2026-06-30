@@ -5,11 +5,13 @@ import { generateCharacter, expandCharacterField } from '../generators'
 import { cx } from '../util'
 import { CharAvatar } from './CharAvatar'
 import { fileToPortrait, GENERIC_PORTRAITS } from '../image'
-import type { Character } from '../types'
+import { EMOTIONS, buildEmotionArtPrompts } from '../emotion'
+import type { Character, EmotionKey } from '../types'
 
 const COLORS = ['#7c5cff', '#3fb6a8', '#ff6b8b', '#f5a623', '#4a90e2', '#9b59b6', '#2ecc71', '#e74c3c']
 
 type Draft = Omit<Character, 'id' | 'createdAt'>
+type TextField = 'description' | 'personality' | 'scenario' | 'exampleDialogue' | 'systemPrompt'
 
 const blank = (): Draft => ({
   name: '',
@@ -53,6 +55,31 @@ export function CharacterEditor({ editing, onClose }: { editing: Character | 'ne
     }
   }
 
+  const [showPrompts, setShowPrompts] = useState(false)
+  const [emotionBusy, setEmotionBusy] = useState<EmotionKey | null>(null)
+  const [emotionErr, setEmotionErr] = useState('')
+
+  const setEmotionPortrait = (key: EmotionKey, v: string | undefined) =>
+    setC((prev) => {
+      const portraits = { ...(prev.portraits || {}) }
+      if (v) portraits[key] = v
+      else delete portraits[key]
+      return { ...prev, portraits }
+    })
+
+  const onPickEmotion = async (key: EmotionKey, file?: File) => {
+    if (!file) return
+    setEmotionBusy(key)
+    setEmotionErr('')
+    try {
+      setEmotionPortrait(key, await fileToPortrait(file))
+    } catch (e) {
+      setEmotionErr((e as { message?: string })?.message ?? 'Could not use that image.')
+    } finally {
+      setEmotionBusy(null)
+    }
+  }
+
   const generate = async () => {
     if (!criteria.trim() || gen) return
     setGen(true)
@@ -67,12 +94,12 @@ export function CharacterEditor({ editing, onClose }: { editing: Character | 'ne
     }
   }
 
-  const expand = async (key: keyof Draft, label: string) => {
+  const expand = async (key: TextField, label: string) => {
     if (expanding) return
     setExpanding(key)
     setGenErr('')
     try {
-      const text = await expandCharacterField({ field: label, current: c[key] ?? '', character: c, settings })
+      const text = await expandCharacterField({ field: label, current: c[key], character: c, settings })
       if (text) setC((prev) => ({ ...prev, [key]: text }))
     } catch (e) {
       setGenErr((e as { message?: string })?.message ?? 'Expand failed.')
@@ -189,6 +216,66 @@ export function CharacterEditor({ editing, onClose }: { editing: Character | 'ne
             ))}
           </div>
           {portraitErr && <div className="error-line">{portraitErr}</div>}
+        </label>
+
+        <label className="field">
+          <span className="field-head">
+            <span>
+              Living set <span className="muted xs">optional — emotion portraits for live mode</span>
+            </span>
+            <button type="button" className="btn xs ghost" onClick={() => setShowPrompts((s) => !s)}>
+              ✨ Art prompts
+            </button>
+          </span>
+          {showPrompts && (
+            <div className="prompt-block">
+              <div className="muted xs">
+                Paste into an image generator to make a matched set for {c.name || 'this character'} — generate
+                Neutral first, then reuse it as a reference so the rest stay consistent.
+              </div>
+              <textarea className="prompt-out" readOnly rows={12} value={buildEmotionArtPrompts(c)} />
+              <button
+                type="button"
+                className="btn sm"
+                onClick={() => navigator.clipboard?.writeText(buildEmotionArtPrompts(c))}
+              >
+                Copy prompts
+              </button>
+            </div>
+          )}
+          <div className="emotion-grid">
+            {EMOTIONS.map((e) => {
+              const src = e.key === 'neutral' ? c.portraits?.neutral ?? c.portrait : c.portraits?.[e.key]
+              return (
+                <div key={e.key} className="emotion-slot">
+                  <div className="emotion-pic-wrap">
+                    <label className="emotion-pic" title={`Upload ${e.label}`}>
+                      <CharAvatar avatar={c.avatar} color={c.color} portrait={src} name={e.label} />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        hidden
+                        disabled={emotionBusy === e.key}
+                        onChange={(ev) => onPickEmotion(e.key, ev.target.files?.[0])}
+                      />
+                    </label>
+                    {c.portraits?.[e.key] && (
+                      <button
+                        type="button"
+                        className="emotion-clear"
+                        title={`Clear ${e.label}`}
+                        onClick={() => setEmotionPortrait(e.key, undefined)}
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                  <span className="emotion-label">{emotionBusy === e.key ? '…' : e.label}</span>
+                </div>
+              )
+            })}
+          </div>
+          {emotionErr && <div className="error-line">{emotionErr}</div>}
         </label>
 
         <label className="field">
