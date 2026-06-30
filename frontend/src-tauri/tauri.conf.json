@@ -2,7 +2,7 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Aphelion",
   "mainBinaryName": "Aphelion",
-  "version": "0.1.26",
+  "version": "0.1.27",
   "identifier": "com.localllm.studio",
   "build": {
     "frontendDist": "../dist",
@@ -41,7 +41,12 @@
         "installerHooks": "installer-hooks.nsh",
         "headerImage": "installer/header.bmp",
         "sidebarImage": "installer/sidebar.bmp",
-        "installerIcon": "icons/icon.ico"
+        "installerIcon": "icons/icon.ico",
+        "uninstallerIcon": "icons/icon.ico",
+        "languages": ["English"],
+        "customLanguageFiles": {
+          "English": "installer/English.nsh"
+        }
       }
     },
     "icon": [
