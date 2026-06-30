@@ -2,8 +2,10 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { Modal } from './Modal'
 import { useStore } from '../store'
 import { listModels } from '../api/ollama'
+import { friendlyModelName } from '../models'
 import { defaultSettings } from '../seed'
 import { VisionSettings } from './VisionSettings'
+import { ModelsModal } from './ModelsModal'
 import { cx } from '../util'
 
 type Tip = { body: string; low?: string; high?: string }
@@ -149,6 +151,8 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const updateSettings = useStore((s) => s.updateSettings)
   const [models, setModels] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
+  const [showModels, setShowModels] = useState(false)
+  const loadedModel = useStore((s) => s.loadedModel)
 
   const refresh = async () => {
     setLoading(true)
@@ -179,6 +183,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
     })
 
   return (
+    <>
     <Modal
       title="Settings"
       onClose={onClose}
@@ -199,18 +204,13 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         </label>
 
         <label className="field">
-          <span>Model</span>
-          <div className="row gap">
-            <select value={settings.model} onChange={(e) => updateSettings({ model: e.target.value })}>
-              {!models.includes(settings.model) && <option value={settings.model}>{settings.model}</option>}
-              {models.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-            <button className="btn sm ghost" onClick={refresh} disabled={loading}>
-              {loading ? '…' : 'Refresh'}
+          <span>Main text model</span>
+          <div className="row gap" style={{ alignItems: 'center' }}>
+            <span className="model-name" style={{ flex: 1 }} title={loadedModel || settings.model}>
+              {friendlyModelName(loadedModel || settings.model)}
+            </span>
+            <button className="btn sm ghost" onClick={() => setShowModels(true)}>
+              🗂 Manage models
             </button>
           </div>
         </label>
@@ -466,5 +466,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         </em>
       </div>
     </Modal>
+    {showModels && <ModelsModal onClose={() => setShowModels(false)} />}
+    </>
   )
 }

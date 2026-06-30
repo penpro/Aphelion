@@ -632,6 +632,52 @@ fn set_vision_mode(app: tauri::AppHandle, on: bool, text_file: String, mmproj_fi
     }
 }
 
+// ---------- model management (list with sizes, delete) ----------
+
+/// List model files: (filename, size_bytes, is_loaded_main). Includes vision files + projectors.
+#[tauri::command]
+fn model_files(app: tauri::AppHandle) -> Vec<(String, u64, bool)> {
+    let Some(dir) = model_dir(&app) else { return vec![] };
+    let main = app.state::<MainModel>().0.lock().unwrap().clone();
+    let mut out = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(&dir) {
+        for e in entries.flatten() {
+            let name = e.file_name().to_string_lossy().to_string();
+            if name.ends_with(".gguf") {
+                let size = e.metadata().map(|m| m.len()).unwrap_or(0);
+                let is_main = main.as_deref() == Some(name.as_str());
+                out.push((name, size, is_main));
+            }
+        }
+    }
+    out.sort_by(|a, b| a.0.to_lowercase().cmp(&b.0.to_lowercase()));
+    out
+}
+
+/// Delete a model file. Refuses the active main model (switch first); if a file lock
+/// blocks it (e.g. the vision engine), frees that engine and retries.
+#[tauri::command]
+fn delete_model(app: tauri::AppHandle, filename: String) -> Result<(), String> {
+    let dir = model_dir(&app).ok_or("no model dir")?;
+    let path = dir.join(&filename);
+    if !path.exists() {
+        return Ok(());
+    }
+    let main = app.state::<MainModel>().0.lock().unwrap().clone();
+    let main_running = app.state::<Engine>().0.lock().unwrap().is_some();
+    if main_running && main.as_deref() == Some(filename.as_str()) {
+        return Err("That model is currently loaded. Switch to another model first.".into());
+    }
+    if std::fs::remove_file(&path).is_ok() {
+        return Ok(());
+    }
+    // Possibly locked by the vision engine — free it and retry.
+    if let Some(mut v) = app.state::<VisionEngine>().0.lock().unwrap().take() {
+        let _ = v.kill();
+    }
+    std::fs::remove_file(&path).map_err(|e| e.to_string())
+}
+
 // ---------- resumable background model downloads ----------
 
 #[derive(Clone, serde::Serialize)]
@@ -855,7 +901,9 @@ pub fn run() {
             set_vision_mode,
             start_download,
             pause_download,
-            download_status
+            download_status,
+            model_files,
+            delete_model
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
