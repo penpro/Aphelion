@@ -39,19 +39,20 @@
   </g>
 
   
-  <g transform="translate(250,200)">
-    <g stroke="#5EEAD4" stroke-width="1.4" opacity="0.4"><path d="M0 -184 v16 M0 168 v16 M-184 0 h16 M168 0 h16"></path></g>
-    <g transform="rotate(-20)">
-      <ellipse cx="0" cy="0" rx="163" ry="130" fill="none" stroke="url(#bn-ring)" stroke-width="1.6" opacity="0.5"></ellipse>
-      <circle cx="163" cy="0" r="22" fill="#FF79C6" opacity="0.5" filter="url(#bn-halo)"></circle>
-      <circle cx="163" cy="0" r="9" fill="url(#bn-planet)"></circle>
-      <circle cx="159" cy="-4" r="2.6" fill="#FFFFFF" opacity="0.9"></circle>
+  <g transform="translate(232,201)">
+    <!-- tilted orbital track + the lone planet at its far vertex (the aphelion) -->
+    <g transform="rotate(-22)">
+      <ellipse cx="0" cy="0" rx="236" ry="190" fill="none" stroke="url(#bn-ring)" stroke-width="2.4" opacity="0.32"></ellipse>
+      <ellipse cx="0" cy="0" rx="236" ry="190" fill="none" stroke="url(#bn-ring)" stroke-width="1.4" opacity="0.7"></ellipse>
+      <circle cx="236" cy="0" r="30" fill="#FF79C6" opacity="0.5" filter="url(#bn-halo)"></circle>
+      <circle cx="236" cy="0" r="13" fill="url(#bn-planet)"></circle>
+      <circle cx="231" cy="-5" r="3.8" fill="#FFFFFF" opacity="0.92"></circle>
     </g>
-    <circle cx="0" cy="0" r="138" fill="url(#bn-bloom)" filter="url(#bn-soft)"></circle>
-    <circle cx="0" cy="0" r="112" fill="none" stroke="url(#bn-ring)" stroke-width="30" filter="url(#bn-soft)" opacity="0.9"></circle>
-    <circle cx="0" cy="0" r="108" fill="#000000"></circle>
-    <circle cx="0" cy="0" r="110" fill="none" stroke="url(#bn-ring)" stroke-width="7" filter="url(#bn-rim)"></circle>
-    <circle cx="0" cy="0" r="110" fill="none" stroke="#ECFEFF" stroke-width="2" opacity="0.92"></circle>
+    <circle cx="0" cy="0" r="210" fill="url(#bn-bloom)" filter="url(#bn-soft)"></circle>
+    <circle cx="0" cy="0" r="164" fill="none" stroke="url(#bn-ring)" stroke-width="44" filter="url(#bn-soft)" opacity="0.92"></circle>
+    <circle cx="0" cy="0" r="160" fill="#000000"></circle>
+    <circle cx="0" cy="0" r="162" fill="none" stroke="url(#bn-ring)" stroke-width="9" filter="url(#bn-rim)"></circle>
+    <circle cx="0" cy="0" r="162" fill="none" stroke="#ECFEFF" stroke-width="2" opacity="0.92"></circle>
   </g>
 
   
