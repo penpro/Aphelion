@@ -10,11 +10,13 @@ struct Engine(Mutex<Option<Child>>);
 /// Caches ingested + chunked text per knowledge-folder path (re-read on app restart).
 struct KnowledgeCache(Mutex<HashMap<String, Vec<(String, String)>>>);
 
-/// Optional second engine serving a vision model (with an mmproj) on VISION_PORT.
+/// Holds the vision model's process while in image mode (swapped onto LLAMA_PORT).
 struct VisionEngine(Mutex<Option<Child>>);
 
+/// Filename of the main (text) model, remembered so it reloads when leaving image mode.
+struct MainModel(Mutex<Option<String>>);
+
 const LLAMA_PORT: u16 = 11435;
-const VISION_PORT: u16 = 11436;
 
 /// The app's own model directory (AppData/<id>/models), created if missing.
 fn model_dir(app: &tauri::AppHandle) -> Option<PathBuf> {
@@ -178,6 +180,7 @@ fn start_engine(app: tauri::AppHandle, filename: String) -> Result<(), String> {
     if let Some(mut old) = app.state::<Engine>().0.lock().unwrap().take() {
         let _ = old.kill();
     }
+    *app.state::<MainModel>().0.lock().unwrap() = Some(filename.clone());
     let child = spawn_engine(&app, &model);
     let ok = child.is_some();
     *app.state::<Engine>().0.lock().unwrap() = child;
@@ -555,59 +558,73 @@ fn vision_present(app: tauri::AppHandle, text_file: String, mmproj_file: String)
     }
 }
 
-/// Start the vision engine (a second llama-server loaded with an mmproj) on VISION_PORT.
-/// If `stop_main` is set, the main engine is stopped first to free VRAM for a large model.
+/// Switch between text and image mode by swapping the model loaded on LLAMA_PORT.
+/// on=true: stop the main model, load the vision model (with its mmproj).
+/// on=false: stop the vision model, reload the remembered main model.
 #[tauri::command]
-fn start_vision(app: tauri::AppHandle, text_file: String, mmproj_file: String, stop_main: bool) -> Result<(), String> {
+fn set_vision_mode(app: tauri::AppHandle, on: bool, text_file: String, mmproj_file: String) -> Result<(), String> {
     let dir = model_dir(&app).ok_or("no model dir")?;
-    let model = dir.join(&text_file);
-    let mmproj = dir.join(&mmproj_file);
-    if !model.exists() || !mmproj.exists() {
-        return Err("vision model files not found — download it in Settings".into());
-    }
-    if stop_main {
+    if on {
+        let model = dir.join(&text_file);
+        let mmproj = dir.join(&mmproj_file);
+        if !model.exists() || !mmproj.exists() {
+            return Err("vision model files not found — download it in Settings".into());
+        }
         if let Some(mut old) = app.state::<Engine>().0.lock().unwrap().take() {
             let _ = old.kill();
         }
-    }
-    if let Some(mut old) = app.state::<VisionEngine>().0.lock().unwrap().take() {
-        let _ = old.kill();
-    }
-    let exe = llama_server_path(&app).ok_or("engine binary not found")?;
-    let port = VISION_PORT.to_string();
-    let mut cmd = Command::new(&exe);
-    cmd.arg("-m")
-        .arg(&model)
-        .arg("--mmproj")
-        .arg(&mmproj)
-        .arg("--host")
-        .arg("127.0.0.1")
-        .arg("--port")
-        .arg(&port)
-        .arg("-ngl")
-        .arg("999")
-        .arg("-c")
-        .arg("4096");
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt;
-        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-        cmd.creation_flags(CREATE_NO_WINDOW);
-    }
-    match cmd.spawn() {
-        Ok(child) => {
-            *app.state::<VisionEngine>().0.lock().unwrap() = Some(child);
-            Ok(())
+        if let Some(mut old) = app.state::<VisionEngine>().0.lock().unwrap().take() {
+            let _ = old.kill();
         }
-        Err(e) => Err(format!("failed to start vision engine: {e}")),
-    }
-}
-
-/// Stop the vision engine (frees its VRAM).
-#[tauri::command]
-fn stop_vision(app: tauri::AppHandle) {
-    if let Some(mut child) = app.state::<VisionEngine>().0.lock().unwrap().take() {
-        let _ = child.kill();
+        let exe = llama_server_path(&app).ok_or("engine binary not found")?;
+        let port = LLAMA_PORT.to_string();
+        let mut cmd = Command::new(&exe);
+        cmd.arg("-m")
+            .arg(&model)
+            .arg("--mmproj")
+            .arg(&mmproj)
+            .arg("--host")
+            .arg("127.0.0.1")
+            .arg("--port")
+            .arg(&port)
+            .arg("-ngl")
+            .arg("999")
+            .arg("-c")
+            .arg("4096");
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+            cmd.creation_flags(CREATE_NO_WINDOW);
+        }
+        match cmd.spawn() {
+            Ok(child) => {
+                *app.state::<VisionEngine>().0.lock().unwrap() = Some(child);
+                Ok(())
+            }
+            Err(e) => Err(format!("failed to start vision engine: {e}")),
+        }
+    } else {
+        if let Some(mut old) = app.state::<VisionEngine>().0.lock().unwrap().take() {
+            let _ = old.kill();
+        }
+        let main = app.state::<MainModel>().0.lock().unwrap().clone();
+        let main = main.ok_or("no main model on record to reload")?;
+        let model = dir.join(&main);
+        if !model.exists() {
+            return Err(format!("main model not found: {main}"));
+        }
+        if let Some(mut old) = app.state::<Engine>().0.lock().unwrap().take() {
+            let _ = old.kill();
+        }
+        let child = spawn_engine(&app, &model);
+        let ok = child.is_some();
+        *app.state::<Engine>().0.lock().unwrap() = child;
+        if ok {
+            Ok(())
+        } else {
+            Err("main model failed to reload".into())
+        }
     }
 }
 
@@ -619,6 +636,7 @@ pub fn run() {
         .manage(Engine(Mutex::new(None)))
         .manage(KnowledgeCache(Mutex::new(HashMap::new())))
         .manage(VisionEngine(Mutex::new(None)))
+        .manage(MainModel(Mutex::new(None)))
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -632,11 +650,24 @@ pub fn run() {
             let handle = app.handle().clone();
             if let Some(dir) = model_dir(&handle) {
                 if let Ok(entries) = std::fs::read_dir(&dir) {
-                    if let Some(model) = entries
-                        .flatten()
-                        .map(|e| e.path())
-                        .find(|p| p.extension().map_or(false, |x| x == "gguf"))
-                    {
+                    // Pick the largest non-projector .gguf as the main model (the user's main
+                    // model is typically larger than any bundled vision model like Gemma 3 4B).
+                    let mut best: Option<(u64, PathBuf)> = None;
+                    for e in entries.flatten() {
+                        let p = e.path();
+                        let is_gguf = p.extension().map_or(false, |x| x == "gguf");
+                        let name = p.file_name().map(|n| n.to_string_lossy().to_lowercase()).unwrap_or_default();
+                        if is_gguf && !name.contains("mmproj") {
+                            let sz = e.metadata().map(|m| m.len()).unwrap_or(0);
+                            if best.as_ref().map_or(true, |(b, _)| sz > *b) {
+                                best = Some((sz, p));
+                            }
+                        }
+                    }
+                    if let Some((_, model)) = best {
+                        if let Some(fname) = model.file_name().map(|n| n.to_string_lossy().to_string()) {
+                            *handle.state::<MainModel>().0.lock().unwrap() = Some(fname);
+                        }
                         let child = spawn_engine(&handle, &model);
                         *handle.state::<Engine>().0.lock().unwrap() = child;
                     }
@@ -677,8 +708,7 @@ pub fn run() {
             write_to_path,
             save_typst_at,
             vision_present,
-            start_vision,
-            stop_vision
+            set_vision_mode
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

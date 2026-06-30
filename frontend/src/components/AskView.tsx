@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { useStore } from '../store'
 import { streamChatNative, samplerFromSettings, getEngineStatus, type ContentPart } from '../api/ollama'
 import { friendlyModelName } from '../models'
-import { findVisionModel, type VisionModel } from '../visionModels'
+import { findVisionModel } from '../visionModels'
 import { Markdown } from './Markdown'
 import { MessageInput } from './MessageInput'
 import { ExpertEditor } from './ExpertEditor'
@@ -14,7 +14,6 @@ import { cx } from '../util'
 // A roomy-but-safe context window for Q&A threads (the model/Modelfile default
 // can be as low as 4k, which truncates multi-turn clarifications).
 const ASK_NUM_CTX = 8192
-const VISION_BASE = 'http://127.0.0.1:11436/v1'
 
 const fileToDataUrl = (f: File): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -42,6 +41,8 @@ export function AskView() {
   const [showDoc, setShowDoc] = useState(false)
   const [pending, setPending] = useState<{ name: string; url: string }[]>([])
   const [dragOver, setDragOver] = useState(false)
+  const [mode, setMode] = useState<'text' | 'image'>('text')
+  const [swapping, setSwapping] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -81,40 +82,52 @@ export function AskView() {
     setPending((prev) => [...prev, ...urls].slice(0, 6))
   }
 
-  // Start the vision engine (second port) if it isn't already serving, and wait for it.
-  const ensureVision = async (vm: VisionModel) => {
-    try {
-      if ((await getEngineStatus(VISION_BASE)) === 'ready') return
-    } catch {
-      /* not up yet */
-    }
-    await invoke('start_vision', { textFile: vm.textFile, mmprojFile: vm.mmprojFile, stopMain: false })
-    for (let i = 0; i < 160; i++) {
+  const waitReady = async () => {
+    for (let i = 0; i < 200; i++) {
       await new Promise((r) => setTimeout(r, 1500))
       try {
-        if ((await getEngineStatus(VISION_BASE)) === 'ready') return
+        if ((await getEngineStatus(settings.baseUrl)) === 'ready') return
       } catch {
         /* keep waiting */
       }
     }
-    throw new Error('Vision model did not load — it may not fit in VRAM alongside your main model. Try Gemma 3 4B in Settings.')
+    throw new Error('Engine did not come back up.')
+  }
+
+  // Swap the loaded model: image mode loads the vision model; text mode reloads the main model.
+  const switchMode = async (next: 'text' | 'image') => {
+    if (next === mode || swapping || busy) return
+    const vm = findVisionModel(settings.visionModel)
+    if (next === 'image' && !vm) {
+      setError('Pick a vision model in Settings (the gear) first.')
+      return
+    }
+    setSwapping(true)
+    setError('')
+    try {
+      await invoke('set_vision_mode', { on: next === 'image', textFile: vm?.textFile ?? '', mmprojFile: vm?.mmprojFile ?? '' })
+      await waitReady()
+      setMode(next)
+      if (next === 'text') setPending([])
+    } catch (e) {
+      setError((e as { message?: string })?.message ?? 'Could not switch mode.')
+    } finally {
+      setSwapping(false)
+    }
   }
 
   const send = async (text: string) => {
-    if ((!text.trim() && pending.length === 0) || busy) return
-    const imgs = pending
-    let vm: VisionModel | null = null
-    if (imgs.length) {
-      vm = findVisionModel(settings.visionModel)
-      if (!vm) {
-        setError('Pick a vision model in Settings (the gear) to analyze images.')
-        return
-      }
+    if ((!text.trim() && pending.length === 0) || busy || swapping) return
+    if (pending.length && mode === 'text') {
+      setError('Switch to 👁 Image mode to analyze the attached image(s).')
+      return
     }
+    const imgs = mode === 'image' ? pending : []
     const sys =
       expert?.systemPrompt?.trim() ||
       'You are a decisive, knowledgeable expert assistant. Answer the question directly and usefully.'
-    const userText = text.trim() || 'Describe and answer about the attached image(s).'
+    const userText = text.trim() || (imgs.length ? 'Describe and answer about the attached image(s).' : '')
+    if (!userText && !imgs.length) return
 
     if (!ask.title.trim() && text.trim()) updateAsk(ask.id, { title: text.slice(0, 60) })
     const note = imgs.length ? `\n\n_[${imgs.length} image${imgs.length > 1 ? 's' : ''}: ${imgs.map((i) => i.name).join(', ')}]_` : ''
@@ -122,7 +135,7 @@ export function AskView() {
     const assistantId = addAskMessage(ask.id, { role: 'assistant', content: '', reasoning: '' })
     setPending([])
 
-    // Prior thread (exclude the just-added user + placeholder); the new user turn is appended per-mode.
+    // Prior thread (exclude the just-added user + placeholder); the new user turn is appended below.
     const cur = useStore.getState().asks.find((a) => a.id === ask.id)
     const histPrev = (cur?.messages ?? [])
       .filter((m) => m.id !== assistantId && m.id !== userId && !m.error)
@@ -149,40 +162,29 @@ export function AskView() {
         onReasoning: (d: string) => useStore.getState().appendToAskMessage(ask.id, assistantId, { reasoning: d }),
         onContent: (d: string) => useStore.getState().appendToAskMessage(ask.id, assistantId, { content: d }),
       }
-      if (vm) {
-        // Image turn → route to the vision engine with a multimodal message.
-        await ensureVision(vm)
-        const content: ContentPart[] = [
-          { type: 'text', text: userText },
-          ...imgs.map((i) => ({ type: 'image_url' as const, image_url: { url: i.url } })),
-        ]
-        const messages = [{ role: 'system', content: sysFull }, ...histPrev, { role: 'user', content }]
-        await streamChatNative({
-          baseUrl: VISION_BASE,
-          model: 'vision',
-          messages,
-          temperature: settings.temperature,
-          topP: settings.topP,
-          think: false,
-          numCtx: ASK_NUM_CTX,
-          signal: ctrl.signal,
-          handlers,
-        })
-      } else {
-        const messages = [{ role: 'system', content: sysFull }, ...histPrev, { role: 'user', content: userText }]
-        await streamChatNative({
-          baseUrl: settings.baseUrl,
-          model: settings.model,
-          messages,
-          temperature: settings.temperature,
-          topP: settings.topP,
-          sampler: samplerFromSettings(settings),
-          think: ask.think,
-          numCtx: ASK_NUM_CTX,
-          signal: ctrl.signal,
-          handlers,
-        })
-      }
+      // Both modes hit the main port; the mode toggle controls which model is loaded there.
+      const userMsg = imgs.length
+        ? {
+            role: 'user',
+            content: [
+              { type: 'text', text: userText },
+              ...imgs.map((i) => ({ type: 'image_url' as const, image_url: { url: i.url } })),
+            ] as ContentPart[],
+          }
+        : { role: 'user', content: userText }
+      const messages = [{ role: 'system', content: sysFull }, ...histPrev, userMsg]
+      await streamChatNative({
+        baseUrl: settings.baseUrl,
+        model: settings.model,
+        messages,
+        temperature: settings.temperature,
+        topP: settings.topP,
+        sampler: samplerFromSettings(settings),
+        think: mode === 'image' ? false : ask.think,
+        numCtx: ASK_NUM_CTX,
+        signal: ctrl.signal,
+        handlers,
+      })
     } catch (e) {
       const err = e as { name?: string; message?: string }
       if (err?.name !== 'AbortError') {
@@ -244,6 +246,14 @@ export function AskView() {
         <button className="btn sm ghost" onClick={() => setManaging(true)}>
           ✎ Experts
         </button>
+        <div className="seg" title="Text uses your main model; Image swaps in the vision model (reloads on switch)">
+          <button type="button" className={cx('seg-btn', mode === 'text' && 'sel')} disabled={swapping || busy} onClick={() => switchMode('text')}>
+            💬 Text
+          </button>
+          <button type="button" className={cx('seg-btn', mode === 'image' && 'sel')} disabled={swapping || busy} onClick={() => switchMode('image')}>
+            {swapping ? '⏳' : '👁 Image'}
+          </button>
+        </div>
         <div className="seg">
           <button type="button" className={cx('seg-btn', !ask.think && 'sel')} onClick={() => updateAsk(ask.id, { think: false })}>
             No reasoning
@@ -265,24 +275,24 @@ export function AskView() {
         >
           📄 Document
         </button>
-        <button
-          className="btn sm ghost"
-          onClick={() => fileRef.current?.click()}
-          title="Attach image(s) to analyze with the vision model"
-        >
-          📎 Image
-        </button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          multiple
-          style={{ display: 'none' }}
-          onChange={(e) => {
-            addFiles(Array.from(e.target.files ?? []))
-            if (fileRef.current) fileRef.current.value = ''
-          }}
-        />
+        {mode === 'image' && (
+          <>
+            <button className="btn sm ghost" onClick={() => fileRef.current?.click()} title="Attach image(s) to analyze">
+              📎 Image
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              multiple
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                addFiles(Array.from(e.target.files ?? []))
+                if (fileRef.current) fileRef.current.value = ''
+              }}
+            />
+          </>
+        )}
       </div>
 
       <div className="messages" ref={scrollRef}>
@@ -331,6 +341,16 @@ export function AskView() {
             </div>
           )
         })}
+        {swapping && (
+          <div className="muted" style={{ padding: '4px 14px' }}>
+            ⏳ Switching model — this reloads the engine and can take a bit…
+          </div>
+        )}
+        {mode === 'image' && !swapping && (
+          <div className="muted xs" style={{ padding: '2px 14px' }}>
+            👁 Image mode — drop or attach an image and ask about it. Switch back to 💬 Text for your main model.
+          </div>
+        )}
         {error && <div className="error-line">{error}</div>}
       </div>
 
@@ -353,7 +373,7 @@ export function AskView() {
           ))}
         </div>
       )}
-      <MessageInput disabled={busy} streaming={busy} onSend={send} onStop={() => abortRef.current?.abort()} />
+      <MessageInput disabled={busy || swapping} streaming={busy} onSend={send} onStop={() => abortRef.current?.abort()} />
 
       {managing && <ExpertEditor onClose={() => setManaging(false)} />}
       {showDoc && (
