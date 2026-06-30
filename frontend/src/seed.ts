@@ -36,6 +36,7 @@ export const defaultSettings: Settings = {
   theme: 'penumbra',
   visionModel: '',
   intentRouter: 'quick',
+  livePortraits: false,
   reduceMotion: false,
   highContrast: false,
   // advanced sampling — llama.cpp defaults (behavior-preserving until changed)

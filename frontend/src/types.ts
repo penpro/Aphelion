@@ -95,6 +95,7 @@ export interface Settings {
   intentRouter: 'off' | 'quick' | 'full' // control-net: off | classify only action-like prompts | classify every prompt
   reduceMotion: boolean // accessibility: force-disable animations/transitions (also auto-on via OS prefers-reduced-motion)
   highContrast: boolean // accessibility: full-strength secondary text + stronger borders
+  livePortraits?: boolean // show a large emotion-reactive character portrait above the chat
   // advanced sampling — defaults match llama.cpp, so behavior is unchanged until tuned
   topK: number
   minP: number

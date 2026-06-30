@@ -107,3 +107,53 @@ select:focus {
 .char-row.active {
   box-shadow: inset 2px 0 0 var(--accent), 0 0 22px color-mix(in srgb, var(--accent) 12%, transparent);
 }
+
+/* ── Live portrait stage (VN-style, emotion-reactive) ────────────────────────── */
+.live-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 0 0 auto;
+  border-bottom: 1px solid var(--border);
+  background: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 70%);
+}
+.live-frame {
+  padding: 14px 0 6px;
+}
+.live-portrait {
+  height: 200px;
+  max-width: 92%;
+  object-fit: contain;
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 50px color-mix(in srgb, var(--accent) 18%, transparent);
+  animation: live-fade 0.45s ease;
+}
+@keyframes live-fade {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.live-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: capitalize;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  padding: 4px 10px 8px;
+}
+.live-stage.is-collapsed .live-toggle {
+  padding: 8px 10px;
+}
+.live-toggle:hover {
+  color: var(--text);
+}

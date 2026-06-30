@@ -3,6 +3,7 @@ import { useStore } from '../store'
 import { useGeneration } from '../useGeneration'
 import { MessageItem } from './MessageItem'
 import { CharAvatar } from './CharAvatar'
+import { LivePortrait } from './LivePortrait'
 import { MessageInput } from './MessageInput'
 import { ChatSetup } from './ChatSetup'
 import { ChatDials } from './ChatDials'
@@ -164,6 +165,7 @@ export function ChatView({ onEditCharacter }: { onEditCharacter: (c: Character) 
     <div className="chat-shell">
       <div className="chat">
         {header}
+        <LivePortrait chat={chat} character={character} enabled={!!settings.livePortraits} />
         <div className="messages" ref={scrollRef}>
           {chat.messages.map((m) => (
             <MessageItem

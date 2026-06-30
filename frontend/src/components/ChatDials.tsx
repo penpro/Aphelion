@@ -17,6 +17,8 @@ export function ChatDials({ chat }: { chat: Chat }) {
   const updateChatTuning = useStore((s) => s.updateChatTuning)
   const removeFromCast = useStore((s) => s.removeFromCast)
   const toggleMute = useStore((s) => s.toggleMute)
+  const settings = useStore((s) => s.settings)
+  const updateSettings = useStore((s) => s.updateSettings)
   const t = chat.tuning
   const cast = chat.castIds.map((id) => characters.find((c) => c.id === id)).filter(Boolean) as Character[]
 
@@ -128,6 +130,26 @@ export function ChatDials({ chat }: { chat: Chat }) {
             {t.think === 'off'
               ? 'No reasoning — fast, and stays snappy as the chat grows.'
               : 'Full reasoning — can help on tricky moments, but slows down a lot in long chats.'}
+          </span>
+        </div>
+
+        <div className="field">
+          <span>Live portrait</span>
+          <div className="seg fill">
+            {[false, true].map((on) => (
+              <button
+                key={String(on)}
+                type="button"
+                className={cx('seg-btn', !!settings.livePortraits === on && 'sel')}
+                onClick={() => updateSettings({ livePortraits: on })}
+              >
+                {on ? 'On' : 'Off'}
+              </button>
+            ))}
+          </div>
+          <span className="muted xs">
+            Reads each reply's mood and shows the character's matching portrait, enlarged, above the chat. Needs a
+            Living set on the character.
           </span>
         </div>
       </div>
