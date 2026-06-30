@@ -373,3 +373,82 @@ select:focus {
   display: block;
   height: 100%;
 }
+
+/* ── Expert picker (custom dropdown with emblems) ────────────────────────────── */
+.expert-picker {
+  position: relative;
+}
+.expert-picker-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 210px;
+  padding: 6px 10px;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+}
+.expert-picker-btn:hover {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+}
+.expert-picker-name {
+  flex: 1;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.expert-picker-caret {
+  color: var(--muted);
+  font-size: 10px;
+}
+.expert-glyph {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  flex: 0 0 22px;
+}
+.expert-glyph-emoji {
+  width: 22px;
+  flex: 0 0 22px;
+  text-align: center;
+}
+.expert-picker-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 60;
+  min-width: 250px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding: 4px;
+  background: color-mix(in srgb, var(--bg-2) 96%, transparent);
+  backdrop-filter: blur(14px) saturate(120%);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  border: 1px solid var(--border-2);
+  border-radius: 10px;
+  box-shadow: 0 20px 54px rgba(0, 0, 0, 0.5);
+}
+.expert-opt {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 7px 9px;
+  background: none;
+  border: none;
+  border-radius: 7px;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+.expert-opt:hover {
+  background: color-mix(in srgb, var(--text) 7%, transparent);
+}
+.expert-opt.sel {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}

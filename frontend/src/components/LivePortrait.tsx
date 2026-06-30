@@ -1,13 +1,24 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { detectEmotion } from '../emotion'
 import { cx } from '../util'
-import type { Character, Chat } from '../types'
+import type { Character, Chat, EmotionKey } from '../types'
 
 // VN-style "live" stage: a large character portrait above the chat that reads the latest reply's
 // emotional tone (pure heuristic — no model call) and shows the matching portrait, with a crossfade.
 // Renders nothing unless live mode is on and the character actually has a living portrait set.
-export function LivePortrait({ chat, character, enabled }: { chat: Chat; character: Character; enabled: boolean }) {
+export function LivePortrait({
+  chat,
+  character,
+  enabled,
+  streaming,
+}: {
+  chat: Chat
+  character: Character
+  enabled: boolean
+  streaming: boolean
+}) {
   const [open, setOpen] = useState(true)
+  const [emotion, setEmotion] = useState<EmotionKey>('neutral')
   const set = character.portraits
 
   const lastText = useMemo(() => {
@@ -16,7 +27,13 @@ export function LivePortrait({ chat, character, enabled }: { chat: Chat; charact
     }
     return ''
   }, [chat.messages])
-  const emotion = useMemo(() => detectEmotion(lastText), [lastText])
+
+  // Take the tone of the WHOLE reply: only re-read once it's done streaming, so the portrait
+  // settles on one mood for the response instead of flipping word-by-word as tokens arrive.
+  useEffect(() => {
+    if (streaming) return
+    setEmotion(detectEmotion(lastText))
+  }, [lastText, streaming])
 
   if (!enabled || !set || Object.keys(set).length === 0) return null
   const src = set[emotion] ?? set.neutral ?? character.portrait

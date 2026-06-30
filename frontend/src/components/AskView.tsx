@@ -4,6 +4,7 @@ import { useStore } from '../store'
 import { streamChatNative, samplerFromSettings, getEngineStatus, runIntentClassifier, type ContentPart } from '../api/ollama'
 import { friendlyModelName } from '../models'
 import { expertIcon } from '../expertIcons'
+import { ExpertPicker } from './ExpertPicker'
 import { findVisionModel } from '../visionModels'
 import {
   buildClassifierPrompt,
@@ -374,17 +375,11 @@ export function AskView() {
 
       <div className="row gap wrap" style={{ padding: '8px 14px', borderBottom: '1px solid var(--border)', alignItems: 'center' }}>
         <label className="muted xs">Expert</label>
-        <select
+        <ExpertPicker
+          experts={experts}
           value={ask.expertId ?? experts[0]?.id ?? ''}
-          style={{ minWidth: 200 }}
-          onChange={(e) => updateAsk(ask.id, { expertId: e.target.value || null })}
-        >
-          {experts.map((ex) => (
-            <option key={ex.id} value={ex.id}>
-              {(ex.emoji ? ex.emoji + ' ' : '') + ex.name}
-            </option>
-          ))}
-        </select>
+          onChange={(id) => updateAsk(ask.id, { expertId: id || null })}
+        />
         <button className="btn sm ghost" onClick={() => setManaging(true)}>
           ✎ Experts
         </button>

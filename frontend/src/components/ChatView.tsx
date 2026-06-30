@@ -165,7 +165,7 @@ export function ChatView({ onEditCharacter }: { onEditCharacter: (c: Character) 
     <div className="chat-shell">
       <div className="chat">
         {header}
-        <LivePortrait chat={chat} character={character} enabled={!!settings.livePortraits} />
+        <LivePortrait chat={chat} character={character} enabled={!!settings.livePortraits} streaming={isStreaming} />
         <div className="messages" ref={scrollRef}>
           {chat.messages.map((m) => (
             <MessageItem
