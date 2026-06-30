@@ -218,6 +218,21 @@
   .pp-powered{font-size:.75rem;color:var(--faint)}
   .donate-float{position:fixed;right:clamp(16px,3vw,28px);bottom:clamp(16px,3vw,28px);z-index:60;font-family:var(--head);font-weight:500;font-size:14px;color:var(--void-900);background:linear-gradient(100deg,var(--corona),var(--flare));padding:12px 20px;border-radius:999px;box-shadow:0 0 0 1px rgba(94,234,212,.4),0 10px 30px rgba(34,211,238,.4);transition:transform .15s ease,box-shadow .15s ease}
   .donate-float:hover{transform:translateY(-2px);box-shadow:0 0 0 1px rgba(94,234,212,.65),0 16px 44px rgba(34,211,238,.55)}
+
+  /* ── changelog: latest open, older versions collapse to the version number ── */
+  #changelog details.pn-item{ border-left:2px solid var(--border); padding-left:16px }
+  #changelog details.pn-item>summary{
+    cursor:pointer; list-style:none; font-family:var(--head); font-weight:600;
+    font-size:1.02rem; color:var(--dim); padding:1px 0; transition:color .15s ease;
+  }
+  #changelog details.pn-item>summary::-webkit-details-marker{ display:none }
+  #changelog details.pn-item>summary::before{
+    content:'▸'; display:inline-block; width:1.1em; color:var(--corona); opacity:.7;
+  }
+  #changelog details.pn-item[open]>summary::before{ content:'▾' }
+  #changelog details.pn-item>summary:hover{ color:var(--text) }
+  #changelog details.pn-item[open]>summary{ color:var(--text); margin-bottom:8px }
+  #changelog details.pn-item ul{ margin:0 }
 </style>
 </head>
 <body>
@@ -410,7 +425,7 @@
     <div style="margin:0 0 22px;max-width:780px;padding:12px 16px;border:1px solid var(--corona);border-radius:10px;background:rgba(94,234,212,.06);font-size:14px;line-height:1.65">
       <b>Already on v0.1.2 or earlier?</b> Those builds don't have the in-app update check — it ships <em>with</em> v0.1.3, so they can't see this release on their own. You'll need to update manually this once: download the latest below (or from the <a href="https://github.com/penpro/Aphelion/releases">releases page</a>) and run the installer. From v0.1.3 on, <b>Settings&nbsp;→&nbsp;Updates</b> will check for you.
     </div>
-    <div style="display:flex;flex-direction:column;gap:22px;max-width:780px">
+    <div id="changelog" style="display:flex;flex-direction:column;gap:22px;max-width:780px">
       <article style="border-left:2px solid var(--corona);padding-left:16px">
         <h3 style="margin:0 0 8px">v0.1.20 <span style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--corona)">LATEST</span></h3>
         <ul style="margin:0;padding-left:18px;line-height:1.75">
@@ -604,6 +619,27 @@
           if (f) f.style.display = 'none';
         }
       } catch (e) { /* cross-origin parent access can throw — leave button as-is */ }
+
+      // Tidy the changelog: keep the latest entry open; collapse every older one
+      // into a click-to-expand <details> showing just its version number.
+      var log = document.getElementById('changelog');
+      if (log) {
+        Array.prototype.filter
+          .call(log.children, function (el) { return el.tagName === 'ARTICLE'; })
+          .forEach(function (art, i) {
+            if (i === 0) return; // newest stays expanded
+            var h3 = art.querySelector('h3');
+            if (!h3) return;
+            var det = document.createElement('details');
+            det.className = 'pn-item';
+            var sum = document.createElement('summary');
+            sum.textContent = (h3.textContent || '').trim();
+            h3.parentNode.removeChild(h3);
+            det.appendChild(sum);
+            while (art.firstChild) det.appendChild(art.firstChild);
+            art.parentNode.replaceChild(det, art);
+          });
+      }
     })();
   </script>
 </body>
