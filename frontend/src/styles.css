@@ -102,6 +102,8 @@ body {
   background:
     radial-gradient(1100px 720px at 50% -10%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 60%),
     radial-gradient(900px 620px at 95% 112%, color-mix(in srgb, var(--violet) 7%, transparent), transparent 55%),
+    linear-gradient(color-mix(in srgb, var(--bg) 78%, transparent), color-mix(in srgb, var(--bg) 78%, transparent)),
+    url('./assets/aphelion-bg.jpg') center center / cover no-repeat,
     var(--bg);
   background-attachment: fixed;
   color: var(--text);

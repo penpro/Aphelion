@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { useStore } from '../store'
 import { streamChatNative, samplerFromSettings, getEngineStatus, runIntentClassifier, type ContentPart } from '../api/ollama'
 import { friendlyModelName } from '../models'
+import { expertIcon } from '../expertIcons'
 import { findVisionModel } from '../visionModels'
 import {
   buildClassifierPrompt,
@@ -465,10 +466,14 @@ export function AskView() {
         {ask.messages.map((m, i) => {
           const isUser = m.role === 'user'
           const isLast = i === ask.messages.length - 1
+          const expIcon = !isUser ? expertIcon(expert?.id) : undefined
           return (
             <div key={m.id} className={cx('msg', isUser ? 'msg-user' : 'msg-assistant', m.error && 'msg-error')}>
-              <div className="msg-avatar" style={{ background: isUser ? '#2a2342' : 'var(--accent)' }}>
-                {isUser ? '🧑' : expert?.emoji || '🪄'}
+              <div
+                className={cx('msg-avatar', expIcon && 'has-portrait')}
+                style={{ background: isUser ? '#2a2342' : expIcon ? 'transparent' : 'var(--accent)' }}
+              >
+                {isUser ? '🧑' : expIcon ? <img src={expIcon} alt="" /> : expert?.emoji || '🪄'}
               </div>
               <div className="msg-body">
                 {m.reasoning && (
