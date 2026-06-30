@@ -1,5 +1,4 @@
 import { useStore } from '../store'
-import { ModelBar } from './ModelBar'
 import { DownloadIndicator } from './DownloadIndicator'
 import { CharAvatar } from './CharAvatar'
 import { UI_ICONS } from '../uiIcons'
@@ -60,7 +59,6 @@ export function Sidebar({
 
   return (
     <aside className="sidebar">
-      <ModelBar />
 
       <div className="side-section">
         <div className="side-head">

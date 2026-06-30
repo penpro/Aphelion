@@ -19,6 +19,7 @@ const LABEL: Record<Status, string> = {
 export function ModelBar() {
   const baseUrl = useStore((s) => s.settings.baseUrl)
   const fallback = useStore((s) => s.settings.model)
+  const contextLength = useStore((s) => s.settings.contextLength)
   const loadedModel = useStore((s) => s.loadedModel)
   const setLoadedModel = useStore((s) => s.setLoadedModel)
   const [status, setStatus] = useState<Status>('down')
@@ -46,31 +47,29 @@ export function ModelBar() {
   const totalGb = vram ? vram.total / 1024 : 0
   const pct = vram && vram.total > 0 ? Math.min(100, (vram.used / vram.total) * 100) : 0
   const modelName = friendlyModelName(loadedModel || fallback)
+  const ctxLabel = contextLength >= 1024 ? `${Math.round(contextLength / 1024)}K` : String(contextLength)
 
   return (
-    <div className="model-bar">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span className={cx('status-dot', status === 'ready' && 'live')} style={{ background: dotColor }} title={LABEL[status]} />
-        <span className="model-name" title={loadedModel || fallback}>
-          {modelName}
-        </span>
-      </div>
-      <div className={cx('xs', status !== 'ready' && 'muted')} style={{ marginTop: 2 }}>
-        {LABEL[status]}
-      </div>
+    <div className="topbar-stats">
+      <span className={cx('status-dot', status === 'ready' && 'live')} style={{ background: dotColor }} title={LABEL[status]} />
+      <span className="ts-model" title={loadedModel || fallback}>
+        {modelName}
+      </span>
       {vram && (
-        <div style={{ marginTop: 6 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span className="muted xs">VRAM</span>
-            <span className="xs">
-              {usedGb.toFixed(1)} / {totalGb.toFixed(1)} GB
-            </span>
-          </div>
-          <div className="vram-track">
-            <div className="vram-fill" style={{ width: pct + '%', background: pct > 92 ? 'var(--danger)' : 'var(--accent)' }} />
-          </div>
-        </div>
+        <span className="ts-chip" title={`VRAM ${usedGb.toFixed(1)} / ${totalGb.toFixed(1)} GB`}>
+          <span className="ts-k">VRAM</span>
+          <span className="ts-bar">
+            <i style={{ width: pct + '%', background: pct > 92 ? 'var(--danger)' : 'var(--accent)' }} />
+          </span>
+          <span className="ts-v">
+            {usedGb.toFixed(1)}/{totalGb.toFixed(0)}
+          </span>
+        </span>
       )}
+      <span className="ts-chip" title="Context window">
+        <span className="ts-k">CTX</span>
+        <span className="ts-v">{ctxLabel}</span>
+      </span>
     </div>
   )
 }

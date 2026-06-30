@@ -1,5 +1,6 @@
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { CoronaMark } from './CoronaMark'
+import { ModelBar } from './ModelBar'
 import { useStore } from '../store'
 import { cx } from '../util'
 import { UI_ICONS } from '../uiIcons'
@@ -34,6 +35,7 @@ export function TitleBar() {
         ))}
       </nav>
       <div className="topbar-spacer" data-tauri-drag-region />
+      <ModelBar />
       <div className="titlebar-controls">
         <button className="tb-btn" aria-label="Minimize" title="Minimize" onClick={() => win().minimize()}>
           <svg width="11" height="11" viewBox="0 0 11 11" aria-hidden="true">
