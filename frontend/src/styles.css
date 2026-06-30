@@ -1173,6 +1173,7 @@ select:focus {
   flex: 1;
   display: flex;
   min-width: 0;
+  min-height: 0; /* bound to the viewport so the chat column's messages scroll, not the whole shell */
 }
 .chat-dials {
   flex: 0 0 212px;
