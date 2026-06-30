@@ -157,3 +157,117 @@ select:focus {
 .live-toggle:hover {
   color: var(--text);
 }
+
+/* ── Custom frameless title bar ──────────────────────────────────────────────── */
+.titlebar {
+  position: relative;
+  z-index: 10000;
+  flex: 0 0 auto;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: color-mix(in srgb, var(--bg-2) 82%, transparent);
+  backdrop-filter: blur(12px) saturate(120%);
+  -webkit-backdrop-filter: blur(12px) saturate(120%);
+  border-bottom: 1px solid var(--border);
+  user-select: none;
+  -webkit-user-select: none;
+}
+.titlebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  flex: 1;
+  padding: 0 12px;
+  font-family: var(--font-head);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+.titlebar-controls {
+  display: flex;
+  height: 100%;
+}
+.tb-btn {
+  width: 46px;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.tb-btn:hover {
+  background: color-mix(in srgb, var(--text) 12%, transparent);
+  color: var(--text);
+}
+.tb-close:hover {
+  background: #e25563;
+  color: #fff;
+}
+
+/* ── Frameless resize grips (edges + corners) ────────────────────────────────── */
+.resize-h {
+  position: fixed;
+  z-index: 10001;
+}
+.resize-n {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  cursor: ns-resize;
+}
+.resize-s {
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  cursor: ns-resize;
+}
+.resize-w {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+  cursor: ew-resize;
+}
+.resize-e {
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 4px;
+  cursor: ew-resize;
+}
+.resize-ne {
+  top: 0;
+  right: 0;
+  width: 11px;
+  height: 11px;
+  cursor: nesw-resize;
+}
+.resize-nw {
+  top: 0;
+  left: 0;
+  width: 11px;
+  height: 11px;
+  cursor: nwse-resize;
+}
+.resize-se {
+  bottom: 0;
+  right: 0;
+  width: 11px;
+  height: 11px;
+  cursor: nwse-resize;
+}
+.resize-sw {
+  bottom: 0;
+  left: 0;
+  width: 11px;
+  height: 11px;
+  cursor: nesw-resize;
+}

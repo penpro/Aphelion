@@ -11,6 +11,8 @@ import { PersonaEditor } from './components/PersonaEditor'
 import { SettingsPanel } from './components/SettingsPanel'
 import { SetupWizard } from './components/SetupWizard'
 import { Tutorial } from './components/Tutorial'
+import { TitleBar } from './components/TitleBar'
+import { ResizeHandles } from './components/ResizeHandles'
 import type { Character } from './types'
 
 export default function App() {
@@ -44,7 +46,9 @@ export default function App() {
   }, [theme, reduceMotion, highContrast])
 
   return (
-    <div className="app">
+    <>
+      <TitleBar />
+      <div className="app">
       <a className="skip-link" href="#main-view">
         Skip to content
       </a>
@@ -76,6 +80,8 @@ export default function App() {
       )}
 
       {needsSetup && <SetupWizard onReady={() => setNeedsSetup(false)} />}
-    </div>
+      </div>
+      <ResizeHandles />
+    </>
   )
 }

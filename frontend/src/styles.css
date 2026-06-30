@@ -98,6 +98,10 @@ body,
   height: 100%;
   margin: 0;
 }
+#root {
+  display: flex;
+  flex-direction: column;
+}
 body {
   background:
     radial-gradient(1100px 720px at 50% -10%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 60%),
@@ -122,7 +126,8 @@ code, pre, kbd, .mono, .xs, .hint, .model-name, .estimate, .num-input, .field-la
 /* ---------- layout ---------- */
 .app {
   display: flex;
-  height: 100vh;
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
