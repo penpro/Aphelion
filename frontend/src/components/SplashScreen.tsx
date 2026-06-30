@@ -69,7 +69,7 @@ export function SplashScreen() {
     <div className={cx('splash', fading && 'is-out')} data-tauri-drag-region>
       <div className="splash-inner">
         <div className="splash-mark">
-          <CoronaMark size={88} />
+          <CoronaMark size={264} />
         </div>
         <div className="splash-title">Aphelion</div>
         <div className="splash-msg">
