@@ -252,7 +252,7 @@ export function CharacterEditor({ editing, onClose }: { editing: Character | 'ne
           {portraitErr && <div className="error-line">{portraitErr}</div>}
         </label>
 
-        <label className="field">
+        <div className="field">
           <span className="field-head">
             <span>
               Portrait sets{' '}
@@ -356,7 +356,7 @@ export function CharacterEditor({ editing, onClose }: { editing: Character | 'ne
             </div>
           )}
           {emotionErr && <div className="error-line">{emotionErr}</div>}
-        </label>
+        </div>
 
         <label className="field">
           <span>Accent color</span>
