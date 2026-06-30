@@ -17,6 +17,8 @@ use tauri::Manager;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_upload::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(Engine(Mutex::new(None)))
@@ -103,8 +105,7 @@ pub fn run() {
             downloads::start_download,
             downloads::pause_download,
             downloads::download_status,
-            updates::app_version,
-            updates::check_for_update
+            updates::app_version
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
