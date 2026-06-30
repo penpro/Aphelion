@@ -37,6 +37,7 @@ export const defaultSettings: Settings = {
   visionModel: '',
   intentRouter: 'quick',
   livePortraits: false,
+  livePortraitSize: 'small',
   reduceMotion: false,
   highContrast: false,
   // advanced sampling — llama.cpp defaults (behavior-preserving until changed)

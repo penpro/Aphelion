@@ -11,11 +11,13 @@ export function LivePortrait({
   character,
   enabled,
   streaming,
+  size,
 }: {
   chat: Chat
   character: Character
   enabled: boolean
   streaming: boolean
+  size: 'small' | 'medium' | 'large'
 }) {
   const [open, setOpen] = useState(true)
   const [emotion, setEmotion] = useState<EmotionKey>('neutral')
@@ -40,7 +42,7 @@ export function LivePortrait({
   if (!src) return null
 
   return (
-    <div className={cx('live-stage', !open && 'is-collapsed')}>
+    <div className={cx('live-stage', 'lp-' + size, !open && 'is-collapsed')}>
       {open && (
         <div className="live-frame">
           <img key={emotion} src={src} alt={`${character.name} — ${emotion}`} className="live-portrait" />

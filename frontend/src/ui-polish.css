@@ -123,10 +123,17 @@ select:focus {
 .live-portrait {
   height: 200px;
   max-width: 92%;
+  max-height: 46vh;
   object-fit: contain;
   border-radius: 14px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 50px color-mix(in srgb, var(--accent) 18%, transparent);
   animation: live-fade 0.45s ease;
+}
+.live-stage.lp-medium .live-portrait {
+  height: 320px;
+}
+.live-stage.lp-large .live-portrait {
+  height: 440px;
 }
 @keyframes live-fade {
   from {

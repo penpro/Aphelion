@@ -152,6 +152,24 @@ export function ChatDials({ chat }: { chat: Chat }) {
             Living set on the character.
           </span>
         </div>
+
+        {settings.livePortraits && (
+          <div className="field">
+            <span>Portrait size</span>
+            <div className="seg fill">
+              {(['small', 'medium', 'large'] as const).map((sz) => (
+                <button
+                  key={sz}
+                  type="button"
+                  className={cx('seg-btn', (settings.livePortraitSize ?? 'small') === sz && 'sel')}
+                  onClick={() => updateSettings({ livePortraitSize: sz })}
+                >
+                  {sz[0].toUpperCase() + sz.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </aside>
   )
