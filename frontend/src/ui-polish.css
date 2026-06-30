@@ -121,19 +121,20 @@ select:focus {
   padding: 14px 0 6px;
 }
 .live-portrait {
-  height: 200px;
+  display: block;
+  width: auto;
+  height: auto;
   max-width: 92%;
-  max-height: 46vh;
-  object-fit: contain;
+  max-height: min(200px, 52vh); /* the element hugs the image (no letterbox bars) */
   border-radius: 14px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 50px color-mix(in srgb, var(--accent) 18%, transparent);
   animation: live-fade 0.45s ease;
 }
 .live-stage.lp-medium .live-portrait {
-  height: 320px;
+  max-height: min(320px, 52vh);
 }
 .live-stage.lp-large .live-portrait {
-  height: 440px;
+  max-height: min(440px, 52vh);
 }
 @keyframes live-fade {
   from {
