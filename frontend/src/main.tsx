@@ -4,6 +4,7 @@ import App from './App'
 import './brand-tokens.css'
 import './styles.css'
 import './a11y.css'
+import './ui-polish.css'
 import 'highlight.js/styles/github-dark.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
