@@ -162,17 +162,20 @@ export function AskView() {
         onReasoning: (d: string) => useStore.getState().appendToAskMessage(ask.id, assistantId, { reasoning: d }),
         onContent: (d: string) => useStore.getState().appendToAskMessage(ask.id, assistantId, { content: d }),
       }
-      // Both modes hit the main port; the mode toggle controls which model is loaded there.
-      const userMsg = imgs.length
-        ? {
-            role: 'user',
-            content: [
-              { type: 'text', text: userText },
-              ...imgs.map((i) => ({ type: 'image_url' as const, image_url: { url: i.url } })),
-            ] as ContentPart[],
-          }
-        : { role: 'user', content: userText }
-      const messages = [{ role: 'system', content: sysFull }, ...histPrev, userMsg]
+      // Both modes hit the main port; the toggle controls which model is loaded there.
+      // Gemma's vision template is strict (no system role, must alternate user/assistant),
+      // so for image turns fold the system prompt into a single user message and drop history.
+      const messages = imgs.length
+        ? [
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: sysFull ? `${sysFull}\n\n${userText}` : userText },
+                ...imgs.map((i) => ({ type: 'image_url' as const, image_url: { url: i.url } })),
+              ] as ContentPart[],
+            },
+          ]
+        : [{ role: 'system', content: sysFull }, ...histPrev, { role: 'user', content: userText }]
       await streamChatNative({
         baseUrl: settings.baseUrl,
         model: settings.model,
