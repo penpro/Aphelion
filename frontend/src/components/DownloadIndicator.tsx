@@ -9,10 +9,11 @@ const short = (f: string) =>
     .replace(/\.gguf$/i, '')
     .replace(/-Q4_K_M$/i, '')
     .replace(/-it$/i, '')
-const gb = (n: number) => (n / 1024 / 1024 / 1024).toFixed(1)
+    .replace(/^gemma-3-/i, 'Gemma 3 ')
 
-/** Floating status pill on the main screen for background model downloads
- * (downloading / resuming / paused / failed), with pause + resume controls. */
+/** Compact inline download "sliver" for the sidebar foot — a peek at background model
+ * downloads (downloading / resuming / paused / failed) with pause + resume. Renders
+ * nothing when idle, so it never blocks the buttons around it. */
 export function DownloadIndicator() {
   const [items, setItems] = useState<DL[]>([])
 
@@ -23,7 +24,7 @@ export function DownloadIndicator() {
         .then((s) => alive && setItems(s))
         .catch(() => {})
     tick()
-    const id = setInterval(tick, 1500)
+    const id = setInterval(tick, 1200)
     return () => {
       alive = false
       clearInterval(id)
@@ -34,71 +35,47 @@ export function DownloadIndicator() {
   if (!active.length) return null
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        bottom: 14,
-        left: 14,
-        zIndex: 60,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 6,
-        width: 300,
-      }}
-    >
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 5, padding: '2px 2px 4px' }}>
       {active.map(([name, recv, total, status]) => {
         const pct = total > 0 ? Math.round((recv / total) * 100) : 0
+        const failed = status === 'failed'
+        const running = status === 'downloading' || status === 'resuming'
+        const label = failed ? 'failed' : status === 'resuming' ? `resuming ${pct}%` : status === 'paused' ? `paused ${pct}%` : `${pct}%`
         return (
-          <div
-            key={name}
-            style={{
-              background: 'var(--panel, #130A30)',
-              border: '1px solid var(--border, #2a2342)',
-              borderRadius: 10,
-              padding: '8px 10px',
-              fontSize: 12,
-              boxShadow: '0 6px 22px rgba(0,0,0,.45)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div key={name} style={{ fontSize: 11 }} title={`${name} — ${status} · ${pct}%`}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: 0.85 }}>
                 ⬇ {short(name)}
               </span>
-              <span className="muted" style={{ marginLeft: 'auto', textTransform: 'capitalize' }}>
-                {status}
+              <span className="muted" style={{ fontSize: 10 }}>
+                {label}
               </span>
+              {running ? (
+                <button className="icon-btn sm" title="Pause" onClick={() => invoke('pause_download', { filename: name })}>
+                  ⏸
+                </button>
+              ) : (
+                <button
+                  className="icon-btn sm"
+                  title="Resume"
+                  onClick={() => {
+                    const u = urlForFile(name)
+                    if (u) invoke('start_download', { url: u, filename: name })
+                  }}
+                >
+                  ▶
+                </button>
+              )}
             </div>
-            <div style={{ height: 6, background: 'rgba(255,255,255,.08)', borderRadius: 4, margin: '6px 0', overflow: 'hidden' }}>
+            <div style={{ height: 3, borderRadius: 2, background: 'rgba(255,255,255,.1)', marginTop: 3, overflow: 'hidden' }}>
               <div
                 style={{
                   width: `${pct}%`,
                   height: '100%',
-                  background: status === 'failed' ? '#ff6b6b' : 'var(--corona, #5EEAD4)',
+                  background: failed ? '#ff6b6b' : 'var(--corona, #5EEAD4)',
                   transition: 'width .4s ease',
                 }}
               />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span className="muted">{total > 0 ? `${gb(recv)} / ${gb(total)} GB · ${pct}%` : `${gb(recv)} GB`}</span>
-              <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
-                {(status === 'downloading' || status === 'resuming') && (
-                  <button className="btn sm ghost" title="Pause" onClick={() => invoke('pause_download', { filename: name })}>
-                    ⏸
-                  </button>
-                )}
-                {(status === 'paused' || status === 'failed') && (
-                  <button
-                    className="btn sm ghost"
-                    title="Resume"
-                    onClick={() => {
-                      const url = urlForFile(name)
-                      if (url) invoke('start_download', { url, filename: name })
-                    }}
-                  >
-                    ▶
-                  </button>
-                )}
-              </span>
             </div>
           </div>
         )

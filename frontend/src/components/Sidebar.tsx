@@ -1,6 +1,7 @@
 import { useStore } from '../store'
 import { ModelBar } from './ModelBar'
 import { CoronaMark } from './CoronaMark'
+import { DownloadIndicator } from './DownloadIndicator'
 import { cx, timeAgo } from '../util'
 import type { AppView, Character } from '../types'
 
@@ -294,6 +295,7 @@ export function Sidebar({
         <button className="btn ghost block" onClick={onOpenPersona}>
           🧑 Persona: {persona.name}
         </button>
+        <DownloadIndicator />
         <button className="btn ghost block" onClick={onOpenSettings}>
           ⚙ Settings
         </button>
