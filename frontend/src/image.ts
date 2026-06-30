@@ -1,8 +1,9 @@
-// Portrait helpers — downscale/compress an uploaded image to a small data URL (safe for
-// localStorage, which holds the whole store), plus a few generic on-brand portraits so the
-// picker isn't empty before custom art exists.
+// Portrait helpers — downscale/compress an uploaded image to a data URL stored inline in the
+// save, plus a few generic on-brand portraits so the picker isn't empty before custom art exists.
 
-const MAX_EDGE = 256 // longest side in px — keeps each portrait ~10-40 KB
+// Longest side in px. 768 keeps the live portrait crisp at the Large size (even on hi-DPI) while
+// WebP keeps each one ~60-150 KB. (Re-upload existing portraits to pick up the higher resolution.)
+const MAX_EDGE = 768
 
 /** Read an image File, downscale to fit MAX_EDGE, and return a compressed WebP data URL. */
 export async function fileToPortrait(file: File): Promise<string> {
