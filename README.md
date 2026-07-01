@@ -10,6 +10,11 @@
   <img alt="Offline" src="https://img.shields.io/badge/cloud-none-FF79C6" />
 </p>
 
+<p align="center">
+  <a href="https://youtu.be/CjzuCgxyU4A"><img src="https://img.youtube.com/vi/CjzuCgxyU4A/maxresdefault.jpg" alt="Watch the Aphelion deep-dive demo" width="75%" /></a>
+</p>
+<p align="center"><em>▶️ <a href="https://youtu.be/CjzuCgxyU4A"><strong>Watch the full deep-dive demo</strong></a> (~35 min)</em></p>
+
 ---
 
 **Aphelion** is an all-in-one desktop app that runs powerful AI models entirely on your own PC — Windows, macOS, or Linux — with no servers, no cloud, no setup. Chat with characters, write stories, build branching dialogue, draft and analyze code, or ask an expert assistant. **Everything you type stays on your machine,** and once it's set up it works with the internet unplugged.
