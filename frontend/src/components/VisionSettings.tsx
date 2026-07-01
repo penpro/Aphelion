@@ -1,21 +1,14 @@
 import { useEffect, useState } from 'react'
-import { invoke } from '@tauri-apps/api/core'
+import { visionPresent, downloadStatus, startDownload as startDownloadCmd, pauseDownload, type DownloadInfo } from '../tauri'
 import { useStore } from '../store'
 import { VISION_MODELS, findVisionModel } from '../visionModels'
-
-interface DL {
-  filename: string
-  received: number
-  total: number
-  status: string
-}
 
 /** Settings control: pick + download (resumable, background) a vision model for image tasks. */
 export function VisionSettings() {
   const visionModel = useStore((s) => s.settings.visionModel)
   const updateSettings = useStore((s) => s.updateSettings)
   const [present, setPresent] = useState(false)
-  const [dls, setDls] = useState<DL[]>([])
+  const [dls, setDls] = useState<DownloadInfo[]>([])
   const [err, setErr] = useState('')
 
   const vm = findVisionModel(visionModel)
@@ -28,13 +21,13 @@ export function VisionSettings() {
     let alive = true
     const tick = async () => {
       try {
-        const ok = await invoke<boolean>('vision_present', { textFile: vm.textFile, mmprojFile: vm.mmprojFile })
+        const ok = await visionPresent(vm.textFile, vm.mmprojFile)
         if (alive) setPresent(ok)
       } catch {
         if (alive) setPresent(false)
       }
       try {
-        const status = await invoke<DL[]>('download_status')
+        const status = await downloadStatus()
         if (alive) setDls(status)
       } catch {
         /* ignore */
@@ -63,16 +56,16 @@ export function VisionSettings() {
     if (!vm) return
     setErr('')
     try {
-      await invoke('start_download', { url: vm.textUrl, filename: vm.textFile })
-      await invoke('start_download', { url: vm.mmprojUrl, filename: vm.mmprojFile })
+      await startDownloadCmd(vm.textUrl, vm.textFile)
+      await startDownloadCmd(vm.mmprojUrl, vm.mmprojFile)
     } catch (e) {
       setErr((e as Error)?.message ?? String(e))
     }
   }
   const pause = async () => {
     if (!vm) return
-    await invoke('pause_download', { filename: vm.textFile })
-    await invoke('pause_download', { filename: vm.mmprojFile })
+    await pauseDownload(vm.textFile)
+    await pauseDownload(vm.mmprojFile)
   }
 
   return (

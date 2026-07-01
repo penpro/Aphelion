@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { open } from '@tauri-apps/plugin-dialog'
-import { invoke } from '@tauri-apps/api/core'
+import { folderInfo } from '../tauri'
 
 const baseName = (p: string) => p.split(/[\\/]/).filter(Boolean).pop() || p
 
@@ -23,7 +23,7 @@ export function FolderGrant({
       return
     }
     let alive = true
-    invoke<[number, number, string[]]>('folder_info', { path: folder })
+    folderInfo(folder)
       .then(([files, chunks]) => {
         if (alive) setInfo({ files, chunks })
       })

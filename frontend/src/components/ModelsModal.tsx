@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react'
-import { invoke } from '@tauri-apps/api/core'
+import { modelFiles, startEngine, deleteModel, type ModelFile } from '../tauri'
 import { getEngineStatus } from '../api/ollama'
 import { useStore } from '../store'
 import { Modal } from './Modal'
 import { friendlyModelName } from '../models'
-
-type MF = [string, number, boolean] // filename, size_bytes, is_loaded_main
 
 const isMmproj = (n: string) => n.toLowerCase().includes('mmproj')
 const gb = (n: number) => (n / 1024 / 1024 / 1024).toFixed(2)
@@ -18,13 +16,13 @@ export function ModelsModal({ onClose }: { onClose: () => void }) {
   const baseUrl = useStore((s) => s.settings.baseUrl)
   const updateSettings = useStore((s) => s.updateSettings)
   const setLoadedModel = useStore((s) => s.setLoadedModel)
-  const [files, setFiles] = useState<MF[]>([])
+  const [files, setFiles] = useState<ModelFile[]>([])
   const [busy, setBusy] = useState('') // filename being acted on ('' = idle)
   const [confirm, setConfirm] = useState<string | null>(null)
   const [err, setErr] = useState('')
 
   const refresh = () =>
-    invoke<MF[]>('model_files')
+    modelFiles()
       .then(setFiles)
       .catch(() => {})
   useEffect(() => {
@@ -35,7 +33,7 @@ export function ModelsModal({ onClose }: { onClose: () => void }) {
     setErr('')
     setBusy(name)
     try {
-      await invoke('start_engine', { filename: name })
+      await startEngine(name)
       updateSettings({ model: name })
       setLoadedModel(name)
       for (let i = 0; i < 120; i++) {
@@ -55,7 +53,7 @@ export function ModelsModal({ onClose }: { onClose: () => void }) {
     setConfirm(null)
     setBusy(name)
     try {
-      await invoke('delete_model', { filename: name })
+      await deleteModel(name)
       refresh()
     } catch (e) {
       setErr((e as { message?: string })?.message ?? String(e))

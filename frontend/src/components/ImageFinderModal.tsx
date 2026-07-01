@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { open } from '@tauri-apps/plugin-dialog'
-import { invoke } from '@tauri-apps/api/core'
+import { setVisionMode, listImages, readImageData, saveDocument, openPath } from '../tauri'
 import { useStore } from '../store'
 import { classifyImage, getEngineStatus } from '../api/ollama'
 import { findVisionModel } from '../visionModels'
@@ -60,7 +60,7 @@ export function ImageFinderModal({
 
   const restoreMain = async () => {
     try {
-      await invoke('set_vision_mode', { on: false, textFile: vm?.textFile ?? '', mmprojFile: vm?.mmprojFile ?? '' })
+      await setVisionMode(false, vm?.textFile ?? '', vm?.mmprojFile ?? '')
       await waitReady()
       setEngineMode('text')
     } catch {
@@ -81,10 +81,10 @@ export function ImageFinderModal({
     abortRef.current = ctrl
     try {
       setPhase('loading')
-      await invoke('set_vision_mode', { on: true, textFile: vm.textFile, mmprojFile: vm.mmprojFile })
+      await setVisionMode(true, vm.textFile, vm.mmprojFile)
       await waitReady()
       setEngineMode('image')
-      const names = await invoke<string[]>('list_images', { folder })
+      const names = await listImages(folder)
       if (!names.length) throw new Error('No images found in that folder.')
       setTotal(names.length)
       setPhase('classifying')
@@ -92,7 +92,7 @@ export function ImageFinderModal({
       for (const name of names) {
         if (ctrl.signal.aborted) break
         try {
-          const dataUrl = await invoke<string>('read_image_data', { folder, name })
+          const dataUrl = await readImageData(folder, name)
           if (await classifyImage(baseUrl, dataUrl, criterion.trim(), ctrl.signal)) {
             found.push(name)
             setMatches([...found])
@@ -117,8 +117,8 @@ export function ImageFinderModal({
   ${cells}
 )
 `
-        const pdf = await invoke<string>('save_document', { folder, title: `${criterion.trim()} matches`, source })
-        await invoke('open_path', { path: pdf })
+        const pdf = await saveDocument(folder, `${criterion.trim()} matches`, source)
+        await openPath(pdf)
         setSavedNote(`Saved ${found.length} match${found.length === 1 ? '' : 'es'} to a PDF in ${baseName(folder)} · opened.`)
       } else if (!found.length) {
         setSavedNote('No matches found.')

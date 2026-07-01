@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { invoke } from '@tauri-apps/api/core'
+import { vramTotalMb, modelDirPath, startEngine } from '../tauri'
 import { download } from '@tauri-apps/plugin-upload'
 import { MODEL_CATALOG, UNCENSORED_CATALOG, findModel, recommendModel, type ModelOption } from '../models'
 import { getEngineStatus } from '../api/ollama'
@@ -18,7 +18,7 @@ export function SetupWizard({ onReady }: { onReady: () => void }) {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    invoke<number | null>('vram_total_mb')
+    vramTotalMb()
       .then((mb) => {
         setVramMb(mb ?? null)
         setSelected(recommendModel(mb ? mb / 1024 : null))
@@ -36,13 +36,13 @@ export function SetupWizard({ onReady }: { onReady: () => void }) {
     setPhase('downloading')
     setPct(0)
     try {
-      const dir = await invoke<string | null>('model_dir_path')
+      const dir = await modelDirPath()
       if (!dir) throw new Error('No model directory available.')
       await download(model.url, `${dir}/${model.filename}`, (p) => {
         if (p.total > 0) setPct((p.progressTotal / p.total) * 100)
       })
       setPhase('starting')
-      await invoke('start_engine', { filename: model.filename })
+      await startEngine(model.filename)
       for (let i = 0; i < 120; i++) {
         await new Promise((r) => setTimeout(r, 1500))
         if ((await getEngineStatus(baseUrl)) === 'ready') break

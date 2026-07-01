@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { invoke } from '@tauri-apps/api/core'
+import { listModels } from './tauri'
 import { useStore } from './store'
 import { Sidebar } from './components/Sidebar'
 import { ChatView } from './components/ChatView'
@@ -34,7 +34,7 @@ export default function App() {
   // First run: if no model has been downloaded yet, show the setup wizard.
   // Once a model exists, run the welcome tour until it's dismissed with "don't show again".
   useEffect(() => {
-    invoke<string[]>('list_models')
+    listModels()
       .then((models) => {
         setNeedsSetup(models.length === 0)
         if (models.length > 0 && !useStore.getState().settings.seenWelcome) setShowWelcome(true)

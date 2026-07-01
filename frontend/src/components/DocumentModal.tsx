@@ -1,6 +1,19 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { open } from '@tauri-apps/plugin-dialog'
-import { invoke } from '@tauri-apps/api/core'
+import {
+  listDocuments,
+  retrieveContext,
+  grantPath,
+  readTextFile,
+  readDocument,
+  compileTypst,
+  writeTempFile,
+  openPath,
+  saveTypstAt,
+  writeToPath,
+  saveDocument,
+  saveTextDocument,
+} from '../tauri'
 import { useStore } from '../store'
 import { Modal } from './Modal'
 import { generateTypstDoc, generateTextDoc, editDoc, fixTypstDoc } from '../generators'
@@ -81,7 +94,7 @@ export function DocumentModal({
       setDocs([])
       return
     }
-    invoke<string[]>('list_documents', { folder: dir })
+    listDocuments(dir)
       .then(setDocs)
       .catch(() => setDocs([]))
   }
@@ -99,7 +112,7 @@ export function DocumentModal({
     }
     if (includeFolder && folder) {
       try {
-        const kb = await invoke<string>('retrieve_context', { path: folder, query: request, maxChars: 4000 })
+        const kb = await retrieveContext(folder, request, 4000)
         if (kb.trim()) parts.push(`From the folder:\n${kb}`)
       } catch {
         /* folder unavailable — skip */
@@ -184,8 +197,8 @@ export function DocumentModal({
         ],
       })
       if (typeof picked !== 'string') return
-      await invoke('grant_path', { path: picked }) // scope the file commands to this file's folder
-      const src = await invoke<string>('read_text_file', { path: picked })
+      await grantPath(picked) // scope the file commands to this file's folder
+      const src = await readTextFile(picked)
       setFormat(fmtForExt(picked.split('.').pop() || ''))
       setContent(src)
       setFilePath(picked)
@@ -200,7 +213,7 @@ export function DocumentModal({
   const reopen = async (name: string) => {
     if (!folder || busy !== 'idle') return
     try {
-      const src = await invoke<string>('read_document', { folder, name })
+      const src = await readDocument(folder, name)
       setFormat(fmtForExt(name.split('.').pop() || ''))
       setContent(src)
       setFilePath(null)
@@ -237,9 +250,9 @@ export function DocumentModal({
     setBusy('compiling')
     try {
       const path = format.typst
-        ? await invoke<string>('compile_typst', { source: content, outPath: null })
-        : await invoke<string>('write_temp_file', { name: `${saveTitle}.${format.ext}`, content })
-      await invoke('open_path', { path })
+        ? await compileTypst(content, null)
+        : await writeTempFile(`${saveTitle}.${format.ext}`, content)
+      await openPath(path)
     } catch (e) {
       const err = e as { message?: string }
       setError(typeof err?.message === 'string' ? err.message : String(e))
@@ -257,9 +270,9 @@ export function DocumentModal({
       let opened: string
       if (filePath) {
         if (format.typst) {
-          opened = await invoke<string>('save_typst_at', { typPath: filePath, source: content })
+          opened = await saveTypstAt(filePath, content)
         } else {
-          await invoke('write_to_path', { path: filePath, content })
+          await writeToPath(filePath, content)
           opened = filePath
         }
         setSavedTo(filePath)
@@ -270,12 +283,12 @@ export function DocumentModal({
           return
         }
         opened = format.typst
-          ? await invoke<string>('save_document', { folder: dir, title: saveTitle, source: content })
-          : await invoke<string>('save_text_document', { folder: dir, title: saveTitle, ext: format.ext, content })
+          ? await saveDocument(dir, saveTitle, content)
+          : await saveTextDocument(dir, saveTitle, format.ext, content)
         setSavedTo(dir)
         refreshDocs(dir)
       }
-      await invoke('open_path', { path: opened })
+      await openPath(opened)
     } catch (e) {
       const err = e as { message?: string }
       setError(typeof err?.message === 'string' ? err.message : String(e))

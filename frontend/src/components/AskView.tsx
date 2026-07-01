@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { invoke } from '@tauri-apps/api/core'
+import { setVisionMode, extractPdf, retrieveContext } from '../tauri'
 import { useStore } from '../store'
 import { useConfirm } from './ConfirmDialog'
 import { streamChatNative, samplerFromSettings, getEngineStatus, runIntentClassifier, type ContentPart } from '../api/ollama'
@@ -110,7 +110,7 @@ export function AskView() {
       } else if (f.type === 'application/pdf' || /\.pdf$/i.test(f.name)) {
         try {
           const buf = new Uint8Array(await f.arrayBuffer())
-          const text = await invoke<string>('extract_pdf', { data: Array.from(buf) })
+          const text = await extractPdf(Array.from(buf))
           if (text.trim()) texts.push({ name: f.name, text })
         } catch (e) {
           setError(`Couldn't read ${f.name}: ${(e as { message?: string })?.message ?? e}`)
@@ -153,7 +153,7 @@ export function AskView() {
     setSwapping(true)
     setError('')
     try {
-      await invoke('set_vision_mode', { on: next === 'image', textFile: vm?.textFile ?? '', mmprojFile: vm?.mmprojFile ?? '' })
+      await setVisionMode(next === 'image', vm?.textFile ?? '', vm?.mmprojFile ?? '')
       await waitReady()
       setEngineMode(next)
       if (next === 'text') setPending([])
@@ -214,7 +214,7 @@ export function AskView() {
       let sysFull = sys
       if (ask.knowledgeFolder) {
         try {
-          const kb = await invoke<string>('retrieve_context', { path: ask.knowledgeFolder, query: userText, maxChars: 6000 })
+          const kb = await retrieveContext(ask.knowledgeFolder, userText, 6000)
           if (kb.trim()) {
             sysFull = `${sys}\n\n# Reference material from the user's folder\nUse it to answer accurately and cite file names when relevant; if it doesn't cover the question, say so.\n\n${kb}`
           }

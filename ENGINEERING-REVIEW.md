@@ -31,7 +31,7 @@ A critical software-engineering audit (Rust backend, React/TS frontend, persiste
 
 ## Tier 2 — Decoupling & maintainability
 
-- [ ] **4. No Tauri boundary — ~49 `invoke()` across 24 components** (violates "go through `api/`"). Add `services/tauri.ts` with typed wrappers; components call functions, not `invoke`. Also fixes the 15+ untyped `invoke<string>` returns.
+- [x] **4. Tauri boundary** *(v0.1.38)* — `src/tauri.ts` is now the single typed boundary (one documented wrapper per command + `ModelFile`/`DownloadInfo` types); all ~43 `invoke()` call sites across 11 files go through it, and `invoke` appears **only** in `tauri.ts`. Fixes the scattered untyped `invoke<T>` calls in one place. (Verified: build + 58 tests green + grep clean.)
 - [ ] **5. God-components/modules.** `AskView` (~600), `generators.ts` (~590, streaming loop copy-pasted 4×), `store.ts` (~580 monolith), `SettingsPanel` (~500), `StoryView`/`DocumentModal` (~470). Extract hooks (`useAskGeneration`, `useStoryGeneration`, `useDialogueGeneration`), split `generators.ts` by domain behind one `streamWith()` helper, pull merge/migration into `migrations.ts`.
 - [ ] **6. `MessageItem` not memoized** → every streaming token re-renders the whole list. `React.memo` + `useCallback`.
 
@@ -42,7 +42,7 @@ A critical software-engineering audit (Rust backend, React/TS frontend, persiste
 - [ ] **7. Swallowed errors** — `.catch(() => {})` in `ModelsModal`/`FolderGrant`/`SetupWizard`/`DocumentModal`; log + show a subtle status.
 - [ ] **8. Test coverage gaps** — pure functions are covered (7 files); the load-bearing store `merge()`/migrations and the quota path are not. Add merge (corrupt/partial input) + quota-exceeded tests. *(quota path partially covered by `storage.test.ts` in v0.1.35.)*
 - [ ] **9. Rust minor** — temp-file name collisions (use a UUID), symlink TOCTOU in the allowlist (low practical risk), no timeouts on child waits.
-- [ ] **10. Release papercut** — version bump is 6 manual edits across 5 files; add `scripts/bump.mjs` (single source of truth).
+- [x] **10. Release bump script** *(v0.1.38)* — `scripts/bump.mjs` (`npm run bump <version|patch|minor|major>`) writes all 5 version files with anchored replacements; no more six hand-edits.
 
 ---
 

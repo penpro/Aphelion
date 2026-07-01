@@ -1,13 +1,6 @@
 import { useEffect, useState } from 'react'
-import { invoke } from '@tauri-apps/api/core'
+import { downloadStatus, pauseDownload, startDownload, type DownloadInfo } from '../tauri'
 import { urlForFile } from '../visionModels'
-
-interface DL {
-  filename: string
-  received: number
-  total: number
-  status: string
-}
 
 const short = (f: string) =>
   f
@@ -20,12 +13,12 @@ const short = (f: string) =>
  * downloads (downloading / resuming / paused / failed) with pause + resume. Renders
  * nothing when idle, so it never blocks the buttons around it. */
 export function DownloadIndicator() {
-  const [items, setItems] = useState<DL[]>([])
+  const [items, setItems] = useState<DownloadInfo[]>([])
 
   useEffect(() => {
     let alive = true
     const tick = () =>
-      invoke<DL[]>('download_status')
+      downloadStatus()
         .then((s) => alive && setItems(s))
         .catch(() => {})
     tick()
@@ -56,7 +49,7 @@ export function DownloadIndicator() {
                 {label}
               </span>
               {running ? (
-                <button className="icon-btn sm" title="Pause" onClick={() => invoke('pause_download', { filename: name })}>
+                <button className="icon-btn sm" title="Pause" onClick={() => pauseDownload(name)}>
                   ⏸
                 </button>
               ) : (
@@ -65,7 +58,7 @@ export function DownloadIndicator() {
                   title="Resume"
                   onClick={() => {
                     const u = urlForFile(name)
-                    if (u) invoke('start_download', { url: u, filename: name })
+                    if (u) startDownload(u, name)
                   }}
                 >
                   ▶

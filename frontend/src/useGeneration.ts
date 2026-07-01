@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 import { useStore } from './store'
-import { invoke } from '@tauri-apps/api/core'
+import { retrieveContext } from './tauri'
 import { streamChatNative, reloadModel, proofread, samplerFromSettings } from './api/ollama'
 import { buildApiMessages, estTokens } from './prompt'
 import { distillMessages, compactSummary, LIVE_WINDOW_TOKENS, KEEP_RECENT_TOKENS, SUMMARY_CAP_TOKENS } from './memory'
@@ -51,11 +51,7 @@ export function useGeneration() {
       if (lastUser?.trim()) {
         setMemoryStatus('📚 searching knowledge folder…')
         try {
-          const kb = await invoke<string>('retrieve_context', {
-            path: chat.knowledgeFolder,
-            query: lastUser,
-            maxChars: 6000,
-          })
+          const kb = await retrieveContext(chat.knowledgeFolder, lastUser, 6000)
           if (kb?.trim()) {
             sources = [...sources, { id: 'kb', name: 'Knowledge folder — relevant excerpts (factual reference)', text: kb }]
           }

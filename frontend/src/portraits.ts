@@ -1,4 +1,5 @@
-import { invoke, convertFileSrc } from '@tauri-apps/api/core'
+import { convertFileSrc } from '@tauri-apps/api/core'
+import { savePortrait } from './tauri'
 import { uid } from './util'
 
 // Character portraits used to live in the store as base64 data-URLs, which bloated localStorage
@@ -11,7 +12,7 @@ const DISK_PREFIX = 'disk:'
  *  portrait always keeps working, just un-offloaded. */
 export async function persistPortrait(dataUrl: string): Promise<string> {
   try {
-    const path = await invoke<string>('save_portrait', { id: uid(), dataUrl })
+    const path = await savePortrait(uid(), dataUrl)
     return DISK_PREFIX + path
   } catch {
     return dataUrl

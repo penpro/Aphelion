@@ -1,5 +1,5 @@
 import { useEffect, useState, type CSSProperties } from 'react'
-import { invoke } from '@tauri-apps/api/core'
+import { appVersion, shutdownEngine } from '../tauri'
 import { check, type Update } from '@tauri-apps/plugin-updater'
 import { relaunch } from '@tauri-apps/plugin-process'
 
@@ -25,7 +25,7 @@ export function UpdateCheck() {
   const [pct, setPct] = useState(0)
 
   useEffect(() => {
-    invoke<string>('app_version')
+    appVersion()
       .then(setVersion)
       .catch(() => {})
   }, [])
@@ -54,7 +54,7 @@ export function UpdateCheck() {
     setPct(0)
     try {
       // Stop the bundled engine first so its DLLs aren't locked when the installer overwrites them.
-      await invoke('shutdown_engine').catch(() => {})
+      await shutdownEngine().catch(() => {})
       await new Promise((r) => setTimeout(r, 700))
       let total = 0
       let got = 0
