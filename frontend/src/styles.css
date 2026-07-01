@@ -469,6 +469,14 @@ code, pre, kbd, .mono, .xs, .hint, .model-name, .estimate, .num-input, .field-la
   width: auto;
   min-width: 0;
 }
+.set-desc-field {
+  gap: 4px;
+}
+.set-desc {
+  width: 100%;
+  resize: vertical;
+  min-height: 44px;
+}
 .set-empty {
   margin-top: 6px;
   padding: 12px;

@@ -6,8 +6,11 @@ import { generateCharacter, expandCharacterField } from '../generators'
 import { cx, uid } from '../util'
 import { CharAvatar } from './CharAvatar'
 import { fileToPortrait, GENERIC_PORTRAITS } from '../image'
-import { persistPortrait } from '../portraits'
+import { persistPortrait, portraitDataUrl } from '../portraits'
 import { EMOTIONS, buildEmotionArtPrompts } from '../emotion'
+import { describePortrait, getEngineStatus } from '../api/ollama'
+import { setVisionMode } from '../tauri'
+import { findVisionModel } from '../visionModels'
 import type { Character, EmotionKey, PortraitSet } from '../types'
 
 const COLORS = ['#7c5cff', '#3fb6a8', '#ff6b8b', '#f5a623', '#4a90e2', '#9b59b6', '#2ecc71', '#e74c3c']
@@ -111,6 +114,63 @@ export function CharacterEditor({ editing, onClose }: { editing: Character | 'ne
       setEmotionErr((e as { message?: string })?.message ?? 'Could not use that image.')
     } finally {
       setEmotionBusy(null)
+    }
+  }
+
+  const setSetDescription = (setId: string, description: string) =>
+    mutateSets((list) => list.map((s) => (s.id === setId ? { ...s, description } : s)))
+
+  const [scanPhase, setScanPhase] = useState('')
+  const [scanErr, setScanErr] = useState('')
+  const vm = findVisionModel(settings.visionModel)
+
+  const waitEngineReady = async () => {
+    for (let i = 0; i < 120; i++) {
+      await new Promise((r) => setTimeout(r, 1500))
+      try {
+        if ((await getEngineStatus(settings.baseUrl)) === 'ready') return
+      } catch {
+        /* keep waiting */
+      }
+    }
+    throw new Error('Engine did not come back up.')
+  }
+
+  // Load the vision model once, describe each set's look from a representative portrait, then restore
+  // the main model. Fills every set's description (typed or scanned) — that's what drives auto-switch.
+  const describeLooks = async () => {
+    if (scanPhase) return
+    setScanErr('')
+    if (!vm) return setScanErr('Pick a vision model in Settings (the gear) first.')
+    const targets = (c.portraitSets ?? []).filter((s) => Object.keys(s.portraits).length > 0)
+    if (!targets.length) return setScanErr('Add at least one portrait to a set first.')
+    const baseUrl = settings.baseUrl
+    try {
+      setScanPhase('Loading the vision model…')
+      await setVisionMode(true, vm.textFile, vm.mmprojFile)
+      await waitEngineReady()
+      for (let i = 0; i < targets.length; i++) {
+        const s = targets[i]
+        setScanPhase(`Describing ${s.name?.trim() || 'look'} (${i + 1}/${targets.length})…`)
+        const rep = s.portraits.neutral ?? Object.values(s.portraits)[0]
+        const dataUrl = await portraitDataUrl(rep)
+        if (!dataUrl) continue
+        const desc = await describePortrait(baseUrl, dataUrl, c.name)
+        if (desc) setSetDescription(s.id, desc)
+      }
+      setScanPhase('Restoring your main model…')
+      await setVisionMode(false, vm.textFile, vm.mmprojFile)
+      await waitEngineReady()
+      setScanPhase('')
+    } catch (e) {
+      setScanErr((e as { message?: string })?.message ?? String(e))
+      try {
+        await setVisionMode(false, vm.textFile, vm.mmprojFile)
+        await waitEngineReady()
+      } catch {
+        /* best effort restore */
+      }
+      setScanPhase('')
     }
   }
 
@@ -267,9 +327,16 @@ export function CharacterEditor({ editing, onClose }: { editing: Character | 'ne
               Portrait sets{' '}
               <span className="muted xs">optional — named looks (e.g. “Hair up”), each with the 8 emotions</span>
             </span>
-            <button type="button" className="btn xs ghost" onClick={addSet}>
-              + New set
-            </button>
+            <span className="row gap">
+              {sets.length > 0 && (
+                <button type="button" className="btn xs ghost" onClick={describeLooks} disabled={!!scanPhase} title="Use the vision model to describe each look — powers auto-switching in chat">
+                  {scanPhase ? 'Scanning…' : '🔍 Describe looks'}
+                </button>
+              )}
+              <button type="button" className="btn xs ghost" onClick={addSet}>
+                + New set
+              </button>
+            </span>
           </span>
           {sets.length === 0 ? (
             <div className="muted sm set-empty">
@@ -309,6 +376,16 @@ export function CharacterEditor({ editing, onClose }: { editing: Character | 'ne
                       Delete
                     </button>
                   </div>
+                  <label className="field set-desc-field">
+                    <span className="muted xs">Look description — what this outfit/appearance is. Drives auto-switching in chat; type it or use “Describe looks”.</span>
+                    <textarea
+                      className="set-desc"
+                      rows={2}
+                      placeholder='e.g. "a red silk evening gown, hair down and loose"'
+                      value={activeSet.description ?? ''}
+                      onChange={(e) => setSetDescription(activeSet.id, e.target.value)}
+                    />
+                  </label>
                   {showPrompts && (
                     <div className="prompt-block">
                       <div className="muted xs">
@@ -369,6 +446,13 @@ export function CharacterEditor({ editing, onClose }: { editing: Character | 'ne
             </div>
           )}
           {emotionErr && <div className="error-line">{emotionErr}</div>}
+          {scanPhase && <div className="muted xs" style={{ marginTop: 6 }}>{scanPhase}</div>}
+          {scanErr && <div className="error-line">{scanErr}</div>}
+          {!vm && sets.length > 0 && (
+            <div className="muted xs" style={{ marginTop: 4 }}>
+              Tip: “Describe looks” needs a vision model (Settings → Vision). Or just type each look’s description above.
+            </div>
+          )}
         </div>
 
         <label className="field">

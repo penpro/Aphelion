@@ -193,6 +193,14 @@ export function ChatDials({ chat }: { chat: Chat }) {
               ))}
             </select>
             <span className="muted xs">Which of {primary?.name || 'the character'}’s looks the live portrait shows.</span>
+            <label className="row gap" style={{ marginTop: 8, alignItems: 'center' }}>
+              <input
+                type="checkbox"
+                checked={!!chat.autoPortraitSet}
+                onChange={(e) => updateChat(chat.id, { autoPortraitSet: e.target.checked })}
+              />
+              <span className="muted xs">Auto-switch — let the story pick the look (needs a description on each set).</span>
+            </label>
           </div>
         )}
       </div>

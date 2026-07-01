@@ -175,6 +175,97 @@ export async function classifyEmotion(
   }
 }
 
+/**
+ * Pick which portrait "look" (outfit/appearance set) the character currently has, by matching the
+ * recent story against each set's name + description. Deliberately STICKY: it's told to keep the
+ * current look unless the story clearly shows a wardrobe/appearance change ("put on", "changed into",
+ * "now wearing", "took off"), so an ordinary reply doesn't flip the outfit. Text-only + deterministic
+ * — no vision, no model swap. Returns the chosen set's id, or null to keep the current look.
+ */
+export async function classifyPortraitSet(
+  baseUrl: string,
+  character: { name?: string },
+  sets: { id: string; name: string; description?: string }[],
+  currentSetId: string | undefined,
+  recentText: string,
+  signal?: AbortSignal,
+): Promise<string | null> {
+  if (sets.length < 2) return null
+  const name = character.name?.trim() || 'the character'
+  const currentIdx = Math.max(0, sets.findIndex((s) => s.id === currentSetId))
+  const list = sets
+    .map((s, i) => `${i + 1}. ${s.name?.trim() || 'Untitled'}${s.description?.trim() ? ` — ${s.description.trim()}` : ''}`)
+    .join('\n')
+  const prompt =
+    `You choose which visual LOOK a roleplay character currently has, for a portrait system.\n\n` +
+    `CHARACTER: ${name}\n\nAVAILABLE LOOKS:\n${list}\n\n` +
+    `CURRENTLY SHOWING: look ${currentIdx + 1} (${sets[currentIdx]?.name?.trim() || 'Untitled'})\n\n` +
+    `Recent story:\n"""\n${recentText.slice(-1600)}\n"""\n\n` +
+    `Which look is ${name} in RIGHT NOW? Only change from the current look if the story clearly shows ` +
+    `them changing their clothes or appearance (put on, changed into, slipped into, now wearing, took ` +
+    `off, undressed, transformed). If nothing clearly changed, keep the current look.\n\n` +
+    `Answer with ONLY the number of the look.`
+  try {
+    const resp = await fetch(`${baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'intent', max_tokens: 6, temperature: 0, messages: [{ role: 'user', content: prompt }] }),
+      signal,
+    })
+    if (!resp.ok) return null
+    const json = await resp.json()
+    const out = String(json.choices?.[0]?.message?.content ?? '')
+    const n = parseInt(out.match(/\d+/)?.[0] ?? '', 10)
+    if (!Number.isFinite(n) || n < 1 || n > sets.length) return null
+    return sets[n - 1].id
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Vision: describe a portrait's outfit/appearance in one concise phrase, to fill a set's description
+ * (which drives auto-switch). Requires the vision model to be loaded (set_vision_mode(true) first).
+ * Returns a trimmed phrase, or '' if the engine can't answer.
+ */
+export async function describePortrait(baseUrl: string, dataUrl: string, name: string, signal?: AbortSignal): Promise<string> {
+  const who = name?.trim() || 'the character'
+  try {
+    const resp = await fetch(`${baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'vision',
+        max_tokens: 60,
+        temperature: 0,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text:
+                  `In ONE short phrase, describe ${who}'s outfit and overall appearance in this image — ` +
+                  `focus on clothing, hair, and any striking visual details. No preamble, no sentence, just the phrase.`,
+              },
+              { type: 'image_url', image_url: { url: dataUrl } },
+            ],
+          },
+        ],
+      }),
+      signal,
+    })
+    if (!resp.ok) return ''
+    const json = await resp.json()
+    return String(json.choices?.[0]?.message?.content ?? '')
+      .replace(/^["'\s]+|["'\s]+$/g, '')
+      .replace(/\s+/g, ' ')
+      .slice(0, 200)
+  } catch {
+    return ''
+  }
+}
+
 /** Strip the trailing /v1 to reach Ollama's native API root. */
 function nativeRoot(baseUrl: string): string {
   return baseUrl.endsWith('/v1') ? baseUrl.slice(0, -3) : baseUrl

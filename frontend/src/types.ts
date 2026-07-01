@@ -14,6 +14,7 @@ export type EmotionKey =
 export interface PortraitSet {
   id: string
   name: string
+  description?: string // what this look shows (outfit/appearance) — typed or filled by the vision scan; drives auto-switch
   portraits: Partial<Record<EmotionKey, string>>
 }
 
@@ -79,6 +80,7 @@ export interface Chat {
   started: boolean // false = still in the setup panel
   tuning: ChatTuning
   portraitSetId?: string // which of the primary character's portrait sets the live portrait shows
+  autoPortraitSet?: boolean // let the model pick the active look each reply (matches the scene to a set's description)
   sources: Source[] // reference docs injected into context
   knowledgeFolder?: string // path to a user-granted folder; relevant chunks retrieved into context per message
   summary: string // rolling distilled "story so far" memory of older, summarized-out messages

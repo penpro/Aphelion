@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { classifyImage, samplerBody, samplerFromSettings } from './ollama'
+import { classifyImage, classifyPortraitSet, describePortrait, samplerBody, samplerFromSettings } from './ollama'
 import { defaultSettings } from '../seed'
 
 describe('samplerBody', () => {
@@ -62,5 +62,78 @@ describe('classifyImage', () => {
   it('throws on a non-ok response', async () => {
     stub('', false)
     await expect(classifyImage('http://x/v1', 'data:image/png;base64,AAA', 'x')).rejects.toThrow(/HTTP 500/)
+  })
+})
+
+describe('classifyPortraitSet', () => {
+  afterEach(() => vi.unstubAllGlobals())
+  const stub = (content: string, ok = true) => {
+    const f = vi.fn(async () => ({ ok, status: ok ? 200 : 500, json: async () => ({ choices: [{ message: { content } }] }) }))
+    vi.stubGlobal('fetch', f)
+    return f
+  }
+  const sets = [
+    { id: 'a', name: 'Casual', description: 'jeans and a t-shirt' },
+    { id: 'b', name: 'Red dress', description: 'a red evening gown' },
+    { id: 'c', name: 'Armor', description: 'steel plate armor' },
+  ]
+
+  it('returns null without calling the model when there are fewer than 2 sets', async () => {
+    const f = stub('1')
+    expect(await classifyPortraitSet('http://x/v1', { name: 'A' }, [sets[0]], 'a', 'text')).toBeNull()
+    expect(f).not.toHaveBeenCalled()
+  })
+
+  it('maps the answered number to that set id', async () => {
+    stub('2')
+    expect(await classifyPortraitSet('http://x/v1', { name: 'A' }, sets, 'a', 'she slips into the red dress')).toBe('b')
+  })
+
+  it('parses a number out of stray prose', async () => {
+    stub('Look 3.')
+    expect(await classifyPortraitSet('http://x/v1', { name: 'A' }, sets, 'a', 'she buckles on her armor')).toBe('c')
+  })
+
+  it('returns null on an out-of-range or unparseable answer', async () => {
+    stub('9')
+    expect(await classifyPortraitSet('http://x/v1', { name: 'A' }, sets, 'a', 't')).toBeNull()
+    stub('none')
+    expect(await classifyPortraitSet('http://x/v1', { name: 'A' }, sets, 'a', 't')).toBeNull()
+  })
+
+  it('sends the set list + recent text and uses the intent model', async () => {
+    const f = stub('1')
+    await classifyPortraitSet('http://x/v1', { name: 'Mara' }, sets, 'b', 'RECENT-STORY-MARKER')
+    const [, init] = f.mock.calls[0] as unknown as [string, RequestInit]
+    const body = JSON.parse(init.body as string)
+    expect(body.model).toBe('intent')
+    const prompt = body.messages[0].content as string
+    expect(prompt).toContain('Red dress')
+    expect(prompt).toContain('RECENT-STORY-MARKER')
+    expect(prompt).toContain('CURRENTLY SHOWING: look 2')
+  })
+
+  it('returns null on a non-ok response (caller keeps the current look)', async () => {
+    stub('2', false)
+    expect(await classifyPortraitSet('http://x/v1', { name: 'A' }, sets, 'a', 't')).toBeNull()
+  })
+})
+
+describe('describePortrait', () => {
+  afterEach(() => vi.unstubAllGlobals())
+  const stub = (content: string, ok = true) => {
+    const f = vi.fn(async () => ({ ok, status: ok ? 200 : 500, json: async () => ({ choices: [{ message: { content } }] }) }))
+    vi.stubGlobal('fetch', f)
+    return f
+  }
+
+  it('trims quotes/whitespace and collapses runs', async () => {
+    stub('  "a red evening gown,   hair down"  ')
+    expect(await describePortrait('http://x/v1', 'data:image/png;base64,AAA', 'Mara')).toBe('a red evening gown, hair down')
+  })
+
+  it('returns empty string on a non-ok response', async () => {
+    stub('x', false)
+    expect(await describePortrait('http://x/v1', 'data:image/png;base64,AAA', 'Mara')).toBe('')
   })
 })
