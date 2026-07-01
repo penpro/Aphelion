@@ -1,5 +1,13 @@
 import type { Character, Persona, Settings, StoryDials, ChatTuning, Expert } from './types'
 import { now } from './util'
+import seraphinaNeutral from './assets/seraphina/neutral.webp'
+import seraphinaHappy from './assets/seraphina/happy.webp'
+import seraphinaSad from './assets/seraphina/sad.webp'
+import seraphinaAngry from './assets/seraphina/angry.webp'
+import seraphinaSurprised from './assets/seraphina/surprised.webp'
+import seraphinaFearful from './assets/seraphina/fearful.webp'
+import seraphinaEmbarrassed from './assets/seraphina/embarrassed.webp'
+import seraphinaAffectionate from './assets/seraphina/affectionate.webp'
 
 export const DEFAULT_CHAT_TUNING: ChatTuning = { prose: 50, length: 'medium', intensity: 2, think: 'off' }
 
@@ -103,6 +111,23 @@ export const defaultCharacters: Character[] = [
     systemPrompt:
       'Let the relationship develop gradually and earn its beats. Use actions in *asterisks* and ' +
       'spoken words in quotes.',
+    portrait: seraphinaNeutral,
+    portraitSets: [
+      {
+        id: 'seraphina-ranger',
+        name: 'Ranger',
+        portraits: {
+          neutral: seraphinaNeutral,
+          happy: seraphinaHappy,
+          sad: seraphinaSad,
+          angry: seraphinaAngry,
+          surprised: seraphinaSurprised,
+          fearful: seraphinaFearful,
+          embarrassed: seraphinaEmbarrassed,
+          affectionate: seraphinaAffectionate,
+        },
+      },
+    ],
     createdAt: now(),
   },
 ]

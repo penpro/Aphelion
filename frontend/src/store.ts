@@ -559,9 +559,18 @@ export const useStore = create<AppState>()(
         if (!mergedSettings.baseUrl || mergedSettings.baseUrl.startsWith('/ollama')) {
           mergedSettings.baseUrl = current.settings.baseUrl
         }
+        // Backfill the shipped Seraphina example portraits onto installs that predate them
+        // (leave her alone once a user has given her their own portrait sets, or deleted her).
+        const seraphinaSeed = defaultCharacters.find((c) => c.id === 'seed-seraphina')
+        const characters = (p.characters ?? current.characters).map((c) =>
+          c.id === 'seed-seraphina' && !c.portraitSets?.length && seraphinaSeed?.portraitSets?.length
+            ? { ...c, portrait: c.portrait || seraphinaSeed.portrait, portraitSets: seraphinaSeed.portraitSets }
+            : c,
+        )
         return {
           ...current,
           ...p,
+          characters,
           stories,
           chats,
           experts,
