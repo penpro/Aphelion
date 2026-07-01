@@ -20,10 +20,11 @@ A critical software-engineering audit (Rust backend, React/TS frontend, persiste
   - [x] Top-level `ErrorBoundary` with Reload / Export / Reset recovery UI.
   - [x] Defensive rehydration: corrupt store → boot on defaults, not a crash (`storage.ts` `getItem`).
 
-- [ ] **3. Engine spawn is fire-and-forget + lock poisoning (Rust)**
-  - [ ] `spawn_engine()` (`engine.rs:29-70`) returns before the port is listening and ignores a **stale process on 127.0.0.1:11435** — poll for readiness / adopt-or-kill a stale listener before reporting success.
-  - [ ] Every `.lock().unwrap()` has no poison recovery → one panic under a lock (a PDF slipping the `catch_unwind`) cascades a backend crash. Use poison-tolerant access.
-  - [ ] Child stdio undrained (`engine.rs:60`, `vision.rs:57`) → pipe-buffer deadlock. Add `Stdio::null()`.
+- [x] **3. Engine spawn + lock poisoning (Rust)** *(v0.1.36)*
+  - [x] `start_engine` now guards an instant-death spawn (busy port / incompatible model) with `try_wait` → a clear error instead of storing a dead process and hanging the UI.
+  - [x] All 33 `.lock().unwrap()` → poison-tolerant `unwrap_or_else(|e| e.into_inner())` across engine/vision/downloads/knowledge/documents/lib — one panic under a lock can no longer cascade-crash the backend.
+  - [x] `Stdio::null()` on both llama-server spawns → no pipe-buffer deadlock.
+  - [ ] *Deferred:* killing a **truly-orphaned** engine holding the port (after a hard crash) needs a port→PID lookup — future.
 
 ---
 

@@ -1,7 +1,7 @@
 //! Model/engine lifecycle: VRAM detection, listing/loading/deleting models, spawning llama-server.
 use crate::state::{model_dir, Engine, MainModel, VisionEngine, LLAMA_PORT};
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command};
+use std::process::{Child, Command, Stdio};
 use tauri::Manager;
 
 /// The llama.cpp server binary name (`.exe` only on Windows).
@@ -51,6 +51,9 @@ pub(crate) fn spawn_engine(app: &tauri::AppHandle, model: &Path) -> Option<Child
         "--reasoning",
         "off",
     ]);
+    // Don't inherit the parent's stdio: a chatty llama-server would fill its pipe buffer and
+    // deadlock if nobody drains it. We read status over HTTP, not stdout.
+    cmd.stdout(Stdio::null()).stderr(Stdio::null());
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
@@ -74,10 +77,10 @@ pub(crate) fn spawn_engine(app: &tauri::AppHandle, model: &Path) -> Option<Child
 /// ggml-base.dll locked and the update fails with "error opening file for writing."
 #[tauri::command]
 pub fn shutdown_engine(app: tauri::AppHandle) {
-    if let Some(mut child) = app.state::<Engine>().0.lock().unwrap().take() {
+    if let Some(mut child) = app.state::<Engine>().0.lock().unwrap_or_else(|e| e.into_inner()).take() {
         let _ = child.kill();
     }
-    if let Some(mut child) = app.state::<VisionEngine>().0.lock().unwrap().take() {
+    if let Some(mut child) = app.state::<VisionEngine>().0.lock().unwrap_or_else(|e| e.into_inner()).take() {
         let _ = child.kill();
     }
 }
@@ -177,25 +180,31 @@ pub fn start_engine(app: tauri::AppHandle, filename: String) -> Result<(), Strin
     if !model.exists() {
         return Err(format!("model not found: {filename}"));
     }
-    if let Some(mut old) = app.state::<Engine>().0.lock().unwrap().take() {
+    if let Some(mut old) = app.state::<Engine>().0.lock().unwrap_or_else(|e| e.into_inner()).take() {
         let _ = old.kill();
     }
-    *app.state::<MainModel>().0.lock().unwrap() = Some(filename.clone());
-    let child = spawn_engine(&app, &model);
-    let ok = child.is_some();
-    *app.state::<Engine>().0.lock().unwrap() = child;
-    if ok {
-        Ok(())
-    } else {
-        Err("engine failed to launch".into())
+    *app.state::<MainModel>().0.lock().unwrap_or_else(|e| e.into_inner()) = Some(filename.clone());
+    let Some(mut child) = spawn_engine(&app, &model) else {
+        return Err("engine failed to launch".into());
+    };
+    // A doomed spawn (port already in use, incompatible model) exits within a moment. Catch that
+    // and report it, instead of storing a dead process and letting the UI hang on a silent engine.
+    std::thread::sleep(std::time::Duration::from_millis(600));
+    if let Ok(Some(status)) = child.try_wait() {
+        return Err(format!(
+            "The engine exited on startup (code {:?}). The port may already be in use by another process, or the model may be incompatible.",
+            status.code()
+        ));
     }
+    *app.state::<Engine>().0.lock().unwrap_or_else(|e| e.into_inner()) = Some(child);
+    Ok(())
 }
 
 /// List model files: (filename, size_bytes, is_loaded_main). Includes vision files + projectors.
 #[tauri::command]
 pub fn model_files(app: tauri::AppHandle) -> Vec<(String, u64, bool)> {
     let Some(dir) = model_dir(&app) else { return vec![] };
-    let main = app.state::<MainModel>().0.lock().unwrap().clone();
+    let main = app.state::<MainModel>().0.lock().unwrap_or_else(|e| e.into_inner()).clone();
     let mut out = Vec::new();
     if let Ok(entries) = std::fs::read_dir(&dir) {
         for e in entries.flatten() {
@@ -220,8 +229,8 @@ pub fn delete_model(app: tauri::AppHandle, filename: String) -> Result<(), Strin
     if !path.exists() {
         return Ok(());
     }
-    let main = app.state::<MainModel>().0.lock().unwrap().clone();
-    let main_running = app.state::<Engine>().0.lock().unwrap().is_some();
+    let main = app.state::<MainModel>().0.lock().unwrap_or_else(|e| e.into_inner()).clone();
+    let main_running = app.state::<Engine>().0.lock().unwrap_or_else(|e| e.into_inner()).is_some();
     if main_running && main.as_deref() == Some(filename.as_str()) {
         return Err("That model is currently loaded. Switch to another model first.".into());
     }
@@ -229,7 +238,7 @@ pub fn delete_model(app: tauri::AppHandle, filename: String) -> Result<(), Strin
         return Ok(());
     }
     // Possibly locked by the vision engine — free it and retry.
-    if let Some(mut v) = app.state::<VisionEngine>().0.lock().unwrap().take() {
+    if let Some(mut v) = app.state::<VisionEngine>().0.lock().unwrap_or_else(|e| e.into_inner()).take() {
         let _ = v.kill();
     }
     std::fs::remove_file(&path).map_err(|e| e.to_string())

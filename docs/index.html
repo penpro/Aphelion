@@ -460,7 +460,13 @@
     </div>
     <div id="changelog" style="display:flex;flex-direction:column;gap:22px;max-width:780px">
       <article style="border-left:2px solid var(--corona);padding-left:16px">
-        <h3 style="margin:0 0 8px">v0.1.35 <span style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--corona)">LATEST</span></h3>
+        <h3 style="margin:0 0 8px">v0.1.36 <span style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--corona)">LATEST</span></h3>
+        <ul style="margin:0;padding-left:18px;line-height:1.75">
+          <li><b>Engine reliability.</b> Under the hood: the model server now reports a clear error if it can't start (e.g. a port conflict) instead of hanging, one bad file during knowledge ingestion can no longer take down the backend, and a chatty engine can't deadlock. Nothing changes in how you use it — it just fails gracefully where it used to get stuck.</li>
+        </ul>
+      </article>
+      <article style="border-left:2px solid var(--border);padding-left:16px">
+        <h3 style="margin:0 0 8px">v0.1.35</h3>
         <ul style="margin:0;padding-left:18px;line-height:1.75">
           <li><b>Your data is safer.</b> Aphelion no longer silently loses work if local storage fills up — a failed save now warns you and offers a one-click backup instead of vanishing, and a corrupt save boots to a clean state instead of a blank screen. New <b>Export / Import backup</b> in Settings, and a recovery screen replaces any hard crash.</li>
         </ul>

@@ -55,10 +55,10 @@ pub fn run() {
                     }
                     if let Some((_, model)) = best {
                         if let Some(fname) = model.file_name().map(|n| n.to_string_lossy().to_string()) {
-                            *handle.state::<MainModel>().0.lock().unwrap() = Some(fname);
+                            *handle.state::<MainModel>().0.lock().unwrap_or_else(|e| e.into_inner()) = Some(fname);
                         }
                         let child = engine::spawn_engine(&handle, &model);
-                        *handle.state::<Engine>().0.lock().unwrap() = child;
+                        *handle.state::<Engine>().0.lock().unwrap_or_else(|e| e.into_inner()) = child;
                     }
                 }
             }
@@ -67,12 +67,12 @@ pub fn run() {
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::Destroyed = event {
                 if let Some(engine) = window.app_handle().try_state::<Engine>() {
-                    if let Some(mut child) = engine.0.lock().unwrap().take() {
+                    if let Some(mut child) = engine.0.lock().unwrap_or_else(|e| e.into_inner()).take() {
                         let _ = child.kill();
                     }
                 }
                 if let Some(v) = window.app_handle().try_state::<VisionEngine>() {
-                    if let Some(mut child) = v.0.lock().unwrap().take() {
+                    if let Some(mut child) = v.0.lock().unwrap_or_else(|e| e.into_inner()).take() {
                         let _ = child.kill();
                     }
                 }

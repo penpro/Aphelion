@@ -3,7 +3,7 @@
 use crate::engine::{llama_server_path, spawn_engine};
 use crate::state::{model_dir, Engine, MainModel, VisionEngine, LLAMA_PORT};
 use std::path::PathBuf;
-use std::process::Command;
+use std::process::{Command, Stdio};
 use tauri::Manager;
 
 /// Whether both files of a vision model are present in the model dir.
@@ -27,10 +27,10 @@ pub fn set_vision_mode(app: tauri::AppHandle, on: bool, text_file: String, mmpro
         if !model.exists() || !mmproj.exists() {
             return Err("vision model files not found — download it in Settings".into());
         }
-        if let Some(mut old) = app.state::<Engine>().0.lock().unwrap().take() {
+        if let Some(mut old) = app.state::<Engine>().0.lock().unwrap_or_else(|e| e.into_inner()).take() {
             let _ = old.kill();
         }
-        if let Some(mut old) = app.state::<VisionEngine>().0.lock().unwrap().take() {
+        if let Some(mut old) = app.state::<VisionEngine>().0.lock().unwrap_or_else(|e| e.into_inner()).take() {
             let _ = old.kill();
         }
         let exe = llama_server_path(&app).ok_or("engine binary not found")?;
@@ -48,6 +48,7 @@ pub fn set_vision_mode(app: tauri::AppHandle, on: bool, text_file: String, mmpro
             .arg("999")
             .arg("-c")
             .arg("4096");
+        cmd.stdout(Stdio::null()).stderr(Stdio::null());
         #[cfg(windows)]
         {
             use std::os::windows::process::CommandExt;
@@ -56,27 +57,27 @@ pub fn set_vision_mode(app: tauri::AppHandle, on: bool, text_file: String, mmpro
         }
         match cmd.spawn() {
             Ok(child) => {
-                *app.state::<VisionEngine>().0.lock().unwrap() = Some(child);
+                *app.state::<VisionEngine>().0.lock().unwrap_or_else(|e| e.into_inner()) = Some(child);
                 Ok(())
             }
             Err(e) => Err(format!("failed to start vision engine: {e}")),
         }
     } else {
-        if let Some(mut old) = app.state::<VisionEngine>().0.lock().unwrap().take() {
+        if let Some(mut old) = app.state::<VisionEngine>().0.lock().unwrap_or_else(|e| e.into_inner()).take() {
             let _ = old.kill();
         }
-        let main = app.state::<MainModel>().0.lock().unwrap().clone();
+        let main = app.state::<MainModel>().0.lock().unwrap_or_else(|e| e.into_inner()).clone();
         let main = main.ok_or("no main model on record to reload")?;
         let model = dir.join(&main);
         if !model.exists() {
             return Err(format!("main model not found: {main}"));
         }
-        if let Some(mut old) = app.state::<Engine>().0.lock().unwrap().take() {
+        if let Some(mut old) = app.state::<Engine>().0.lock().unwrap_or_else(|e| e.into_inner()).take() {
             let _ = old.kill();
         }
         let child = spawn_engine(&app, &model);
         let ok = child.is_some();
-        *app.state::<Engine>().0.lock().unwrap() = child;
+        *app.state::<Engine>().0.lock().unwrap_or_else(|e| e.into_inner()) = child;
         if ok {
             Ok(())
         } else {

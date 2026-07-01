@@ -32,7 +32,7 @@ pub fn grant_path(app: tauri::AppHandle, path: String) {
         p.parent().map(|x| x.to_path_buf()).unwrap_or(p)
     };
     if let Ok(canon) = std::fs::canonicalize(&dir) {
-        app.state::<Granted>().0.lock().unwrap().insert(canon);
+        app.state::<Granted>().0.lock().unwrap_or_else(|e| e.into_inner()).insert(canon);
     }
 }
 
@@ -218,7 +218,7 @@ pub fn write_temp_file(name: String, content: String) -> Result<String, String> 
 /// files (e.g. images) return a friendly error rather than a cryptic decode failure.
 #[tauri::command]
 pub fn read_text_file(granted: tauri::State<Granted>, path: String) -> Result<String, String> {
-    if !path_allowed(&granted.0.lock().unwrap(), &path) {
+    if !path_allowed(&granted.0.lock().unwrap_or_else(|e| e.into_inner()), &path) {
         return Err("That file isn't in a folder you've opened — use the Open button to pick it.".into());
     }
     let bytes = std::fs::read(&path).map_err(|e| e.to_string())?;
@@ -229,7 +229,7 @@ pub fn read_text_file(granted: tauri::State<Granted>, path: String) -> Result<St
 /// Overwrite a text/code file at an absolute path (saving edits back to the opened file).
 #[tauri::command]
 pub fn write_to_path(granted: tauri::State<Granted>, path: String, content: String) -> Result<(), String> {
-    if !path_allowed(&granted.0.lock().unwrap(), &path) {
+    if !path_allowed(&granted.0.lock().unwrap_or_else(|e| e.into_inner()), &path) {
         return Err("That location isn't in a folder you've opened.".into());
     }
     std::fs::write(&path, content).map_err(|e| e.to_string())
@@ -243,7 +243,7 @@ pub fn save_typst_at(
     typ_path: String,
     source: String,
 ) -> Result<String, String> {
-    if !path_allowed(&granted.0.lock().unwrap(), &typ_path) {
+    if !path_allowed(&granted.0.lock().unwrap_or_else(|e| e.into_inner()), &typ_path) {
         return Err("That location isn't in a folder you've opened.".into());
     }
     let typ = PathBuf::from(&typ_path);

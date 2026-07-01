@@ -107,7 +107,7 @@ fn retrieve_chunks(chunks: &[(String, String)], query: &str, max_chars: usize) -
 /// Ingest (cached) a knowledge folder; returns (file count, chunk count, file names).
 #[tauri::command]
 pub fn folder_info(cache: State<KnowledgeCache>, path: String) -> (usize, usize, Vec<String>) {
-    let mut map = cache.0.lock().unwrap();
+    let mut map = cache.0.lock().unwrap_or_else(|e| e.into_inner());
     let chunks = map.entry(path.clone()).or_insert_with(|| ingest_folder(&path));
     let mut names: Vec<String> = chunks.iter().map(|c| c.0.clone()).collect();
     names.sort();
@@ -118,7 +118,7 @@ pub fn folder_info(cache: State<KnowledgeCache>, path: String) -> (usize, usize,
 /// Retrieve the chunks most relevant to `query` (keyword scoring), up to `max_chars`.
 #[tauri::command]
 pub fn retrieve_context(cache: State<KnowledgeCache>, path: String, query: String, max_chars: usize) -> String {
-    let mut map = cache.0.lock().unwrap();
+    let mut map = cache.0.lock().unwrap_or_else(|e| e.into_inner());
     let chunks = map.entry(path.clone()).or_insert_with(|| ingest_folder(&path));
     if chunks.is_empty() {
         return String::new();

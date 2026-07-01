@@ -19,7 +19,7 @@ pub fn download_status(downloads: tauri::State<Downloads>) -> Vec<DownloadInfo> 
     downloads
         .0
         .lock()
-        .unwrap()
+        .unwrap_or_else(|e| e.into_inner())
         .iter()
         .map(|(f, e)| DownloadInfo {
             filename: f.clone(),
@@ -33,7 +33,7 @@ pub fn download_status(downloads: tauri::State<Downloads>) -> Vec<DownloadInfo> 
 /// Pause a running download — keeps the partial file so it can resume later.
 #[tauri::command]
 pub fn pause_download(downloads: tauri::State<Downloads>, filename: String) {
-    if let Some(e) = downloads.0.lock().unwrap().get_mut(&filename) {
+    if let Some(e) = downloads.0.lock().unwrap_or_else(|e| e.into_inner()).get_mut(&filename) {
         e.status = "paused".into();
     }
 }
@@ -45,7 +45,7 @@ pub fn start_download(app: tauri::AppHandle, url: String, filename: String) -> R
     let path = dir.join(&filename);
     {
         let downloads = app.state::<Downloads>();
-        let mut map = downloads.0.lock().unwrap();
+        let mut map = downloads.0.lock().unwrap_or_else(|e| e.into_inner());
         if let Some(e) = map.get(&filename) {
             if e.status == "downloading" || e.status == "resuming" {
                 return Ok(()); // already in progress
@@ -64,7 +64,7 @@ pub fn start_download(app: tauri::AppHandle, url: String, filename: String) -> R
     let app2 = app.clone();
     tauri::async_runtime::spawn(async move {
         if let Err(e) = run_download(&app2, &url, &filename, &path).await {
-            if let Some(en) = app2.state::<Downloads>().0.lock().unwrap().get_mut(&filename) {
+            if let Some(en) = app2.state::<Downloads>().0.lock().unwrap_or_else(|e| e.into_inner()).get_mut(&filename) {
                 if en.status != "paused" {
                     en.status = "failed".into();
                 }
@@ -90,7 +90,7 @@ async fn run_download(app: &tauri::AppHandle, url: &str, filename: &str, path: &
     let code = resp.status().as_u16();
     if code == 416 {
         // Range not satisfiable → the file is already complete.
-        if let Some(e) = app.state::<Downloads>().0.lock().unwrap().get_mut(filename) {
+        if let Some(e) = app.state::<Downloads>().0.lock().unwrap_or_else(|e| e.into_inner()).get_mut(filename) {
             e.total = start;
             e.received = start;
             e.status = "done".into();
@@ -109,7 +109,7 @@ async fn run_download(app: &tauri::AppHandle, url: &str, filename: &str, path: &
         std::fs::File::create(path).map_err(|e| e.to_string())?
     };
     let mut received = if resumed { start } else { 0 };
-    if let Some(e) = app.state::<Downloads>().0.lock().unwrap().get_mut(filename) {
+    if let Some(e) = app.state::<Downloads>().0.lock().unwrap_or_else(|e| e.into_inner()).get_mut(filename) {
         e.received = received;
         e.total = total;
         e.status = "downloading".into();
@@ -122,7 +122,7 @@ async fn run_download(app: &tauri::AppHandle, url: &str, filename: &str, path: &
             .state::<Downloads>()
             .0
             .lock()
-            .unwrap()
+            .unwrap_or_else(|e| e.into_inner())
             .get(filename)
             .map(|e| e.status == "paused")
             .unwrap_or(false)
@@ -131,12 +131,12 @@ async fn run_download(app: &tauri::AppHandle, url: &str, filename: &str, path: &
         }
         file.write_all(&chunk).map_err(|e| e.to_string())?;
         received += chunk.len() as u64;
-        if let Some(e) = app.state::<Downloads>().0.lock().unwrap().get_mut(filename) {
+        if let Some(e) = app.state::<Downloads>().0.lock().unwrap_or_else(|e| e.into_inner()).get_mut(filename) {
             e.received = received;
         }
     }
     file.flush().ok();
-    if let Some(e) = app.state::<Downloads>().0.lock().unwrap().get_mut(filename) {
+    if let Some(e) = app.state::<Downloads>().0.lock().unwrap_or_else(|e| e.into_inner()).get_mut(filename) {
         e.status = "done".into();
         if e.total == 0 {
             e.total = received;
