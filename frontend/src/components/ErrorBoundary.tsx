@@ -1,6 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { STORE_KEY, exportData } from '../storage'
-import { download } from '../util'
+import { saveTextFile } from '../tauri'
 
 // Last line of defence: if any render throws (e.g. a corrupt rehydrated state slips through),
 // show a recovery screen instead of a blank white window. Uses plain DOM actions only — no hooks,
@@ -41,7 +41,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
             </button>
             <button
               className="btn ghost"
-              onClick={() => download('aphelion-backup.json', exportData(), 'application/json')}
+              onClick={() => saveTextFile('aphelion-backup.json', exportData(), 'application/json')}
             >
               Export data
             </button>

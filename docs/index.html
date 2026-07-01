@@ -460,7 +460,13 @@
     </div>
     <div id="changelog" style="display:flex;flex-direction:column;gap:22px;max-width:780px">
       <article style="border-left:2px solid var(--corona);padding-left:16px">
-        <h3 style="margin:0 0 8px">v0.1.38 <span style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--corona)">LATEST</span></h3>
+        <h3 style="margin:0 0 8px">v0.1.39 <span style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--corona)">LATEST</span></h3>
+        <ul style="margin:0;padding-left:18px;line-height:1.75">
+          <li><b>Smarter live portraits + working export.</b> The live portrait now asks the model what the <em>character</em> is actually feeling — reading their personality and the subtext — instead of guessing from word choice, so a dry, guarded, or flirtatious character stops reading as “angry.” And the Export buttons (chat, story, tree, backup) now use a proper Save dialog, fixing the ones that silently did nothing.</li>
+        </ul>
+      </article>
+      <article style="border-left:2px solid var(--border);padding-left:16px">
+        <h3 style="margin:0 0 8px">v0.1.38</h3>
         <ul style="margin:0;padding-left:18px;line-height:1.75">
           <li><b>Under-the-hood cleanup.</b> A maintenance release: every backend call now goes through one typed boundary instead of ~40 scattered spots (fewer places for bugs to hide), and cutting a release is a single command. No user-facing change.</li>
         </ul>

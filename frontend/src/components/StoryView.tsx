@@ -4,7 +4,8 @@ import { useConfirm } from './ConfirmDialog'
 import { generateStory, parseScreenplay } from '../generators'
 import { SourcesPanel } from './SourcesPanel'
 import { DEFAULT_DIALS, defaultFlowCurve } from '../seed'
-import { download, cx } from '../util'
+import { cx } from '../util'
+import { saveTextFile } from '../tauri'
 import type { Character, StoryBeat, StoryDials, POV } from '../types'
 
 const LENGTHS = [
@@ -223,12 +224,12 @@ export function StoryView() {
       characters: cast.map((c) => ({ id: c.id, name: c.name, description: c.description })),
       beats: story.beats.map((b, i) => ({ index: i, speaker: b.speaker, characterId: b.characterId, type: b.type, text: b.text })),
     }
-    download(`${slug(story.title)}.story.json`, JSON.stringify(data, null, 2), 'application/json')
+    saveTextFile(`${slug(story.title)}.story.json`, JSON.stringify(data, null, 2), 'application/json')
   }
   const exportMarkdown = () => {
     const lines = [`# ${story.title}`, '', `> ${story.premise}`, '']
     for (const b of story.beats) lines.push(b.type === 'narration' ? `*${b.text}*` : `**${b.speaker}:** ${b.text}`, '')
-    download(`${slug(story.title)}.md`, lines.join('\n'), 'text/markdown')
+    saveTextFile(`${slug(story.title)}.md`, lines.join('\n'), 'text/markdown')
   }
 
   const liveBeats = busy && streamText ? parseScreenplay(streamText, cast.map((c) => c.name)) : null

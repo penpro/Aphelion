@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { detectEmotion } from '../emotion'
+import { classifyEmotion } from '../api/ollama'
+import { useStore } from '../store'
 import { portraitSrc } from '../portraits'
 import { cx } from '../util'
 import type { Character, Chat, EmotionKey } from '../types'
@@ -22,6 +24,7 @@ export function LivePortrait({
 }) {
   const [open, setOpen] = useState(true)
   const [emotion, setEmotion] = useState<EmotionKey>('neutral')
+  const baseUrl = useStore((s) => s.settings.baseUrl)
 
   // The active named set for this chat (falls back to the first set, then the legacy single set).
   const set = useMemo(() => {
@@ -37,12 +40,25 @@ export function LivePortrait({
     return ''
   }, [chat.messages])
 
-  // Take the tone of the WHOLE reply: only re-read once it's done streaming, so the portrait
-  // settles on one mood for the response instead of flipping word-by-word as tokens arrive.
+  // Read the WHOLE reply once it's done streaming (so the portrait settles on one mood instead of
+  // flickering per token). The keyword heuristic gives an instant guess; then we ask the model what
+  // THIS character is actually feeling — reading subtext + personality, since a dry or guarded voice
+  // isn't anger — and refine to that answer when it arrives. Falls back to the heuristic if offline.
   useEffect(() => {
-    if (streaming) return
-    setEmotion(detectEmotion(lastText))
-  }, [lastText, streaming])
+    if (streaming || !lastText) return
+    setEmotion(detectEmotion(lastText)) // instant provisional
+    const ctrl = new AbortController()
+    let live = true
+    classifyEmotion(baseUrl, character, lastText, ctrl.signal)
+      .then((e) => {
+        if (live && e) setEmotion(e as EmotionKey)
+      })
+      .catch(() => {})
+    return () => {
+      live = false
+      ctrl.abort()
+    }
+  }, [lastText, streaming, baseUrl, character.id, character.name, character.personality, character.description])
 
   if (!enabled || !set || Object.keys(set).length === 0) return null
   const src = set[emotion] ?? set.neutral ?? character.portrait

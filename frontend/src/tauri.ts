@@ -3,6 +3,8 @@
 // lives in ONE place instead of being duplicated across ~40 call sites. Add a wrapper here for
 // every new `#[tauri::command]`; components should never import `invoke` themselves.
 import { invoke } from '@tauri-apps/api/core'
+import { save } from '@tauri-apps/plugin-dialog'
+import { download as downloadBlob } from './util'
 
 // ---------- shared shapes ----------
 
@@ -146,3 +148,25 @@ export const deletePortrait = (path: string): Promise<void> => invoke('delete_po
 
 /** The running app version (from Cargo). */
 export const appVersion = (): Promise<string> => invoke('app_version')
+
+// ---------- high-level helpers ----------
+
+/**
+ * Save text to a user-chosen location via the native Save dialog, then grant + write it. Falls back
+ * to a browser blob download in the dev build (no Tauri). Returns true if saved, false if cancelled.
+ *
+ * Why not just an <a download>: inside the packaged WebView2 a programmatic blob download silently
+ * does nothing, which is why the in-app Export buttons appeared broken. The OS save dialog works.
+ */
+export async function saveTextFile(defaultName: string, content: string, mime = 'text/plain'): Promise<boolean> {
+  try {
+    const path = await save({ defaultPath: defaultName })
+    if (!path) return false // user cancelled
+    await grantPath(path) // grant the chosen file's folder so the write passes the path allowlist
+    await writeToPath(path, content)
+    return true
+  } catch {
+    downloadBlob(defaultName, content, mime) // dev browser / dialog unavailable
+    return true
+  }
+}

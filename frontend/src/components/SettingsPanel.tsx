@@ -8,7 +8,8 @@ import { ModelsModal } from './ModelsModal'
 import { UpdateCheck } from './UpdateCheck'
 import { useConfirm } from './ConfirmDialog'
 import { STORE_KEY, exportData } from '../storage'
-import { cx, download } from '../util'
+import { cx } from '../util'
+import { saveTextFile } from '../tauri'
 
 type Tip = { body: string; low?: string; high?: string }
 
@@ -178,7 +179,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
       seed: defaultSettings.seed,
     })
 
-  const exportBackup = () => download('aphelion-backup.json', exportData(), 'application/json')
+  const exportBackup = () => saveTextFile('aphelion-backup.json', exportData(), 'application/json')
   const importBackup = async (file?: File) => {
     if (!file) return
     const text = await file.text()

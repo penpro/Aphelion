@@ -132,6 +132,49 @@ export async function runIntentClassifier(baseUrl: string, prompt: string, signa
   return String(json.choices?.[0]?.message?.content ?? '')
 }
 
+const EMOTION_LABELS = ['neutral', 'happy', 'sad', 'angry', 'surprised', 'fearful', 'embarrassed', 'affectionate'] as const
+
+/**
+ * Ask the model what the CHARACTER is actually feeling right now — reading subtext and their
+ * personality, NOT the prose's surface tone (a dry, guarded, or teasing voice isn't anger, and
+ * flirtation often hides behind sharp words). This is what the keyword heuristic can't do: it reads
+ * word choice, so a wry character reads as "angry". Returns one of the 8 emotion labels, or null if
+ * the engine is unreachable / the answer is unusable (the caller keeps its heuristic guess).
+ * Non-streaming, deterministic, capped to a couple of tokens.
+ */
+export async function classifyEmotion(
+  baseUrl: string,
+  character: { name?: string; personality?: string; description?: string },
+  reply: string,
+  signal?: AbortSignal,
+): Promise<string | null> {
+  const name = character.name?.trim() || 'the character'
+  const persona = [character.personality, character.description].filter(Boolean).join(' — ').slice(0, 500)
+  const prompt =
+    `You label a roleplay character's current emotion for a portrait system.\n\n` +
+    `CHARACTER: ${name}\n` +
+    (persona ? `PERSONALITY: ${persona}\n` : '') +
+    `\nTheir latest message:\n"""\n${reply.slice(0, 2000)}\n"""\n\n` +
+    `What is ${name} actually FEELING right now — the expression they'd wear on their face? Read the ` +
+    `subtext and their personality, NOT the writing style: a dry, guarded, clinical, cool, or teasing ` +
+    `tone is not anger, and flirtation or affection often hides behind wry or sharp words.\n\n` +
+    `Answer with ONLY one word from: ${EMOTION_LABELS.join(', ')}.`
+  try {
+    const resp = await fetch(`${baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'emotion', max_tokens: 8, temperature: 0, messages: [{ role: 'user', content: prompt }] }),
+      signal,
+    })
+    if (!resp.ok) return null
+    const json = await resp.json()
+    const out = String(json.choices?.[0]?.message?.content ?? '').toLowerCase()
+    return EMOTION_LABELS.find((k) => out.includes(k)) ?? null
+  } catch {
+    return null
+  }
+}
+
 /** Strip the trailing /v1 to reach Ollama's native API root. */
 function nativeRoot(baseUrl: string): string {
   return baseUrl.endsWith('/v1') ? baseUrl.slice(0, -3) : baseUrl

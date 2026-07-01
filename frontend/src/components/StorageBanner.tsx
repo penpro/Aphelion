@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { subscribeStorageError, exportData } from '../storage'
-import { download } from '../util'
+import { saveTextFile } from '../tauri'
 
 // Surfaces a persist failure (usually a full localStorage) as a dismissible banner with a one-click
 // backup — so "your data didn't save" is loud and actionable instead of silent.
@@ -13,7 +13,7 @@ export function StorageBanner() {
       <span className="storage-banner-msg">⚠️ {message}</span>
       <button
         className="btn xs"
-        onClick={() => download('aphelion-backup.json', exportData(), 'application/json')}
+        onClick={() => saveTextFile('aphelion-backup.json', exportData(), 'application/json')}
       >
         Export backup
       </button>

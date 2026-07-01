@@ -12,7 +12,7 @@ import { Modal } from './Modal'
 import { DocumentModal } from './DocumentModal'
 import { substituteMacros } from '../prompt'
 import { generateCharacterFromReference } from '../generators'
-import { download } from '../util'
+import { saveTextFile } from '../tauri'
 import type { Character } from '../types'
 
 export function ChatView({ onEditCharacter }: { onEditCharacter: (c: Character) => void }) {
@@ -94,7 +94,7 @@ export function ChatView({ onEditCharacter }: { onEditCharacter: (c: Character) 
       const who = m.role === 'user' ? userName : m.role === 'assistant' ? dispName : 'System'
       lines.push(`**${who}:** ${substituteMacros(m.content, character.name, userName)}`, '')
     }
-    download(`${chat.title.replace(/[^\w-]+/g, '_') || 'chat'}.md`, lines.join('\n'), 'text/markdown')
+    saveTextFile(`${chat.title.replace(/[^\w-]+/g, '_') || 'chat'}.md`, lines.join('\n'), 'text/markdown')
   }
 
   const header = (

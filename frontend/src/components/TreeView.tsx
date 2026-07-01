@@ -2,7 +2,8 @@ import { useMemo, useRef, useState } from 'react'
 import { useStore } from '../store'
 import { useConfirm } from './ConfirmDialog'
 import { generateDialogueNode, type PathStep } from '../generators'
-import { download, cx, uid } from '../util'
+import { cx, uid } from '../util'
+import { saveTextFile } from '../tauri'
 import type { DialogueNode, DialogueOption } from '../types'
 
 function slug(s: string): string {
@@ -156,7 +157,7 @@ export function TreeView() {
       root: tree.rootId,
       nodes,
     }
-    download(`${slug(tree.title)}.dialogue.json`, JSON.stringify(data, null, 2), 'application/json')
+    saveTextFile(`${slug(tree.title)}.dialogue.json`, JSON.stringify(data, null, 2), 'application/json')
   }
 
   return (
