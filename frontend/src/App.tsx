@@ -11,6 +11,7 @@ import { PersonaEditor } from './components/PersonaEditor'
 import { SettingsPanel } from './components/SettingsPanel'
 import { SetupWizard } from './components/SetupWizard'
 import { Tutorial } from './components/Tutorial'
+import { WelcomeTour } from './components/WelcomeTour'
 import { TitleBar } from './components/TitleBar'
 import { ResizeHandles } from './components/ResizeHandles'
 import { SplashScreen } from './components/SplashScreen'
@@ -26,15 +27,16 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false)
   const [needsSetup, setNeedsSetup] = useState(false)
   const [showTutorial, setShowTutorial] = useState(false)
+  const [showWelcome, setShowWelcome] = useState(false)
   const updateSettings = useStore((s) => s.updateSettings)
 
   // First run: if no model has been downloaded yet, show the setup wizard.
-  // Once a model exists and the tutorial hasn't been seen, open it once.
+  // Once a model exists, run the welcome tour until it's dismissed with "don't show again".
   useEffect(() => {
     invoke<string[]>('list_models')
       .then((models) => {
         setNeedsSetup(models.length === 0)
-        if (models.length > 0 && !useStore.getState().settings.seenTutorial) setShowTutorial(true)
+        if (models.length > 0 && !useStore.getState().settings.seenWelcome) setShowWelcome(true)
       })
       .catch(() => setNeedsSetup(false)) // not running under Tauri (browser dev) — skip
   }, [])
@@ -59,6 +61,7 @@ export default function App() {
         onOpenPersona={() => setShowPersona(true)}
         onOpenSettings={() => setShowSettings(true)}
         onOpenTutorial={() => setShowTutorial(true)}
+        onOpenWelcome={() => setShowWelcome(true)}
       />
 
       <main id="main-view" className="view-region">
@@ -77,6 +80,15 @@ export default function App() {
             setShowTutorial(false)
             updateSettings({ seenTutorial: true })
           }}
+        />
+      )}
+      {showWelcome && (
+        <WelcomeTour
+          onClose={(dontShowAgain) => {
+            setShowWelcome(false)
+            if (dontShowAgain) updateSettings({ seenWelcome: true })
+          }}
+          onOpenArchitecture={() => setShowTutorial(true)}
         />
       )}
 

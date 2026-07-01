@@ -98,7 +98,8 @@ export interface Settings {
   autoExpandReasoning: boolean
   keepLoaded: boolean // pin the model in VRAM (keep_alive -1) instead of idle-unloading
   proofread: boolean // re-run each reply through the model to fix spelling/grammar
-  seenTutorial: boolean // the first-run tutorial has been shown
+  seenTutorial: boolean // the "how it works" architecture modal has been shown
+  seenWelcome: boolean // the first-run welcome tour was dismissed with "don't show again"
   theme: string // accent/void preset: penumbra | synthwave | cyber | ember | bloodmoon
   visionModel: string // '' = off, else a VISION_MODELS id — a vision-capable model for image tasks
   intentRouter: 'off' | 'quick' | 'full' // control-net: off | classify only action-like prompts | classify every prompt

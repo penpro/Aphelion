@@ -33,6 +33,7 @@ export const defaultSettings: Settings = {
   keepLoaded: false,
   proofread: false,
   seenTutorial: false,
+  seenWelcome: false,
   theme: 'penumbra',
   visionModel: '',
   intentRouter: 'quick',

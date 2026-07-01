@@ -11,12 +11,14 @@ export function Sidebar({
   onOpenPersona,
   onOpenSettings,
   onOpenTutorial,
+  onOpenWelcome,
 }: {
   onEditCharacter: (c: Character) => void
   onNewCharacter: () => void
   onOpenPersona: () => void
   onOpenSettings: () => void
   onOpenTutorial: () => void
+  onOpenWelcome: () => void
 }) {
   const view = useStore((s) => s.view)
   const setView = useStore((s) => s.setView)
@@ -264,6 +266,9 @@ export function Sidebar({
       )}
 
       <div className="side-foot">
+        <button className="btn ghost block foot-btn" onClick={onOpenWelcome}>
+          <img src={UI_ICONS.how} alt="" aria-hidden="true" /> Quick tour
+        </button>
         <button className="btn ghost block foot-btn" onClick={onOpenTutorial}>
           <img src={UI_ICONS.how} alt="" aria-hidden="true" /> How it works
         </button>

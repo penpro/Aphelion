@@ -537,3 +537,124 @@ select:focus {
   max-width: 320px;
   margin-top: 10px;
 }
+
+/* Welcome / first-run feature tour overlay */
+.welcome-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: color-mix(in srgb, var(--bg) 68%, transparent);
+  backdrop-filter: blur(7px);
+  animation: welcome-fade 0.3s ease;
+}
+.welcome-card {
+  width: min(460px, 100%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 96%, transparent), color-mix(in srgb, var(--bg) 88%, transparent));
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 26px 26px 20px;
+  text-align: center;
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.55),
+    0 0 60px color-mix(in srgb, var(--accent) 14%, transparent);
+  animation: welcome-rise 0.35s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+.welcome-hero {
+  display: grid;
+  place-items: center;
+  min-height: 86px;
+  margin-bottom: 4px;
+}
+.welcome-step-icon {
+  font-size: 52px;
+  line-height: 1;
+  filter: drop-shadow(0 0 18px color-mix(in srgb, var(--accent) 45%, transparent));
+}
+.welcome-title {
+  font-family: var(--font-head);
+  font-size: 22px;
+  margin: 6px 0 10px;
+}
+.welcome-body {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.65;
+  min-height: 96px;
+}
+.welcome-arch {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--accent);
+  cursor: pointer;
+}
+.welcome-arch:hover {
+  text-decoration: underline;
+}
+.welcome-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 18px 0 14px;
+}
+.welcome-dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 26%, transparent);
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.welcome-dot.sel {
+  background: var(--accent);
+  transform: scale(1.35);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+.welcome-dsa {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  font-size: 12.5px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.welcome-dsa input {
+  width: auto;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.welcome-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+@keyframes welcome-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes welcome-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+[data-reduce-motion='true'] .welcome-overlay,
+[data-reduce-motion='true'] .welcome-card {
+  animation: none;
+}
