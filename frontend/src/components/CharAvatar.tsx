@@ -1,5 +1,6 @@
 // One avatar tile, used everywhere a character appears. Renders the portrait image when the
 // character has one; otherwise the emoji glyph on the character's accent color (the original look).
+import { portraitSrc } from '../portraits'
 
 export function CharAvatar({
   avatar,
@@ -18,7 +19,7 @@ export function CharAvatar({
   if (portrait) {
     return (
       <div className={cls + ' has-portrait'}>
-        <img src={portrait} alt={name ?? ''} draggable={false} />
+        <img src={portraitSrc(portrait)} alt={name ?? ''} draggable={false} />
       </div>
     )
   }

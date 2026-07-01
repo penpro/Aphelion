@@ -4,6 +4,7 @@ mod documents;
 mod downloads;
 mod engine;
 mod knowledge;
+mod portraits;
 mod state;
 mod updates;
 mod vision;
@@ -90,6 +91,8 @@ pub fn run() {
             knowledge::folder_info,
             knowledge::retrieve_context,
             knowledge::extract_pdf,
+            portraits::save_portrait,
+            portraits::delete_portrait,
             documents::compile_typst,
             documents::open_path,
             documents::save_document,

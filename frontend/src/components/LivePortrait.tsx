@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { detectEmotion } from '../emotion'
+import { portraitSrc } from '../portraits'
 import { cx } from '../util'
 import type { Character, Chat, EmotionKey } from '../types'
 
@@ -51,7 +52,7 @@ export function LivePortrait({
     <div className={cx('live-stage', 'lp-' + size, !open && 'is-collapsed')}>
       {open && (
         <div className="live-frame">
-          <img key={emotion} src={src} alt={`${character.name} — ${emotion}`} className="live-portrait" />
+          <img key={emotion} src={portraitSrc(src)} alt={`${character.name} — ${emotion}`} className="live-portrait" />
         </div>
       )}
       <button

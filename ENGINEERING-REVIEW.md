@@ -12,7 +12,8 @@ A critical software-engineering audit (Rust backend, React/TS frontend, persiste
   The whole store (incl. **user-uploaded portrait data-URLs**, 80–150 KB each × 8 emotions × N sets) serializes to a ~5 MB `localStorage` with no guard (`store.ts` persist, `image.ts:23`). On `QuotaExceededError`, zustand-persist swallowed it → write dropped → data loss on next launch. Trips at ~5–6 user-illustrated characters. **Violates our own standard #6** ("images aren't persisted").
   - [x] Wrap persist storage so quota/parse failures never crash and surface a warning (`storage.ts` `safeStorage`, v0.1.35).
   - [x] Export / Import backup valve in Settings + a storage-full banner (v0.1.35).
-  - [ ] **Cause fix:** move portraits to disk via Tauri fs; store a path/ref, not base64. Render via `convertFileSrc` (CSP already allows `asset:`). *(the real fix — next)*
+  - [x] **Cause fix (v0.1.37):** new portrait uploads write to disk (`portraits.rs` `save_portrait`); the store holds a small `disk:<path>` ref read back via `convertFileSrc` (asset protocol — `protocol-asset` feature + `$APPDATA/portraits/**` scope). ⚠️ Needs a packaged smoke test — the asset protocol can't be verified locally.
+  - [ ] **Migration** of existing data-URL portraits → disk (deferred until after the smoke test, so we don't migrate onto an unverified mechanism). Also: orphan-file cleanup on portrait replace/delete.
   - *Note: seed/Seraphina portraits are bundled asset URLs, not data-URLs — they cost ~nothing. Only user-created sets bloat storage.*
 
 - [x] **2. No React error boundary → white-screen, unbootable** *(v0.1.35)*

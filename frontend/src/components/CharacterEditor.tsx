@@ -6,6 +6,7 @@ import { generateCharacter, expandCharacterField } from '../generators'
 import { cx, uid } from '../util'
 import { CharAvatar } from './CharAvatar'
 import { fileToPortrait, GENERIC_PORTRAITS } from '../image'
+import { persistPortrait } from '../portraits'
 import { EMOTIONS, buildEmotionArtPrompts } from '../emotion'
 import type { Character, EmotionKey, PortraitSet } from '../types'
 
@@ -58,7 +59,7 @@ export function CharacterEditor({ editing, onClose }: { editing: Character | 'ne
     setPortraitBusy(true)
     setPortraitErr('')
     try {
-      setPortrait(await fileToPortrait(file))
+      setPortrait(await persistPortrait(await fileToPortrait(file)))
     } catch (e) {
       setPortraitErr((e as { message?: string })?.message ?? 'Could not use that image.')
     } finally {
@@ -105,7 +106,7 @@ export function CharacterEditor({ editing, onClose }: { editing: Character | 'ne
     setEmotionBusy(`${setId}:${key}`)
     setEmotionErr('')
     try {
-      setSetEmotion(setId, key, await fileToPortrait(file))
+      setSetEmotion(setId, key, await persistPortrait(await fileToPortrait(file)))
     } catch (e) {
       setEmotionErr((e as { message?: string })?.message ?? 'Could not use that image.')
     } finally {
