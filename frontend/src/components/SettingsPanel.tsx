@@ -191,6 +191,8 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
       }
     >
       <div className="form">
+        <UpdateCheck />
+
         <label className="field">
           <span>Engine API URL (bundled llama.cpp server)</span>
           <input value={settings.baseUrl} onChange={(e) => updateSettings({ baseUrl: e.target.value })} />
@@ -490,8 +492,6 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           <span>High contrast</span>
         </label>
         <em className="hint">Full-strength secondary text and stronger borders for better legibility.</em>
-
-        <UpdateCheck />
       </div>
     </Modal>
     {showModels && <ModelsModal onClose={() => setShowModels(false)} />}

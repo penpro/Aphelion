@@ -227,6 +227,48 @@ code, pre, kbd, .mono, .xs, .hint, .model-name, .estimate, .num-input, .field-la
   gap: 6px;
 }
 
+/* Rotating helper tip above the footer menu */
+.side-tip {
+  margin: 8px 10px 2px;
+  padding: 10px 11px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.5;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.side-tip:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: color-mix(in srgb, var(--accent) 11%, transparent);
+}
+.side-tip-icon {
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 40%, transparent));
+}
+.side-tip-text {
+  animation: tip-fade 0.4s ease;
+}
+@keyframes tip-fade {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+[data-reduce-motion='true'] .side-tip-text {
+  animation: none;
+}
+
 /* ---------- chat ---------- */
 .chat {
   flex: 1;

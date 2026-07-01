@@ -1,5 +1,6 @@
 import { useStore } from '../store'
 import { DownloadIndicator } from './DownloadIndicator'
+import { TipRotator } from './TipRotator'
 import { CharAvatar } from './CharAvatar'
 import { UI_ICONS } from '../uiIcons'
 import { cx, timeAgo } from '../util'
@@ -264,6 +265,8 @@ export function Sidebar({
           </div>
         </div>
       )}
+
+      <TipRotator />
 
       <div className="side-foot">
         <button className="btn ghost block foot-btn" onClick={onOpenWelcome}>
