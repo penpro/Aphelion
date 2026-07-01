@@ -1,6 +1,7 @@
 import { useStore } from '../store'
 import { DownloadIndicator } from './DownloadIndicator'
 import { TipRotator } from './TipRotator'
+import { useConfirm } from './ConfirmDialog'
 import { CharAvatar } from './CharAvatar'
 import { UI_ICONS } from '../uiIcons'
 import { cx, timeAgo } from '../util'
@@ -23,6 +24,7 @@ export function Sidebar({
 }) {
   const view = useStore((s) => s.view)
   const setView = useStore((s) => s.setView)
+  const confirm = useConfirm()
   const characters = useStore((s) => s.characters)
   const chats = useStore((s) => s.chats)
   const stories = useStore((s) => s.stories)
@@ -135,9 +137,10 @@ export function Sidebar({
                   <button
                     className="icon-btn sm row-action"
                     title="Delete chat"
-                    onClick={(e) => {
+                    onClick={async (e) => {
                       e.stopPropagation()
-                      deleteChat(c.id)
+                      if (await confirm({ title: 'Delete chat?', message: 'This conversation and all its messages will be permanently deleted.', confirmLabel: 'Delete' }))
+                        deleteChat(c.id)
                     }}
                   >
                     🗑
@@ -253,9 +256,10 @@ export function Sidebar({
                 <button
                   className="icon-btn sm row-action"
                   title="Delete"
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation()
-                    deleteAsk(a.id)
+                    if (await confirm({ title: 'Delete thread?', message: 'This Ask thread will be permanently deleted.', confirmLabel: 'Delete' }))
+                      deleteAsk(a.id)
                   }}
                 >
                   🗑

@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { useStore } from '../store'
+import { useConfirm } from './ConfirmDialog'
 import { generateDialogueNode, type PathStep } from '../generators'
 import { download, cx, uid } from '../util'
 import type { DialogueNode, DialogueOption } from '../types'
@@ -58,6 +59,7 @@ export function TreeView() {
   const updateTree = useStore((s) => s.updateTree)
   const deleteTree = useStore((s) => s.deleteTree)
   const resetTree = useStore((s) => s.resetTree)
+  const confirm = useConfirm()
   const setTreeRoot = useStore((s) => s.setTreeRoot)
   const upsertNode = useStore((s) => s.upsertNode)
 
@@ -94,6 +96,8 @@ export function TreeView() {
     if (!tree.premise.trim()) return setError('Describe the situation first.')
     const name = npc?.name || tree.npcName || 'NPC'
 
+    if (nodeCount > 0 && !(await confirm({ title: 'Regenerate tree?', message: 'This replaces the current dialogue tree with a freshly generated one.', confirmLabel: 'Regenerate' })))
+      return
     resetTree(tree.id)
     const ctrl = new AbortController()
     abortRef.current = ctrl
@@ -163,7 +167,7 @@ export function TreeView() {
           <button className="btn sm ghost" onClick={exportJSON} disabled={!tree.rootId}>
             Export JSON
           </button>
-          <button className="btn sm ghost danger" onClick={() => confirm('Delete this dialogue tree?') && deleteTree(tree.id)}>
+          <button className="btn sm ghost danger" onClick={async () => { if (await confirm({ title: 'Delete tree?', message: 'This dialogue tree will be permanently deleted.', confirmLabel: 'Delete' })) deleteTree(tree.id) }}>
             Delete
           </button>
         </div>

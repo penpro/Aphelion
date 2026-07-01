@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState, type ReactNode, type PointerEvent } from 'react'
 import { useStore } from '../store'
+import { useConfirm } from './ConfirmDialog'
 import { generateStory, parseScreenplay } from '../generators'
 import { SourcesPanel } from './SourcesPanel'
 import { DEFAULT_DIALS, defaultFlowCurve } from '../seed'
@@ -89,6 +90,7 @@ export function StoryView() {
   const storeUpdateDials = useStore((s) => s.updateDials)
   const deleteStory = useStore((s) => s.deleteStory)
   const setBeats = useStore((s) => s.setBeats)
+  const confirm = useConfirm()
 
   const [busy, setBusy] = useState(false)
   const [streamText, setStreamText] = useState('')
@@ -242,7 +244,7 @@ export function StoryView() {
           <button className="btn sm ghost" onClick={exportMarkdown} disabled={!story.beats.length}>
             Export .md
           </button>
-          <button className="btn sm ghost danger" onClick={() => confirm('Delete this story?') && deleteStory(story.id)}>
+          <button className="btn sm ghost danger" onClick={async () => { if (await confirm({ title: 'Delete story?', message: 'This story and all of its beats will be permanently deleted.', confirmLabel: 'Delete' })) deleteStory(story.id) }}>
             Delete
           </button>
         </div>

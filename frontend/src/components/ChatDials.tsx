@@ -2,6 +2,7 @@ import { useStore } from '../store'
 import { SourcesPanel } from './SourcesPanel'
 import { CharAvatar } from './CharAvatar'
 import { cx } from '../util'
+import { useConfirm } from './ConfirmDialog'
 import type { Chat, Character, ResponseLength, ThinkMode } from '../types'
 
 const LENGTHS: { id: ResponseLength; label: string }[] = [
@@ -16,6 +17,7 @@ export function ChatDials({ chat }: { chat: Chat }) {
   const updateChat = useStore((s) => s.updateChat)
   const updateChatTuning = useStore((s) => s.updateChatTuning)
   const removeFromCast = useStore((s) => s.removeFromCast)
+  const confirm = useConfirm()
   const toggleMute = useStore((s) => s.toggleMute)
   const settings = useStore((s) => s.settings)
   const updateSettings = useStore((s) => s.updateSettings)
@@ -46,7 +48,10 @@ export function ChatDials({ chat }: { chat: Chat }) {
                   className="icon-btn sm"
                   title="Remove from chat"
                   disabled={cast.length <= 1}
-                  onClick={() => removeFromCast(chat.id, c.id)}
+                  onClick={async () => {
+                    if (await confirm({ title: 'Remove from chat?', message: `Remove ${c.name} from this chat? Their messages stay, but they'll no longer take part.`, confirmLabel: 'Remove' }))
+                      removeFromCast(chat.id, c.id)
+                  }}
                 >
                   ✕
                 </button>

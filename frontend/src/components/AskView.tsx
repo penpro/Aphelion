@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { useStore } from '../store'
+import { useConfirm } from './ConfirmDialog'
 import { streamChatNative, samplerFromSettings, getEngineStatus, runIntentClassifier, type ContentPart } from '../api/ollama'
 import { friendlyModelName } from '../models'
 import { expertIcon } from '../expertIcons'
@@ -49,6 +50,7 @@ export function AskView() {
   const deleteAsk = useStore((s) => s.deleteAsk)
   const addAskMessage = useStore((s) => s.addAskMessage)
   const clearAskThread = useStore((s) => s.clearAskThread)
+  const confirm = useConfirm()
 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -364,10 +366,14 @@ export function AskView() {
           <button className="btn sm ghost" onClick={() => createAsk()}>
             + New
           </button>
-          <button className="btn sm ghost" onClick={() => clearAskThread(ask.id)} disabled={!ask.messages.length || busy}>
+          <button
+            className="btn sm ghost"
+            onClick={async () => { if (await confirm({ title: 'Clear thread?', message: 'All messages in this thread will be cleared.', confirmLabel: 'Clear' })) clearAskThread(ask.id) }}
+            disabled={!ask.messages.length || busy}
+          >
             Clear thread
           </button>
-          <button className="btn sm ghost danger" onClick={() => deleteAsk(ask.id)}>
+          <button className="btn sm ghost danger" onClick={async () => { if (await confirm({ title: 'Delete thread?', message: 'This Ask thread will be permanently deleted.', confirmLabel: 'Delete' })) deleteAsk(ask.id) }}>
             Delete
           </button>
         </div>

@@ -4,6 +4,7 @@ import { useGeneration } from '../useGeneration'
 import { MessageItem } from './MessageItem'
 import { CharAvatar } from './CharAvatar'
 import { LivePortrait } from './LivePortrait'
+import { useConfirm } from './ConfirmDialog'
 import { MessageInput } from './MessageInput'
 import { ChatSetup } from './ChatSetup'
 import { ChatDials } from './ChatDials'
@@ -17,6 +18,7 @@ import type { Character } from '../types'
 export function ChatView({ onEditCharacter }: { onEditCharacter: (c: Character) => void }) {
   const chats = useStore((s) => s.chats)
   const characters = useStore((s) => s.characters)
+  const confirm = useConfirm()
   const persona = useStore((s) => s.persona)
   const activeChatId = useStore((s) => s.activeChatId)
   const settings = useStore((s) => s.settings)
@@ -187,7 +189,10 @@ export function ChatView({ onEditCharacter }: { onEditCharacter: (c: Character) 
               streaming={isStreaming && m.id === lastAssistantId}
               onRegenerate={() => regenerate(chat.id, m.id)}
               onEdit={(text) => updateMessage(chat.id, m.id, { content: text })}
-              onDelete={() => deleteMessage(chat.id, m.id)}
+              onDelete={async () => {
+                if (await confirm({ title: 'Delete message?', message: 'This message will be permanently deleted.', confirmLabel: 'Delete' }))
+                  deleteMessage(chat.id, m.id)
+              }}
               onSwipe={(i) => selectSwipe(chat.id, m.id, i)}
               knownNames={knownNames}
               creatingRef={creatingRef}

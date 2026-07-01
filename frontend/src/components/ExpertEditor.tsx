@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useStore } from '../store'
 import { Modal } from './Modal'
+import { useConfirm } from './ConfirmDialog'
 import { cx } from '../util'
 
 /** Manage the "expert" rule sets used by the Ask view — add, edit, delete. */
@@ -9,6 +10,7 @@ export function ExpertEditor({ onClose }: { onClose: () => void }) {
   const addExpert = useStore((s) => s.addExpert)
   const updateExpert = useStore((s) => s.updateExpert)
   const deleteExpert = useStore((s) => s.deleteExpert)
+  const confirm = useConfirm()
 
   const [selId, setSelId] = useState(experts[0]?.id ?? '')
   const sel = experts.find((e) => e.id === selId) ?? experts[0] ?? null
@@ -25,8 +27,10 @@ export function ExpertEditor({ onClose }: { onClose: () => void }) {
     setSelId(e.id)
   }
 
-  const remove = () => {
+  const remove = async () => {
     if (!sel) return
+    if (!(await confirm({ title: 'Delete expert?', message: `"${sel.name}" will be permanently deleted.`, confirmLabel: 'Delete' })))
+      return
     const next = experts.find((e) => e.id !== sel.id)
     deleteExpert(sel.id)
     setSelId(next?.id ?? '')

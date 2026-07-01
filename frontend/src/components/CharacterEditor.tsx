@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Modal } from './Modal'
 import { useStore } from '../store'
+import { useConfirm } from './ConfirmDialog'
 import { generateCharacter, expandCharacterField } from '../generators'
 import { cx, uid } from '../util'
 import { CharAvatar } from './CharAvatar'
@@ -29,6 +30,7 @@ export function CharacterEditor({ editing, onClose }: { editing: Character | 'ne
   const updateCharacter = useStore((s) => s.updateCharacter)
   const deleteCharacter = useStore((s) => s.deleteCharacter)
   const settings = useStore((s) => s.settings)
+  const confirm = useConfirm()
   const isNew = editing === 'new'
   const [c, setC] = useState<Draft>(() => {
     if (isNew) return blank()
@@ -152,8 +154,14 @@ export function CharacterEditor({ editing, onClose }: { editing: Character | 'ne
     onClose()
   }
 
-  const remove = () => {
-    if (confirm(`Delete "${(editing as Character).name}" and all its chats?`)) {
+  const remove = async () => {
+    if (
+      await confirm({
+        title: 'Delete character?',
+        message: `"${(editing as Character).name}" and all of its chats will be permanently deleted.`,
+        confirmLabel: 'Delete',
+      })
+    ) {
       deleteCharacter((editing as Character).id)
       onClose()
     }
@@ -292,7 +300,11 @@ export function CharacterEditor({ editing, onClose }: { editing: Character | 'ne
                     <button type="button" className="btn xs ghost" onClick={() => setShowPrompts((p) => !p)}>
                       ✨ Art prompts
                     </button>
-                    <button type="button" className="btn xs ghost danger" onClick={() => deleteSet(activeSet.id)}>
+                    <button
+                      type="button"
+                      className="btn xs ghost danger"
+                      onClick={async () => { if (await confirm({ title: 'Delete set?', message: `Delete the "${activeSet.name || 'Untitled'}" portrait set and its emotion images?`, confirmLabel: 'Delete' })) deleteSet(activeSet.id) }}
+                    >
                       Delete
                     </button>
                   </div>

@@ -658,3 +658,44 @@ select:focus {
 [data-reduce-motion='true'] .welcome-card {
   animation: none;
 }
+
+/* Branded confirmation dialog (data-loss guard) */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: color-mix(in srgb, var(--bg) 58%, transparent);
+  backdrop-filter: blur(4px);
+  animation: welcome-fade 0.15s ease;
+}
+.confirm-box {
+  width: min(400px, 100%);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px 22px 18px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
+  animation: welcome-rise 0.18s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+.confirm-title {
+  margin: 0 0 8px;
+  font-size: 17px;
+}
+.confirm-msg {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+  margin-bottom: 18px;
+}
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+[data-reduce-motion='true'] .confirm-overlay,
+[data-reduce-motion='true'] .confirm-box {
+  animation: none;
+}
