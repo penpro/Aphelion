@@ -15,6 +15,7 @@ import { WelcomeTour } from './components/WelcomeTour'
 import { TitleBar } from './components/TitleBar'
 import { ResizeHandles } from './components/ResizeHandles'
 import { SplashScreen } from './components/SplashScreen'
+import { StorageBanner } from './components/StorageBanner'
 import type { Character } from './types'
 
 export default function App() {
@@ -51,6 +52,7 @@ export default function App() {
   return (
     <>
       <TitleBar />
+      <StorageBanner />
       <div className="app">
       <a className="skip-link" href="#main-view">
         Skip to content

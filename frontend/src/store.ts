@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import type {
   Character,
   Persona,
@@ -18,6 +18,7 @@ import type {
   Ask,
 } from './types'
 import { uid, now } from './util'
+import { safeStorage } from './storage'
 import {
   defaultCharacters,
   defaultPersona,
@@ -467,6 +468,7 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'localllm-roleplay-studio',
+      storage: createJSONStorage(() => safeStorage),
       version: 1,
       partialize: (s) => ({
         characters: s.characters,

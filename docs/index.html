@@ -460,7 +460,13 @@
     </div>
     <div id="changelog" style="display:flex;flex-direction:column;gap:22px;max-width:780px">
       <article style="border-left:2px solid var(--corona);padding-left:16px">
-        <h3 style="margin:0 0 8px">v0.1.34 <span style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--corona)">LATEST</span></h3>
+        <h3 style="margin:0 0 8px">v0.1.35 <span style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--corona)">LATEST</span></h3>
+        <ul style="margin:0;padding-left:18px;line-height:1.75">
+          <li><b>Your data is safer.</b> Aphelion no longer silently loses work if local storage fills up — a failed save now warns you and offers a one-click backup instead of vanishing, and a corrupt save boots to a clean state instead of a blank screen. New <b>Export / Import backup</b> in Settings, and a recovery screen replaces any hard crash.</li>
+        </ul>
+      </article>
+      <article style="border-left:2px solid var(--border);padding-left:16px">
+        <h3 style="margin:0 0 8px">v0.1.34</h3>
         <ul style="margin:0;padding-left:18px;line-height:1.75">
           <li><b>Confirm before losing anything.</b> Deleting a character, chat, Ask thread, story, dialogue tree, message, expert, or portrait set — or removing someone from a chat — now asks first, with a clean on-brand dialog instead of the old browser popup. Regenerating a dialogue tree only asks when it would overwrite an existing one.</li>
         </ul>

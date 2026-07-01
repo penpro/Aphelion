@@ -6,7 +6,9 @@ import { defaultSettings } from '../seed'
 import { VisionSettings } from './VisionSettings'
 import { ModelsModal } from './ModelsModal'
 import { UpdateCheck } from './UpdateCheck'
-import { cx } from '../util'
+import { useConfirm } from './ConfirmDialog'
+import { STORE_KEY, exportData } from '../storage'
+import { cx, download } from '../util'
 
 type Tip = { body: string; low?: string; high?: string }
 
@@ -156,6 +158,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const updateSettings = useStore((s) => s.updateSettings)
   const [showModels, setShowModels] = useState(false)
   const loadedModel = useStore((s) => s.loadedModel)
+  const confirm = useConfirm()
 
   const resetAdvanced = () =>
     updateSettings({
@@ -175,6 +178,33 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
       seed: defaultSettings.seed,
     })
 
+  const exportBackup = () => download('aphelion-backup.json', exportData(), 'application/json')
+  const importBackup = async (file?: File) => {
+    if (!file) return
+    const text = await file.text()
+    try {
+      JSON.parse(text)
+    } catch {
+      alert('That file is not a valid Aphelion backup.')
+      return
+    }
+    if (
+      await confirm({
+        title: 'Restore backup?',
+        message:
+          'This replaces ALL current characters, chats, and settings with the backup, then reloads. Export your current data first if you want to keep it.',
+        confirmLabel: 'Restore',
+      })
+    ) {
+      try {
+        localStorage.setItem(STORE_KEY, text)
+        window.location.reload()
+      } catch {
+        alert('Could not restore — local storage may be full.')
+      }
+    }
+  }
+
   return (
     <>
     <Modal
@@ -192,6 +222,28 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
     >
       <div className="form">
         <UpdateCheck />
+
+        <div className="field">
+          <span>Your data</span>
+          <div className="row gap">
+            <button className="btn sm ghost" onClick={exportBackup}>
+              ⬇ Export backup
+            </button>
+            <label className="btn sm ghost">
+              ⬆ Import…
+              <input
+                type="file"
+                accept="application/json,.json"
+                hidden
+                onChange={(e) => importBackup(e.target.files?.[0])}
+              />
+            </label>
+          </div>
+          <em className="hint">
+            Save a JSON backup of everything (characters, chats, settings), or restore one. Do this before local
+            storage fills up.
+          </em>
+        </div>
 
         <label className="field">
           <span>Engine API URL (bundled llama.cpp server)</span>
