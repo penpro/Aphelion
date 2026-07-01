@@ -92,10 +92,21 @@ export default function App() {
         />
       )}
 
-      {needsSetup && <SetupWizard onReady={() => setNeedsSetup(false)} />}
+      {needsSetup && (
+        <SetupWizard
+          onReady={() => {
+            setNeedsSetup(false)
+            // brand-new user just finished setup — greet them with the welcome tour
+            if (!useStore.getState().settings.seenWelcome) setShowWelcome(true)
+          }}
+        />
+      )}
       </div>
       <ResizeHandles />
-      <SplashScreen />
+      {/* First-run setup runs standalone — the splash must not sit on top of it waiting to load a
+          model that doesn't exist yet. The splash only covers the model load, so it mounts once a
+          model is present (either already, or after setup completes), never during setup itself. */}
+      {!needsSetup && <SplashScreen />}
     </>
   )
 }
