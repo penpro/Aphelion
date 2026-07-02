@@ -7,7 +7,7 @@ import { generateCharacter, expandCharacterField } from '../generators'
 import { cx, uid } from '../util'
 import { CharAvatar } from './CharAvatar'
 import { fileToPortrait, GENERIC_PORTRAITS } from '../image'
-import { persistPortrait, portraitDataUrl } from '../portraits'
+import { persistPortrait, portraitDataUrl, deleteDiskPortraits, deleteDroppedPortraits } from '../portraits'
 import { EMOTIONS, buildEmotionArtPrompts } from '../emotion'
 import { describePortrait, tagPortrait, getEngineStatus } from '../api/ollama'
 import { setVisionMode, listImages, readImageData } from '../tauri'
@@ -273,9 +273,16 @@ export function CharacterEditor({ editing, onClose }: { editing: Character | 'ne
     }
     const payload: Draft = { ...c }
     // portraitSets supersedes the legacy single living set — drop it so we don't store it twice.
-    if (payload.portraitSets?.length) delete payload.portraits
+    // Must be an explicit undefined: updateCharacter MERGES patches, so a merely-absent key
+    // would silently keep the old stored value.
+    if (payload.portraitSets?.length) payload.portraits = undefined
     if (isNew) addCharacter(payload)
-    else updateCharacter((editing as Character).id, payload)
+    else {
+      // Clean up disk files for any portraits this save dropped (swapped images, cleared
+      // slots, deleted sets). Save-time only — cancelling the editor never touches disk.
+      deleteDroppedPortraits(editing as Character, payload)
+      updateCharacter((editing as Character).id, payload)
+    }
     onClose()
   }
 
@@ -287,6 +294,7 @@ export function CharacterEditor({ editing, onClose }: { editing: Character | 'ne
         confirmLabel: 'Delete',
       })
     ) {
+      deleteDiskPortraits(editing as Character) // remove its portrait files along with it
       deleteCharacter((editing as Character).id)
       onClose()
     }

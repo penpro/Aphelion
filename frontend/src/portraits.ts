@@ -1,6 +1,7 @@
 import { convertFileSrc } from '@tauri-apps/api/core'
-import { savePortrait, readImageData } from './tauri'
+import { savePortrait, readImageData, deletePortrait } from './tauri'
 import { uid } from './util'
+import type { Character, EmotionKey } from './types'
 
 // Character portraits used to live in the store as base64 data-URLs, which bloated localStorage
 // past its ~5MB quota. Now uploads are written to disk (Rust `save_portrait`) and the store holds
@@ -57,5 +58,92 @@ export async function portraitDataUrl(value?: string): Promise<string> {
     })
   } catch {
     return ''
+  }
+}
+
+// ---------- migration: inline data-URL portraits → disk ----------
+
+/** Should this stored value be moved to disk? Real images only — the generic SVG orbs are ~1KB
+ *  generated constants (moving them would also break the picker's selected-state match), and
+ *  bundled assets (Seraphina) / disk refs / empty values stay as they are. */
+const shouldMigrate = (v?: string): v is string => !!v && v.startsWith('data:image/') && !v.startsWith('data:image/svg')
+
+/** Migrate one character's inline portraits to disk. Returns a store patch with the rewritten
+ *  fields, or null if nothing needed moving. A failed write leaves that value inline (persist
+ *  returns its input unchanged on failure), so this is safe to re-run — it converges. */
+export async function migrateCharacterPortraits(
+  c: Character,
+  persist: (dataUrl: string) => Promise<string> = persistPortrait,
+): Promise<Partial<Character> | null> {
+  const patch: Partial<Character> = {}
+  const move = async (v: string | undefined): Promise<string | undefined> => {
+    if (!shouldMigrate(v)) return v
+    const out = await persist(v)
+    return out !== v ? out : v
+  }
+
+  const portrait = await move(c.portrait)
+  if (portrait !== c.portrait) patch.portrait = portrait
+
+  if (c.portraits && Object.values(c.portraits).some(shouldMigrate)) {
+    const legacy: Partial<Record<EmotionKey, string>> = { ...c.portraits }
+    let changed = false
+    for (const k of Object.keys(legacy) as EmotionKey[]) {
+      const moved = await move(legacy[k])
+      if (moved !== legacy[k]) {
+        legacy[k] = moved
+        changed = true
+      }
+    }
+    if (changed) patch.portraits = legacy
+  }
+
+  if (c.portraitSets?.some((s) => Object.values(s.portraits).some(shouldMigrate))) {
+    let changed = false
+    const sets = await Promise.all(
+      c.portraitSets.map(async (s) => {
+        const portraits: Partial<Record<EmotionKey, string>> = { ...s.portraits }
+        for (const k of Object.keys(portraits) as EmotionKey[]) {
+          const moved = await move(portraits[k])
+          if (moved !== portraits[k]) {
+            portraits[k] = moved
+            changed = true
+          }
+        }
+        return { ...s, portraits }
+      }),
+    )
+    if (changed) patch.portraitSets = sets
+  }
+
+  return Object.keys(patch).length ? patch : null
+}
+
+type PortraitFields = Pick<Character, 'portrait' | 'portraits' | 'portraitSets'>
+
+/** Every 'disk:' ref a character owns — used to clean up its files when they're dropped. */
+export function collectDiskRefs(c: PortraitFields): string[] {
+  const refs: string[] = []
+  const add = (v?: string) => {
+    if (isDiskRef(v)) refs.push(v!)
+  }
+  add(c.portrait)
+  Object.values(c.portraits ?? {}).forEach(add)
+  c.portraitSets?.forEach((s) => Object.values(s.portraits).forEach(add))
+  return refs
+}
+
+/** Fire-and-forget deletion of a character's on-disk portrait files (call after removing it). */
+export function deleteDiskPortraits(c: PortraitFields): void {
+  for (const ref of collectDiskRefs(c)) deletePortrait(diskPath(ref)).catch(() => {})
+}
+
+/** Delete the files whose refs were dropped between two versions of a character — swapped
+ *  emotion images, cleared slots, deleted sets. Call on SAVE only (never on draft edits, so
+ *  Cancel keeps everything); refs still present after the save are kept. */
+export function deleteDroppedPortraits(before: PortraitFields, after: PortraitFields): void {
+  const keep = new Set(collectDiskRefs(after))
+  for (const ref of collectDiskRefs(before)) {
+    if (!keep.has(ref)) deletePortrait(diskPath(ref)).catch(() => {})
   }
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { listModels } from './tauri'
+import { migrateCharacterPortraits } from './portraits'
 import { useStore } from './store'
 import { Sidebar } from './components/Sidebar'
 import { ChatView } from './components/ChatView'
@@ -48,6 +49,26 @@ export default function App() {
     r.setAttribute('data-reduce-motion', String(reduceMotion))
     r.setAttribute('data-contrast', highContrast ? 'high' : 'normal')
   }, [theme, reduceMotion, highContrast])
+
+  // Move any inline (base64) portraits from older installs out of the save file and onto disk —
+  // the save has a ~5MB ceiling and images were the thing filling it (new uploads already go to
+  // disk since v0.1.37). Runs once boot has settled; idempotent and failure-tolerant, so an
+  // interrupted pass simply resumes on the next launch. In the browser dev build the disk write
+  // falls back to a no-op and nothing changes.
+  useEffect(() => {
+    const t = setTimeout(async () => {
+      const { characters, updateCharacter } = useStore.getState()
+      for (const c of characters) {
+        try {
+          const patch = await migrateCharacterPortraits(c)
+          if (patch) updateCharacter(c.id, patch)
+        } catch {
+          /* leave this character inline; retried next boot */
+        }
+      }
+    }, 8000)
+    return () => clearTimeout(t)
+  }, [])
 
   return (
     <>

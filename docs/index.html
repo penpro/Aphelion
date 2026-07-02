@@ -509,7 +509,13 @@
     </div>
     <div id="changelog" style="display:flex;flex-direction:column;gap:22px;max-width:780px">
       <article style="border-left:2px solid var(--corona);padding-left:16px">
-        <h3 style="margin:0 0 8px">v0.1.41 <span style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--corona)">LATEST</span></h3>
+        <h3 style="margin:0 0 8px">v0.1.42 <span style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--corona)">LATEST</span></h3>
+        <ul style="margin:0;padding-left:18px;line-height:1.75">
+          <li><b>Portraits move out of the save file.</b> Older installs kept portrait images inside the app's small (~5 MB) save, which is what could fill it up. On first launch this build quietly moves them into proper files on disk — new uploads have worked this way since v0.1.37 — freeing the save for what it's for: your characters and chats. Deleting a character (or swapping out its images) now also cleans up its portrait files.</li>
+        </ul>
+      </article>
+      <article style="border-left:2px solid var(--border);padding-left:16px">
+        <h3 style="margin:0 0 8px">v0.1.41</h3>
         <ul style="margin:0;padding-left:18px;line-height:1.75">
           <li><b>Smart portraits: point at a folder, hit Analyze, done.</b> Drop every portrait of a character — outfits, poses, expressions — into one folder and click <em>Analyze</em> in the character editor. The vision model tags each image once, and from then on the live portrait picks the best one automatically as the story moves: emotion, outfit, and pose in a single read. No typing descriptions, no sorting images into slots — that's the model's job.</li>
         </ul>
