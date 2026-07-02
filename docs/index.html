@@ -509,7 +509,14 @@
     </div>
     <div id="changelog" style="display:flex;flex-direction:column;gap:22px;max-width:780px">
       <article style="border-left:2px solid var(--corona);padding-left:16px">
-        <h3 style="margin:0 0 8px">v0.1.42 <span style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--corona)">LATEST</span></h3>
+        <h3 style="margin:0 0 8px">v0.1.43 <span style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--corona)">LATEST</span></h3>
+        <ul style="margin:0;padding-left:18px;line-height:1.75">
+          <li><b>Scene memory: the app now carries the scene, deliberately.</b> After each reply, a small model call updates a structured record of the character's current state — outfit, hair, mood, pose, props, location — changing only what the story changed. It's injected into every turn (so she <em>stays</em> in the red dress), it's what the live portrait matches against (exact colors, not vibes), and it's visible and editable live in the chat dials. Toggle per chat; on by default.</li>
+          <li><b>Sharper portrait tags.</b> “Analyze” now demands the exact color of every clothing item, the hair, and props — fixing black-vs-purple misses — and the whole index is now viewable and editable in the character editor, so a wrong tag is a two-second fix.</li>
+        </ul>
+      </article>
+      <article style="border-left:2px solid var(--border);padding-left:16px">
+        <h3 style="margin:0 0 8px">v0.1.42</h3>
         <ul style="margin:0;padding-left:18px;line-height:1.75">
           <li><b>Portraits move out of the save file.</b> Older installs kept portrait images inside the app's small (~5 MB) save, which is what could fill it up. On first launch this build quietly moves them into proper files on disk — new uploads have worked this way since v0.1.37 — freeing the save for what it's for: your characters and chats. Deleting a character (or swapping out its images) now also cleans up its portrait files.</li>
         </ul>

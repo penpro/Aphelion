@@ -9,7 +9,8 @@ import { CharAvatar } from './CharAvatar'
 import { fileToPortrait, GENERIC_PORTRAITS } from '../image'
 import { persistPortrait, portraitDataUrl, deleteDiskPortraits, deleteDroppedPortraits } from '../portraits'
 import { EMOTIONS, buildEmotionArtPrompts } from '../emotion'
-import { describePortrait, tagPortrait, getEngineStatus } from '../api/ollama'
+import { describePortrait, tagPortrait } from '../api/classifiers'
+import { getEngineStatus } from '../api/ollama'
 import { setVisionMode, listImages, readImageData } from '../tauri'
 import { findVisionModel } from '../visionModels'
 import type { Character, EmotionKey, PortraitSet, PortraitIndexEntry } from '../types'
@@ -571,6 +572,31 @@ export function CharacterEditor({ editing, onClose }: { editing: Character | 'ne
           </div>
           {analyzePhase && <div className="muted xs" style={{ marginTop: 6 }}>{analyzePhase}</div>}
           {analyzeErr && <div className="error-line">{analyzeErr}</div>}
+          {!!c.portraitIndex?.length && (
+            <details className="index-view">
+              <summary className="muted xs">View / edit the index ({c.portraitIndex.length} portraits)</summary>
+              <div className="index-rows">
+                {c.portraitIndex.map((entry, i) => (
+                  <div key={entry.file} className="index-row">
+                    <span className="index-file" title={entry.file}>{entry.file}</span>
+                    <input
+                      value={entry.tags}
+                      onChange={(ev) =>
+                        setC((prev) => ({
+                          ...prev,
+                          portraitIndex: prev.portraitIndex?.map((x, xi) => (xi === i ? { ...x, tags: ev.target.value } : x)),
+                        }))
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+              <span className="muted xs">
+                These tags are what the picker matches against — fix a wrong color here (e.g. “purple” → “black”) and
+                it takes effect immediately. Re-running Analyze overwrites them.
+              </span>
+            </details>
+          )}
           <span className="muted xs" style={{ marginTop: 4 }}>
             Drop every look — outfits, poses, expressions — into one folder and hit Analyze. The vision model tags each
             image (it loads once, then your main model comes back), and in chat the live portrait auto-picks the best

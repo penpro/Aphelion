@@ -26,6 +26,19 @@ export interface PortraitIndexEntry {
   tags: string
 }
 
+/** The deliberately-carried visual state of a chat's scene: what the character looks like RIGHT
+ *  NOW. Updated by one small model call after each reply (not sniffed from prose), injected into
+ *  the system prompt so the story stays consistent turn to turn, and queried by the live-portrait
+ *  picker. Plain strings; '' = not established yet. Editable live in the chat dials. */
+export interface SceneState {
+  outfit: string
+  hair: string
+  emotion: string // one of the 8 EmotionKey labels
+  pose: string
+  props: string // carried items / weapons
+  location: string
+}
+
 export interface Character {
   id: string
   name: string
@@ -91,6 +104,9 @@ export interface Chat {
   tuning: ChatTuning
   portraitSetId?: string // which of the primary character's portrait sets the live portrait shows
   autoPortraitSet?: boolean // let the model pick the active look each reply (matches the scene to a set's description)
+  sceneTracking?: boolean // carry a structured scene state across turns (undefined = on)
+  sceneState?: SceneState // the carried state itself — outfit/hair/emotion/pose/props/location
+  sceneStateFor?: string // id of the assistant message the state was last updated for (freshness marker)
   sources: Source[] // reference docs injected into context
   knowledgeFolder?: string // path to a user-granted folder; relevant chunks retrieved into context per message
   summary: string // rolling distilled "story so far" memory of older, summarized-out messages

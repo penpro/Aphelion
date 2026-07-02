@@ -3,7 +3,10 @@ import { SourcesPanel } from './SourcesPanel'
 import { CharAvatar } from './CharAvatar'
 import { cx } from '../util'
 import { useConfirm } from './ConfirmDialog'
+import { EMPTY_SCENE } from '../api/classifiers'
 import type { Chat, Character, ResponseLength, ThinkMode } from '../types'
+
+const SCENE_KEYS = ['outfit', 'hair', 'emotion', 'pose', 'props', 'location'] as const
 
 const LENGTHS: { id: ResponseLength; label: string }[] = [
   { id: 'short', label: 'Short' },
@@ -210,6 +213,49 @@ export function ChatDials({ chat }: { chat: Chat }) {
               />
               <span className="muted xs">Auto-switch — let the story pick the look (needs a description on each set).</span>
             </label>
+          </div>
+        )}
+
+        <div className="field">
+          <span>Scene memory</span>
+          <div className="seg fill">
+            {[false, true].map((on) => (
+              <button
+                key={String(on)}
+                type="button"
+                className={cx('seg-btn', (chat.sceneTracking !== false) === on && 'sel')}
+                onClick={() => updateChat(chat.id, { sceneTracking: on })}
+              >
+                {on ? 'On' : 'Off'}
+              </button>
+            ))}
+          </div>
+          <span className="muted xs">
+            Deliberately carries outfit, hair, pose, props, and location from turn to turn — keeps the scene consistent
+            and gives the live portrait exact tags to match. One small model call per reply.
+          </span>
+        </div>
+
+        {chat.sceneTracking !== false && (
+          <div className="field">
+            <span>Current scene{chat.sceneState ? '' : ' — fills in after the next reply'}</span>
+            {chat.sceneState && (
+              <>
+                {SCENE_KEYS.map((k) => (
+                  <label key={k} className="scene-row">
+                    <span className="scene-k">{k}</span>
+                    <input
+                      value={chat.sceneState![k]}
+                      placeholder="—"
+                      onChange={(e) =>
+                        updateChat(chat.id, { sceneState: { ...(chat.sceneState ?? EMPTY_SCENE), [k]: e.target.value } })
+                      }
+                    />
+                  </label>
+                ))}
+                <span className="muted xs">Live — edit to correct or steer; the next reply and portrait pick use it.</span>
+              </>
+            )}
           </div>
         )}
       </div>

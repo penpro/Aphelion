@@ -477,6 +477,64 @@ code, pre, kbd, .mono, .xs, .hint, .model-name, .estimate, .num-input, .field-la
   resize: vertical;
   min-height: 44px;
 }
+
+/* smart-portrait index viewer (CharacterEditor) */
+.index-view {
+  margin-top: 6px;
+}
+.index-view > summary {
+  cursor: pointer;
+}
+.index-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 6px 0;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.index-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.index-row .index-file {
+  font-family: var(--mono, monospace);
+  font-size: 11px;
+  color: var(--text-dim, #9aa);
+  flex: none;
+  width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.index-row input {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+}
+
+/* carried scene-state editor (ChatDials) */
+.scene-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin: 2px 0;
+}
+.scene-row .scene-k {
+  font-family: var(--mono, monospace);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--text-dim, #9aa);
+  flex: none;
+  width: 58px;
+  text-transform: uppercase;
+}
+.scene-row input {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+}
 .set-empty {
   margin-top: 6px;
   padding: 12px;

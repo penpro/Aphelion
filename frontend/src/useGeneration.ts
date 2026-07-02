@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react'
 import { useStore } from './store'
 import { retrieveContext } from './tauri'
 import { streamChatNative, reloadModel, proofread, samplerFromSettings } from './api/ollama'
+import { updateSceneState } from './api/classifiers'
 import { buildApiMessages, estTokens } from './prompt'
 import { distillMessages, compactSummary, LIVE_WINDOW_TOKENS, KEEP_RECENT_TOKENS, SUMMARY_CAP_TOKENS } from './memory'
 import type { Character } from './types'
@@ -12,6 +13,9 @@ import type { Character } from './types'
  */
 export function useGeneration() {
   const [isStreaming, setStreaming] = useState(false)
+  // True from the moment a generation starts until its scene-state update has landed (or been
+  // skipped). The live portrait waits on this instead of racing the tracker — one clean switch.
+  const [scenePending, setScenePending] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
   // The cast signature last generated per chat, so we can flush the KV cache when
   // the cast changes (otherwise a newly added character is ignored until reload).
@@ -72,6 +76,7 @@ export function useGeneration() {
         mutedIds: chat.mutedIds,
         sources,
         summary: chat.summary,
+        sceneState: chat.sceneTracking === false ? undefined : chat.sceneState,
       },
       { maxContextTokens: numCtx, reserveTokens: reserve },
     )
@@ -149,6 +154,28 @@ export function useGeneration() {
     }
   }, [])
 
+  // After a reply, update the carried SCENE STATE: one small deterministic call that tracks what
+  // the character looks like right now (outfit/hair/emotion/pose/props/location), changing only
+  // what the exchange changed. The state is injected into the next turn's system prompt (keeps
+  // the scene consistent) and drives the live portrait's pick. sceneStateFor is ALWAYS stamped —
+  // success or not — so the portrait never waits on a state that isn't coming.
+  const maintainScene = useCallback(async (chatId: string, assistantId: string) => {
+    const st = useStore.getState()
+    const chat = st.chats.find((c) => c.id === chatId)
+    if (!chat || chat.sceneTracking === false) return
+    const reply = chat.messages.find((m) => m.id === assistantId)
+    if (!reply?.content.trim() || reply.error) return
+    const idx = chat.messages.findIndex((m) => m.id === assistantId)
+    const lastUser = [...chat.messages.slice(0, Math.max(0, idx))].reverse().find((m) => m.role === 'user')?.content ?? ''
+    const character = st.characters.find((c) => c.id === chat.characterId)
+    try {
+      const next = await updateSceneState(st.settings.baseUrl, character ?? {}, chat.sceneState, lastUser, reply.content)
+      useStore.getState().updateChat(chatId, next ? { sceneState: next, sceneStateFor: assistantId } : { sceneStateFor: assistantId })
+    } catch {
+      useStore.getState().updateChat(chatId, { sceneStateFor: assistantId })
+    }
+  }, [])
+
   // After a turn, if the live (unsummarized) tail has grown past the window, fold the
   // oldest messages into the running memory (and compact it if it's gotten too large).
   // The summarization LLM call fires only every ~25k tokens, so most turns it no-ops.
@@ -205,18 +232,30 @@ export function useGeneration() {
       const st = useStore.getState()
       st.addMessage(chatId, { role: 'user', content: text })
       const assistantId = st.addMessage(chatId, { role: 'assistant', content: '', reasoning: '' })
-      await run(chatId, assistantId)
+      setScenePending(true)
+      try {
+        await run(chatId, assistantId)
+        await maintainScene(chatId, assistantId)
+      } finally {
+        setScenePending(false)
+      }
       await maintainMemory(chatId)
     },
-    [run, maintainMemory],
+    [run, maintainScene, maintainMemory],
   )
 
   const regenerate = useCallback(
     async (chatId: string, assistantId: string) => {
       useStore.getState().beginSwipe(chatId, assistantId)
-      await run(chatId, assistantId)
+      setScenePending(true)
+      try {
+        await run(chatId, assistantId)
+        await maintainScene(chatId, assistantId)
+      } finally {
+        setScenePending(false)
+      }
     },
-    [run],
+    [run, maintainScene],
   )
 
   // Leave the setup panel and generate the character's opening message.
@@ -225,22 +264,34 @@ export function useGeneration() {
       const st = useStore.getState()
       st.updateChat(chatId, { started: true })
       const assistantId = st.addMessage(chatId, { role: 'assistant', content: '', reasoning: '' })
-      await run(chatId, assistantId)
+      setScenePending(true)
+      try {
+        await run(chatId, assistantId)
+        await maintainScene(chatId, assistantId)
+      } finally {
+        setScenePending(false)
+      }
     },
-    [run],
+    [run, maintainScene],
   )
 
   // "Continue / wait": generate the next beat with no user message.
   const continueScene = useCallback(
     async (chatId: string) => {
       const assistantId = useStore.getState().addMessage(chatId, { role: 'assistant', content: '', reasoning: '' })
-      await run(chatId, assistantId, { continueScene: true })
+      setScenePending(true)
+      try {
+        await run(chatId, assistantId, { continueScene: true })
+        await maintainScene(chatId, assistantId)
+      } finally {
+        setScenePending(false)
+      }
       await maintainMemory(chatId)
     },
-    [run, maintainMemory],
+    [run, maintainScene, maintainMemory],
   )
 
   const stop = useCallback(() => abortRef.current?.abort(), [])
 
-  return { isStreaming, memoryStatus, send, regenerate, begin, stop, continueScene }
+  return { isStreaming, scenePending, memoryStatus, send, regenerate, begin, stop, continueScene }
 }

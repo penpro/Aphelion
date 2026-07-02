@@ -30,7 +30,7 @@ export function ChatView({ onEditCharacter }: { onEditCharacter: (c: Character) 
   const addToCast = useStore((s) => s.addToCast)
   const updateChat = useStore((s) => s.updateChat)
 
-  const { isStreaming, memoryStatus, send, regenerate, begin, stop, continueScene } = useGeneration()
+  const { isStreaming, scenePending, memoryStatus, send, regenerate, begin, stop, continueScene } = useGeneration()
   const [creatingRef, setCreatingRef] = useState<string | null>(null)
   const [showMemory, setShowMemory] = useState(false)
   const [showDoc, setShowDoc] = useState(false)
@@ -173,6 +173,7 @@ export function ChatView({ onEditCharacter }: { onEditCharacter: (c: Character) 
           enabled={!!settings.livePortraits}
           size={settings.livePortraitSize ?? 'small'}
           streaming={isStreaming}
+          scenePending={scenePending}
         />
         <div className="messages" ref={scrollRef}>
           {chat.messages.map((m) => (

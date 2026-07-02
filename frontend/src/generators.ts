@@ -9,8 +9,12 @@ export function randomColor(): string {
   return PALETTE[Math.floor(Math.random() * PALETTE.length)]
 }
 
-/** One non-streamed completion; returns the answer content (reasoning discarded). */
-async function complete(settings: Settings, messages: ApiMessage[], signal?: AbortSignal): Promise<string> {
+/** The one streamed completion every generator goes through — settings plumbing lives HERE only. */
+async function stream(
+  settings: Settings,
+  messages: ApiMessage[],
+  opts?: { signal?: AbortSignal; onContent?: (delta: string) => void; onReasoning?: (delta: string) => void },
+): Promise<string> {
   const { content } = await streamChat({
     baseUrl: settings.baseUrl,
     model: settings.model,
@@ -18,10 +22,15 @@ async function complete(settings: Settings, messages: ApiMessage[], signal?: Abo
     temperature: settings.temperature,
     topP: settings.topP,
     maxTokens: 0, // reasoning model: never cap, or content comes back empty
-    signal,
+    signal: opts?.signal,
+    handlers: { onContent: opts?.onContent, onReasoning: opts?.onReasoning },
   })
   return content
 }
+
+/** One completion with no live handlers; returns the answer content (reasoning discarded). */
+const complete = (settings: Settings, messages: ApiMessage[], signal?: AbortSignal): Promise<string> =>
+  stream(settings, messages, { signal })
 
 // ----------------------------- Document generation (Typst → PDF) -----------------------------
 
@@ -86,19 +95,14 @@ export async function generateTypstDoc(opts: {
       : '',
     '\n\nOutput only the Typst source.',
   ].join('')
-  const { content } = await streamChat({
-    baseUrl: opts.settings.baseUrl,
-    model: opts.settings.model,
-    messages: [
+  const content = await stream(
+    opts.settings,
+    [
       { role: 'system', content: composeSystem(opts.persona, TYPST_SYSTEM) },
       { role: 'user', content: user },
     ],
-    temperature: opts.settings.temperature,
-    topP: opts.settings.topP,
-    maxTokens: 0,
-    signal: opts.signal,
-    handlers: { onContent: opts.onContent },
-  })
+    { signal: opts.signal, onContent: opts.onContent },
+  )
   return stripCodeFences(content)
 }
 
@@ -117,19 +121,14 @@ ${opts.source}
 
 --- Compiler error ---
 ${opts.error}`
-  const { content } = await streamChat({
-    baseUrl: opts.settings.baseUrl,
-    model: opts.settings.model,
-    messages: [
+  const content = await stream(
+    opts.settings,
+    [
       { role: 'system', content: TYPST_SYSTEM },
       { role: 'user', content: user },
     ],
-    temperature: opts.settings.temperature,
-    topP: opts.settings.topP,
-    maxTokens: 0,
-    signal: opts.signal,
-    handlers: { onContent: opts.onContent },
-  })
+    { signal: opts.signal, onContent: opts.onContent },
+  )
   return stripCodeFences(content)
 }
 
@@ -152,19 +151,14 @@ export async function generateTextDoc(opts: {
     opts.context?.trim() ? `\n\nReference material to draw from:\n\n${opts.context.trim()}` : '',
     `\n\nOutput only the ${opts.fileType} file contents.`,
   ].join('')
-  const { content } = await streamChat({
-    baseUrl: opts.settings.baseUrl,
-    model: opts.settings.model,
-    messages: [
+  const content = await stream(
+    opts.settings,
+    [
       { role: 'system', content: system },
       { role: 'user', content: user },
     ],
-    temperature: opts.settings.temperature,
-    topP: opts.settings.topP,
-    maxTokens: 0,
-    signal: opts.signal,
-    handlers: { onContent: opts.onContent },
-  })
+    { signal: opts.signal, onContent: opts.onContent },
+  )
   return stripCodeFences(content)
 }
 
@@ -182,19 +176,14 @@ export async function editDoc(opts: {
   const base = `You are editing an existing ${opts.fileType} file. Apply the user's requested change and output the COMPLETE updated file contents — raw, with no explanations, no commentary, and no markdown code fences. Preserve everything the change doesn't touch. The result must be a valid, complete ${opts.fileType} file.`
   const system = composeSystem(opts.persona, base)
   const user = `Here is the current ${opts.fileType} file:\n\n${opts.current}\n\nRequested change:\n${opts.instruction}\n\nOutput the full updated file.`
-  const { content } = await streamChat({
-    baseUrl: opts.settings.baseUrl,
-    model: opts.settings.model,
-    messages: [
+  const content = await stream(
+    opts.settings,
+    [
       { role: 'system', content: system },
       { role: 'user', content: user },
     ],
-    temperature: opts.settings.temperature,
-    topP: opts.settings.topP,
-    maxTokens: 0,
-    signal: opts.signal,
-    handlers: { onContent: opts.onContent },
-  })
+    { signal: opts.signal, onContent: opts.onContent },
+  )
   return stripCodeFences(content)
 }
 
@@ -481,17 +470,7 @@ export async function generateStory(opts: {
         : 'Write the scene now.',
     },
   ]
-  const { content } = await streamChat({
-    baseUrl: opts.settings.baseUrl,
-    model: opts.settings.model,
-    messages,
-    temperature: opts.settings.temperature,
-    topP: opts.settings.topP,
-    maxTokens: 0,
-    signal: opts.signal,
-    handlers: { onReasoning: opts.onReasoning, onContent: opts.onContent },
-  })
-  return content
+  return stream(opts.settings, messages, { signal: opts.signal, onContent: opts.onContent, onReasoning: opts.onReasoning })
 }
 
 const isActionOnly = (s: string): boolean => /^\*.*\*$/.test(s) && !s.includes('"')

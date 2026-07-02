@@ -11,7 +11,6 @@ import type {
   StoryBeat,
   StoryDials,
   ChatTuning,
-  ThinkMode,
   DialogueTree,
   DialogueNode,
   Expert,
@@ -19,6 +18,7 @@ import type {
 } from './types'
 import { uid, now } from './util'
 import { safeStorage } from './storage'
+import { mergePersisted } from './migrations'
 import {
   defaultCharacters,
   defaultPersona,
@@ -485,102 +485,9 @@ export const useStore = create<AppState>()(
         asks: s.asks,
         activeAskId: s.activeAskId,
       }),
-      // Shallow-merge persisted over defaults, but deep-merge settings/persona so
-      // newly added fields keep their defaults across versions.
-      merge: (persisted, current) => {
-        const p = (persisted ?? {}) as Partial<AppState>
-        // Backfill story fields added after a story was first saved.
-        const stories = (p.stories ?? current.stories).map((st) => ({
-          ...st,
-          targetWords: typeof st.targetWords === 'number' && st.targetWords > 0 ? st.targetWords : DEFAULT_TARGET_WORDS,
-          dials: { ...DEFAULT_DIALS, ...(st.dials ?? {}) },
-          steerLines: Array.isArray(st.steerLines) ? st.steerLines : [],
-          flowCurve: Array.isArray(st.flowCurve) && st.flowCurve.length === 10 ? st.flowCurve : defaultFlowCurve(),
-          sources: Array.isArray(st.sources) ? st.sources : [],
-        }))
-        // Backfill chat fields (scene moved out of the character into the chat).
-        const chats = (p.chats ?? current.chats).map((c) => {
-          const merged = { ...DEFAULT_CHAT_TUNING, ...((c.tuning ?? {}) as Partial<ChatTuning>) }
-          const tk = merged.think as unknown // older saves stored a boolean or 'brief'
-          const think: ThinkMode = tk === 'full' ? 'full' : 'off'
-          return {
-            ...c,
-            castIds: Array.isArray(c.castIds) && c.castIds.length ? c.castIds : [c.characterId],
-            mutedIds: Array.isArray(c.mutedIds) ? c.mutedIds : [],
-            scenePrompt: typeof c.scenePrompt === 'string' ? c.scenePrompt : '',
-            started: typeof c.started === 'boolean' ? c.started : (c.messages?.length ?? 0) > 0,
-            tuning: { ...merged, think },
-            sources: Array.isArray(c.sources) ? c.sources : [],
-            summary: typeof c.summary === 'string' ? c.summary : '',
-            summarizedCount: typeof c.summarizedCount === 'number' ? c.summarizedCount : 0,
-          }
-        })
-        // Seed built-in experts on first run; backfill any newly shipped built-ins
-        // (matched by id) into existing saves without disturbing the user's own
-        // experts or their edits. (A deleted built-in reappears on next load.)
-        const persistedExperts = Array.isArray(p.experts) ? p.experts : []
-        const seenExpertIds = new Set(persistedExperts.map((e) => e.id))
-        const experts = persistedExperts.length
-          ? [...persistedExperts, ...defaultExperts.filter((e) => !seenExpertIds.has(e.id))]
-          : defaultExperts
-        // Migrate legacy single-shot asks ({prompt,response,reasoning}) into multi-turn threads.
-        const asks = ((p.asks ?? current.asks) as unknown[]).map((raw) => {
-          const any = (raw ?? {}) as Record<string, unknown>
-          if (Array.isArray(any.messages)) {
-            return {
-              ...(raw as Ask),
-              title: typeof any.title === 'string' ? (any.title as string) : '',
-              expertId: typeof any.expertId === 'string' ? (any.expertId as string) : null,
-              think: !!any.think,
-            } as Ask
-          }
-          const prompt = typeof any.prompt === 'string' ? (any.prompt as string) : ''
-          const response = typeof any.response === 'string' ? (any.response as string) : ''
-          const msgs: ChatMessage[] = []
-          if (prompt.trim()) msgs.push({ id: uid(), role: 'user', content: prompt, createdAt: (any.createdAt as number) ?? now() })
-          if (response.trim())
-            msgs.push({
-              id: uid(),
-              role: 'assistant',
-              content: response,
-              reasoning: typeof any.reasoning === 'string' ? (any.reasoning as string) : '',
-              createdAt: (any.updatedAt as number) ?? now(),
-            })
-          return {
-            id: (any.id as string) ?? uid(),
-            title: prompt.slice(0, 60),
-            expertId: null,
-            messages: msgs,
-            think: !!any.think,
-            createdAt: (any.createdAt as number) ?? now(),
-            updatedAt: (any.updatedAt as number) ?? now(),
-          } as Ask
-        })
-        const mergedSettings = { ...current.settings, ...((p.settings ?? {}) as Partial<Settings>) }
-        // Migrate the old Ollama dev-proxy URL to the bundled llama.cpp engine.
-        if (!mergedSettings.baseUrl || mergedSettings.baseUrl.startsWith('/ollama')) {
-          mergedSettings.baseUrl = current.settings.baseUrl
-        }
-        // Backfill the shipped Seraphina example portraits onto installs that predate them
-        // (leave her alone once a user has given her their own portrait sets, or deleted her).
-        const seraphinaSeed = defaultCharacters.find((c) => c.id === 'seed-seraphina')
-        const characters = (p.characters ?? current.characters).map((c) =>
-          c.id === 'seed-seraphina' && !c.portraitSets?.length && seraphinaSeed?.portraitSets?.length
-            ? { ...c, portrait: c.portrait || seraphinaSeed.portrait, portraitSets: seraphinaSeed.portraitSets }
-            : c,
-        )
-        return {
-          ...current,
-          ...p,
-          characters,
-          stories,
-          chats,
-          experts,
-          asks,
-          settings: mergedSettings,
-          persona: { ...current.persona, ...(p.persona ?? {}) },
-        }
-      },
+      // All save-format backfills/migrations live in migrations.ts — one place to read
+      // (and test) when the persisted shape changes.
+      merge: (persisted, current) => mergePersisted(persisted, current),
     },
   ),
 )

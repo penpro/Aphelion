@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { detectEmotion } from '../emotion'
-import { classifyEmotion, classifyPortraitSet, pickPortrait } from '../api/ollama'
+import { classifyEmotion, classifyPortraitSet, pickPortrait, sceneStateLine } from '../api/classifiers'
 import { useStore } from '../store'
 import { portraitSrc } from '../portraits'
 import { readImageData } from '../tauri'
@@ -13,24 +13,34 @@ import type { Character, Chat, EmotionKey } from '../types'
 //   vision-built keyword index. No vision model at runtime; images load once and are cached.
 // - Portrait sets: the model classifies what the character is FEELING (subtext, not prose tone)
 //   and shows that emotion slot; with auto-switch on, the active set follows outfit changes.
+// With scene tracking on (the default), both modes wait for the chat's carried scene state and
+// query THAT — exact outfit colors, pose, mood — instead of sniffing raw prose; `scenePending`
+// tells us an update is in flight so the portrait switches exactly once per reply.
 // Renders nothing unless live mode is on and the character has portraits to show.
 export function LivePortrait({
   chat,
   character,
   enabled,
   streaming,
+  scenePending,
   size,
 }: {
   chat: Chat
   character: Character
   enabled: boolean
   streaming: boolean
+  scenePending?: boolean
   size: 'small' | 'medium' | 'large'
 }) {
   const [open, setOpen] = useState(true)
   const [emotion, setEmotion] = useState<EmotionKey>('neutral')
   const baseUrl = useStore((s) => s.settings.baseUrl)
   const updateChat = useStore((s) => s.updateChat)
+
+  // Scene tracking: hold the portrait while the tracker is still working on this reply, and
+  // prefer the tracked state (deliberate, colored, carried) over prose once it's fresh.
+  const tracking = chat.sceneTracking !== false
+  const waiting = tracking && !!scenePending
 
   // Smart-folder mode: an analyzed portrait folder overrides set/emotion mode entirely.
   const folderMode = !!(character.portraitFolder && (character.portraitIndex?.length ?? 0) > 0)
@@ -45,20 +55,25 @@ export function LivePortrait({
     return active?.portraits ?? character.portraits
   }, [character.portraitSets, character.portraits, chat.portraitSetId])
 
-  const lastText = useMemo(() => {
+  const last = useMemo(() => {
     for (let i = chat.messages.length - 1; i >= 0; i--) {
-      if (chat.messages[i].role === 'assistant') return chat.messages[i].content
+      const m = chat.messages[i]
+      if (m.role === 'assistant') return { text: m.content, id: m.id }
     }
-    return ''
+    return { text: '', id: '' }
   }, [chat.messages])
+  const lastText = last.text
+  const stateFresh = tracking && !!chat.sceneState && chat.sceneStateFor === last.id
 
-  // Read the WHOLE reply once it's done streaming (so the portrait settles on one mood instead of
-  // flickering per token). We ask the model what THIS character is actually feeling — reading subtext
-  // + personality, since a dry or guarded voice isn't anger. The current portrait is held until that
-  // answer lands, so we switch exactly ONCE (no heuristic→model double-flick); the keyword heuristic
-  // is only the fallback when the engine is unreachable.
+  // Set-mode emotion: once the reply is done (and the scene tracker has answered, when on), show
+  // what the character is FEELING. The tracked state answers for free; otherwise one classifier
+  // call, holding the current portrait until it lands — one clean switch, heuristic only offline.
   useEffect(() => {
-    if (folderMode || streaming || !lastText) return
+    if (folderMode || streaming || waiting || !lastText) return
+    if (stateFresh && chat.sceneState!.emotion) {
+      setEmotion(chat.sceneState!.emotion as EmotionKey)
+      return
+    }
     const ctrl = new AbortController()
     let live = true
     classifyEmotion(baseUrl, character, lastText, ctrl.signal)
@@ -72,20 +87,23 @@ export function LivePortrait({
       live = false
       ctrl.abort()
     }
-  }, [lastText, streaming, baseUrl, character.id, character.name, character.personality, character.description])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastText, streaming, waiting, stateFresh, chat.sceneState?.emotion, baseUrl, character.id])
 
-  // Auto-switch the active LOOK when the story changes the character's outfit/appearance. Runs once
-  // per finished reply (only with auto on + 2+ sets); reads the recent turns, matches them to each
-  // set's description, and updates the chat's active set if it clearly changed. Sticky by design.
+  // Auto-switch the active LOOK when the story changes the character's outfit/appearance. With
+  // fresh scene state, the query is the exact tracked outfit; otherwise the recent turns.
   useEffect(() => {
-    if (folderMode || streaming || !lastText || !chat.autoPortraitSet) return
+    if (folderMode || streaming || waiting || !lastText || !chat.autoPortraitSet) return
     const list = character.portraitSets ?? []
     if (list.length < 2) return
     const activeId = list.find((s) => s.id === chat.portraitSetId)?.id ?? list[0].id
-    const recent = chat.messages
-      .slice(-6)
-      .map((m) => `${m.role === 'user' ? 'User' : character.name}: ${m.content}`)
-      .join('\n\n')
+    const recent =
+      stateFresh && chat.sceneState!.outfit
+        ? `${character.name} is now wearing: ${chat.sceneState!.outfit}.`
+        : chat.messages
+            .slice(-6)
+            .map((m) => `${m.role === 'user' ? 'User' : character.name}: ${m.content}`)
+            .join('\n\n')
     const ctrl = new AbortController()
     let live = true
     classifyPortraitSet(baseUrl, character, list, activeId, recent, ctrl.signal)
@@ -98,19 +116,22 @@ export function LivePortrait({
       ctrl.abort()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lastText, streaming, baseUrl, chat.id, chat.autoPortraitSet, character.id])
+  }, [lastText, streaming, waiting, stateFresh, chat.sceneState?.outfit, baseUrl, chat.id, chat.autoPortraitSet, character.id])
 
-  // Smart-folder pick: after each finished reply, one text call chooses the best-matching portrait
-  // from the analyzed index (sticky on outfit, expressive on emotion). The current portrait holds
-  // until the answer lands — one clean switch, and a failed call keeps what's showing.
+  // Smart-folder pick: one text call chooses the best-matching portrait from the analyzed index.
+  // With fresh scene state the query is the carried state line (exact colors and pose); the
+  // current portrait holds until the answer lands — one clean switch, failures keep what's showing.
   useEffect(() => {
-    if (!folderMode || streaming || !lastText) return
+    if (!folderMode || streaming || waiting || !lastText) return
     const entries = character.portraitIndex ?? []
     const folder = character.portraitFolder!
-    const recent = chat.messages
-      .slice(-6)
-      .map((m) => `${m.role === 'user' ? 'User' : character.name}: ${m.content}`)
-      .join('\n\n')
+    const query =
+      stateFresh
+        ? sceneStateLine(chat.sceneState!)
+        : chat.messages
+            .slice(-6)
+            .map((m) => `${m.role === 'user' ? 'User' : character.name}: ${m.content}`)
+            .join('\n\n')
     const ctrl = new AbortController()
     let live = true
     const run = async () => {
@@ -118,7 +139,7 @@ export function LivePortrait({
         const file =
           entries.length === 1
             ? entries[0].file
-            : await pickPortrait(baseUrl, character, entries, pickedFileRef.current ?? undefined, recent, ctrl.signal)
+            : await pickPortrait(baseUrl, character, entries, pickedFileRef.current ?? undefined, query, ctrl.signal)
         if (!file || !live) return
         let src = imgCache.current.get(file)
         if (!src) {
@@ -139,7 +160,7 @@ export function LivePortrait({
       ctrl.abort()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lastText, streaming, baseUrl, chat.id, character.id, folderMode])
+  }, [lastText, streaming, waiting, stateFresh, chat.sceneState, baseUrl, chat.id, character.id, folderMode])
 
   if (!enabled) return null
   if (!folderMode && (!set || Object.keys(set).length === 0)) return null

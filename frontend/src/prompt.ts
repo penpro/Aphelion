@@ -1,4 +1,4 @@
-import type { Character, Persona, ChatMessage, ChatTuning, Source } from './types'
+import type { Character, Persona, ChatMessage, ChatTuning, Source, SceneState } from './types'
 import type { ApiMessage } from './api/ollama'
 
 /** Render attached reference docs into a context block. */
@@ -56,6 +56,25 @@ export interface SceneCtx {
   mutedIds?: string[]
   sources?: Source[]
   summary?: string // rolling "story so far" memory, kept in context across the whole chat
+  sceneState?: SceneState // the carried visual state (outfit/hair/pose/props/location), injected for consistency
+}
+
+/** Render the carried scene state as a system-prompt block. Emotion is deliberately left out —
+ *  anchoring the mood would flatten the scene's dynamics; it only drives the portrait. */
+export function sceneStateBlock(state?: SceneState): string {
+  if (!state) return ''
+  const rows = [
+    state.outfit && `- Wearing: ${state.outfit}`,
+    state.hair && `- Hair: ${state.hair}`,
+    state.pose && `- Position/pose: ${state.pose}`,
+    state.props && `- Carrying: ${state.props}`,
+    state.location && `- Location: ${state.location}`,
+  ].filter(Boolean)
+  if (!rows.length) return ''
+  return (
+    `# Live scene state\nThe character's CURRENT visual state. Stay consistent with it — clothing, hair, ` +
+    `position, and carried items do not change unless the story explicitly changes them:\n${rows.join('\n')}`
+  )
 }
 
 function charBlock(c: Character, muted: boolean): string {
@@ -104,6 +123,8 @@ export function buildSystemPrompt(cast: Character[], persona: Persona, ctx?: Sce
         `Treat it as established history and stay fully consistent with it.\n\n${ctx.summary.trim()}`,
     )
   if (ctx?.scenePrompt?.trim()) parts.push(`# Current scene\n${ctx.scenePrompt.trim()}`)
+  const stateBlock = sceneStateBlock(ctx?.sceneState)
+  if (stateBlock) parts.push(stateBlock)
 
   if (isGroup) {
     parts.push(
