@@ -18,8 +18,9 @@ const INTENSITY = ['', 'Wholesome', 'Mild', 'Suggestive', 'Steamy', 'Explicit']
 
 /** The right-hand chat panel, grouped by concern: Cast · Sources · Style · Portrait · Scene.
  *  Each group folds; helper prose lives behind ⓘ tips so the panel stays scannable. The whole
- *  panel docks away via the edge handle in ChatView (settings.dialsCollapsed). */
-export function ChatDials({ chat }: { chat: Chat }) {
+ *  panel docks away via the edge handle in ChatView (settings.dialsCollapsed), and the same
+ *  handle drags to resize it (width/resizing come from ChatView's splitter logic). */
+export function ChatDials({ chat, width, resizing }: { chat: Chat; width?: number; resizing?: boolean }) {
   const characters = useStore((s) => s.characters)
   const updateChat = useStore((s) => s.updateChat)
   const updateChatTuning = useStore((s) => s.updateChatTuning)
@@ -35,7 +36,11 @@ export function ChatDials({ chat }: { chat: Chat }) {
   const who = primary?.name || 'the character'
 
   return (
-    <aside className={cx('chat-dials', settings.dialsCollapsed && 'is-docked')}>
+    <aside
+      className={cx('chat-dials', settings.dialsCollapsed && 'is-docked', resizing && 'is-resizing')}
+      // Inline width only while open — when docked, the .is-docked class must win to collapse to 0.
+      style={settings.dialsCollapsed || !width ? undefined : { width, flexBasis: width }}
+    >
       <details className="dials-sec" open>
         <summary className="dials-title">Cast · {cast.length}</summary>
         <div className="cast-list">

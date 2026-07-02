@@ -509,7 +509,15 @@
     </div>
     <div id="changelog" style="display:flex;flex-direction:column;gap:22px;max-width:780px">
       <article style="border-left:2px solid var(--corona);padding-left:16px">
-        <h3 style="margin:0 0 8px">v0.1.47 <span style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--corona)">LATEST</span></h3>
+        <h3 style="margin:0 0 8px">v0.1.48 <span style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--corona)">LATEST</span></h3>
+        <ul style="margin:0;padding-left:18px;line-height:1.75">
+          <li><b>Resizable chat panel.</b> The right panel's handle is now a splitter — drag it to widen the panel and read long scene fields in full (the width sticks); a plain click still tucks it away.</li>
+          <li><b>Readable delete buttons.</b> Destructive buttons now use a deep red with white text, readable on every theme — including the red-accent presets where they used to blend in.</li>
+          <li><b>Expert names behave.</b> Long expert names ellipsize cleanly in the picker and the manage list instead of overflowing their boxes (hover shows the full name).</li>
+        </ul>
+      </article>
+      <article style="border-left:2px solid var(--border);padding-left:16px">
+        <h3 style="margin:0 0 8px">v0.1.47</h3>
         <ul style="margin:0;padding-left:18px;line-height:1.75">
           <li><b>The portrait engine: multi-axis expression matching.</b> Portraits are now matched on three expression axes — pleasure, energy, dominance (the research-standard PAD model) — on top of tags, so an <em>intense</em> moment stops landing on the <em>angry</em> portrait: same energy, same command, but anger needs low pleasure. Analyze rates every image's face on the axes; the scene tracker rates the moment; the picker matches them first, then outfit and setting, with pose dead last.</li>
           <li><b>Train it yourself: the WHY tab.</b> A little tab on the live portrait slides out the inspector — see exactly which tags drove the pick, 👍/👎 the choice (a 👎 cools those tags off and immediately tries the next-ranked portrait), click any tag to demote it, add your own tags, and cycle through the ranked alternates. Your feedback re-weights the evidence the model sees; the model keeps doing the judging.</li>

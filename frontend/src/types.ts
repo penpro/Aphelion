@@ -169,6 +169,7 @@ export interface Settings {
   livePortraitSize?: 'small' | 'medium' | 'large' // how big the live portrait stage is
   sidebarCollapsed?: boolean // dock the left navigator away for an immersive play area
   dialsCollapsed?: boolean // dock the right chat-dials panel away
+  dialsWidth?: number // user-resized width of the chat-dials panel (drag the dock strip); default 236
   // advanced sampling — defaults match llama.cpp, so behavior is unchanged until tuned
   topK: number
   minP: number

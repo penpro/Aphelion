@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { useStore } from '../store'
 import { useGeneration } from '../useGeneration'
 import { MessageItem } from './MessageItem'
@@ -35,6 +35,37 @@ export function ChatView({ onEditCharacter }: { onEditCharacter: (c: Character) 
   const [creatingRef, setCreatingRef] = useState<string | null>(null)
   const [showMemory, setShowMemory] = useState(false)
   const [showDoc, setShowDoc] = useState(false)
+
+  // The right dock strip doubles as a SPLITTER: drag it to resize the panel (so long scene
+  // fields are readable in full), plain click to dock/undock. Width commits to settings on
+  // release only — live drag stays in local state so we don't hammer the persisted store.
+  const [dragWidth, setDragWidth] = useState<number | null>(null)
+  const dragRef = useRef<{ startX: number; startW: number; moved: boolean } | null>(null)
+  const clampW = (w: number) => Math.max(200, Math.min(560, Math.round(w)))
+  const dialsWidth = dragWidth ?? clampW(settings.dialsWidth ?? 236)
+  const stripDown = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    if (settings.dialsCollapsed) return // docked: plain click reopens, no resizing
+    e.currentTarget.setPointerCapture(e.pointerId)
+    dragRef.current = { startX: e.clientX, startW: dialsWidth, moved: false }
+  }
+  const stripMove = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    const d = dragRef.current
+    if (!d) return
+    const dx = d.startX - e.clientX // the panel sits right of the strip: dragging left widens it
+    if (!d.moved && Math.abs(dx) <= 4) return
+    d.moved = true
+    setDragWidth(clampW(d.startW + dx))
+  }
+  const stripUp = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    const d = dragRef.current
+    dragRef.current = null
+    if (d?.moved) {
+      updateSettings({ dialsWidth: clampW(d.startW + (d.startX - e.clientX)) })
+      setDragWidth(null)
+    } else {
+      updateSettings({ dialsCollapsed: !settings.dialsCollapsed })
+    }
+  }
 
   const chat = useMemo(() => chats.find((c) => c.id === activeChatId) ?? null, [chats, activeChatId])
   const character = useMemo(
@@ -215,15 +246,21 @@ export function ChatView({ onEditCharacter }: { onEditCharacter: (c: Character) 
       </div>
       <button
         type="button"
-        className={'dock-strip' + (settings.dialsCollapsed ? ' is-closed' : '')}
-        title={settings.dialsCollapsed ? 'Show the chat panel' : 'Hide the chat panel'}
-        aria-label={settings.dialsCollapsed ? 'Show the chat panel' : 'Hide the chat panel'}
+        className={'dock-strip' + (settings.dialsCollapsed ? ' is-closed' : ' can-resize')}
+        title={settings.dialsCollapsed ? 'Show the chat panel' : 'Drag to resize · click to hide'}
+        aria-label={settings.dialsCollapsed ? 'Show the chat panel' : 'Drag to resize the chat panel, click to hide it'}
         aria-expanded={!settings.dialsCollapsed}
-        onClick={() => updateSettings({ dialsCollapsed: !settings.dialsCollapsed })}
+        onPointerDown={stripDown}
+        onPointerMove={stripMove}
+        onPointerUp={stripUp}
+        onClick={(e) => {
+          // Pointer clicks are handled in stripUp; this catches keyboard activation only.
+          if (e.detail === 0) updateSettings({ dialsCollapsed: !settings.dialsCollapsed })
+        }}
       >
         <span className="dock-chev">{settings.dialsCollapsed ? '◂' : '▸'}</span>
       </button>
-      <ChatDials chat={chat} />
+      <ChatDials chat={chat} width={dialsWidth} resizing={dragWidth !== null} />
       {docModal}
       {showMemory && (
         <Modal title="🧠 Story memory" onClose={() => setShowMemory(false)} wide>

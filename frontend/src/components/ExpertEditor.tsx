@@ -43,8 +43,8 @@ export function ExpertEditor({ onClose }: { onClose: () => void }) {
           {experts.map((e) => (
             <button
               key={e.id}
-              className={cx('btn sm', e.id === sel?.id ? '' : 'ghost')}
-              style={{ justifyContent: 'flex-start', textAlign: 'left' }}
+              className={cx('btn sm expert-tab', e.id === sel?.id ? '' : 'ghost')}
+              title={e.name}
               onClick={() => setSelId(e.id)}
             >
               {(e.emoji ? e.emoji + ' ' : '') + e.name}
