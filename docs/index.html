@@ -3,25 +3,25 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Aphelion — Your own AI, on your machine</title>
+<title>Aphelion — your own private AI for characters, roleplay &amp; stories</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 
-<meta name="description" content="Aphelion runs powerful AI models entirely on your PC — chat, characters, stories, and code. Free, private, and fully offline after a one-time download. Windows, macOS, Linux." />
+<meta name="description" content="Aphelion is a free, open-source local-AI app by Penumbra — deep character roleplay, stories, and a private assistant, running entirely on your own GPU. One download, no setup, no cloud, no limits. Windows ready; macOS &amp; Linux in beta." />
 <!-- Open Graph / social link previews -->
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Aphelion" />
-<meta property="og:title" content="Aphelion — Your own AI, on your machine" />
-<meta property="og:description" content="Powerful AI models running entirely on your PC — chat, characters, stories, and code. Free, private, fully offline. Windows · macOS · Linux." />
+<meta property="og:title" content="Aphelion — your own private AI, fully offline" />
+<meta property="og:description" content="Characters, roleplay, and stories powered by AI on your own GPU — not the cloud. Free &amp; open source by Penumbra. No setup, no account, no limits. Windows ready; macOS &amp; Linux in beta." />
 <meta property="og:url" content="https://penpro.github.io/Aphelion/" />
 <meta property="og:image" content="https://penpro.github.io/Aphelion/og-image.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta property="og:image:alt" content="Aphelion — your own AI, on your machine" />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="Aphelion — Your own AI, on your machine" />
-<meta name="twitter:description" content="Powerful AI models running entirely on your PC — free, private, fully offline. Windows · macOS · Linux." />
+<meta name="twitter:title" content="Aphelion — your own private AI, fully offline" />
+<meta name="twitter:description" content="Characters, roleplay &amp; stories powered by local AI on your own GPU — free, private, offline, no limits. Windows ready; macOS &amp; Linux in beta." />
 <meta name="twitter:image" content="https://penpro.github.io/Aphelion/og-image.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -72,6 +72,7 @@
   .brand{display:flex; align-items:center; gap:12px; font-weight:500; font-size:19px; letter-spacing:-.01em}
   .brand .mono-tag{font-family:var(--mono); font-size:11px; letter-spacing:.2em; color:var(--faint); border:1px solid var(--border); padding:3px 8px; border-radius:6px}
   .nav-links{display:flex; align-items:center; gap:30px; font-family:var(--mono); font-size:13px; color:var(--dim)}
+  .nav-links .links-grp{display:flex; gap:30px}
   .nav-links a:hover{color:var(--corona)}
   .nav-links .ghost{border:1px solid var(--border); padding:8px 16px; border-radius:8px; color:var(--text)}
   .nav-links .ghost:hover{border-color:var(--corona); color:var(--corona)}
@@ -89,6 +90,7 @@
   .bk-br{bottom:30px; right:clamp(8px,2.5vw,32px); transform:scale(-1,-1)}
 
   .hero-grid{display:grid; grid-template-columns:1.05fr 1fr; gap:clamp(32px,5vw,72px); align-items:center}
+  .hero-grid>*{min-width:0} /* let tracks shrink below the mockup's content width — no horizontal overflow on narrow screens */
 
   .eyebrow{
     display:inline-flex; align-items:center; gap:10px; font-family:var(--mono); font-size:12px;
@@ -122,6 +124,11 @@
   .btn-ghost:hover{border-color:var(--corona); color:var(--corona)}
   .trust{font-family:var(--mono); font-size:12.5px; color:var(--faint); letter-spacing:.04em; display:flex; gap:18px; flex-wrap:wrap}
   .trust b{color:var(--corona); font-weight:500}
+  .platnote{font-family:var(--mono); font-size:12px; line-height:1.5; color:var(--faint); letter-spacing:.01em; margin:0 0 22px; display:flex; flex-wrap:wrap; gap:4px; align-items:center; max-width:34em}
+  .platnote .ok2{color:var(--corona)}
+  .platnote .beta{color:var(--magenta)}
+  .platnote a{color:var(--dim); text-decoration:underline; text-underline-offset:2px}
+  .platnote a:hover{color:var(--corona)}
 
   /* ── eclipse accent behind window ── */
   .stage{position:relative}
@@ -142,7 +149,7 @@
   .pill.vram{margin-left:auto}
   .winctl{display:flex; gap:16px; color:var(--faint); font-family:var(--mono); font-size:13px}
 
-  .body{display:grid; grid-template-columns:120px 1fr 132px; min-height:330px}
+  .body{display:grid; grid-template-columns:150px 1fr 116px; min-height:344px}
   .side{padding:14px 12px; border-right:1px solid var(--border); display:flex; flex-direction:column; gap:6px; font-size:11.5px}
   .side .newchat{display:flex; align-items:center; gap:8px; color:var(--void-900); font-weight:500; background:linear-gradient(100deg,var(--corona),var(--flare)); padding:8px 10px; border-radius:8px; font-size:11px}
   .side .lbl{font-family:var(--mono); font-size:9.5px; letter-spacing:.16em; color:var(--faint); margin:12px 0 3px}
@@ -151,7 +158,8 @@
   .side .ic{width:13px;height:13px;flex:none;color:var(--corona);opacity:.8}
 
   .chat{padding:18px 20px; display:flex; flex-direction:column; gap:14px; border-right:1px solid var(--border)}
-  .chat .head{font-size:13px; color:var(--dim); font-family:var(--mono); letter-spacing:.04em}
+  .chat .head{display:flex; align-items:center; gap:8px; font-size:13px; color:var(--dim); font-family:var(--mono); letter-spacing:.04em}
+  .msg.ai .bubble em{color:var(--faint); font-style:italic}
   .msg{max-width:88%}
   .msg .who{font-family:var(--mono); font-size:10px; letter-spacing:.12em; color:var(--faint); margin-bottom:6px}
   .msg.user{align-self:flex-end; text-align:right}
@@ -177,12 +185,45 @@
   .statusbar .live{color:var(--corona); display:flex; align-items:center; gap:6px}
   .statusbar .live .dot{width:6px;height:6px;border-radius:50%;background:var(--corona);box-shadow:0 0 8px var(--corona)}
 
+  /* titlebar mode tabs */
+  .wtabs{display:flex; gap:2px; margin-left:4px}
+  .wtab{font-size:11.5px; color:var(--faint); padding:5px 9px; border-radius:7px 7px 0 0; border-bottom:2px solid transparent; cursor:default}
+  .wtab.on{color:var(--text); border-bottom-color:var(--corona)}
+
+  /* sidebar: characters + chats */
+  .side .slbl{font-family:var(--mono); font-size:9.5px; letter-spacing:.16em; color:var(--faint); display:flex; justify-content:space-between; align-items:center; margin:2px 2px 3px}
+  .side .slbl .plus{color:var(--corona); font-size:13px; font-family:var(--head)}
+  .crow,.chrow{display:flex; align-items:center; gap:8px; padding:5px 7px; border-radius:7px; color:var(--dim)}
+  .chrow.on{background:rgba(94,234,212,.08); color:var(--text); box-shadow:inset 2px 0 0 var(--corona)}
+  .cav{width:20px; height:20px; border-radius:6px; flex:none; display:grid; place-items:center; font-size:11px; background:linear-gradient(135deg,rgba(94,234,212,.55),rgba(192,132,252,.55))}
+  .cav.gm{background:linear-gradient(135deg,#7c5cff,#c084fc)}
+  .cav.sph{background:linear-gradient(150deg,#3fb6a8,#f5a623)}
+  .cav.any{background:linear-gradient(150deg,#4a6cf2,#c084fc)}
+  .cmeta{display:flex; flex-direction:column; line-height:1.2; min-width:0}
+  .cmeta b{font-weight:500; font-size:11px; color:inherit}
+  .cmeta i{font-style:normal; font-family:var(--mono); font-size:9px; color:var(--faint)}
+  .side .tipbox{margin-top:auto; font-size:10px; line-height:1.45; color:var(--dim); border:1px solid var(--border); border-radius:8px; padding:8px 9px; background:rgba(94,234,212,.04)}
+  .side .navbtns{display:flex; flex-direction:column; gap:4px; margin-top:7px}
+  .side .navbtns span{font-size:10.5px; color:var(--dim); padding:6px 8px; border-radius:7px; border:1px solid var(--border)}
+
+  /* live-portrait stage */
+  .lp{padding:12px 11px; display:flex; flex-direction:column; gap:9px; align-items:center}
+  .lpframe{width:100%; aspect-ratio:3/4; border-radius:11px; overflow:hidden; border:1px solid rgba(192,132,252,.3); position:relative; background:radial-gradient(120% 85% at 50% 14%, rgba(94,234,212,.28), rgba(19,10,48,.92) 64%)}
+  .lpfig{position:absolute; left:50%; bottom:0; transform:translateX(-50%); width:80%; height:50%; border-radius:46% 46% 0 0; background:linear-gradient(180deg,rgba(192,132,252,.5),rgba(124,92,255,.28))}
+  .lpfig::before{content:""; position:absolute; left:50%; top:-44%; transform:translateX(-50%); width:44%; aspect-ratio:1; border-radius:50%; background:linear-gradient(180deg,rgba(255,121,198,.55),rgba(192,132,252,.4))}
+  .lpemotion{font-family:var(--mono); font-size:9.5px; letter-spacing:.08em; color:var(--dim); display:flex; align-items:center; gap:6px; text-align:center}
+  .lpemotion .ok{color:var(--corona)}
+
   @media (max-width:920px){
     .hero-grid{grid-template-columns:1fr; gap:48px}
     .nav-links .links-grp{display:none}
     .body{grid-template-columns:1fr; min-height:0}
-    .side,.panel{display:none}
+    .side,.panel,.lp{display:none}
     .chat{border-right:none}
+  }
+  /* on phones the desktop-app mockup gets cramped/clipped — drop it and give the pitch full width */
+  @media (max-width:640px){
+    .stage{display:none}
   }
 
   /* ── content sections ── */
@@ -268,7 +309,7 @@
       <span class="mono-tag">BY&nbsp;PENUMBRA</span>
     </div>
     <div class="nav-links">
-      <span class="links-grp" style="display:flex;gap:30px">
+      <span class="links-grp">
         <a href="#features">Features</a><a href="#models">Models</a><a href="#faq">FAQ</a><a href="https://github.com/penpro/Aphelion">GitHub</a>
       </span>
       <a class="ghost" href="https://github.com/penpro/Aphelion/releases/latest">Download</a>
@@ -283,17 +324,18 @@
 
     <div class="hero-grid">
       <div class="copy">
-        <span class="eyebrow"><span class="dot"></span>100% LOCAL · WIN · MAC · LINUX</span>
-        <h1>Your own AI.<br>On <span class="glow">your machine.</span></h1>
-        <p class="subhead">Aphelion runs powerful AI models entirely on your PC — chat, characters, stories, and code. Download it once and it picks the best model for your computer automatically; after that, everything runs on your machine, fully offline — no setup, no accounts, no cloud.</p>
+        <span class="eyebrow"><span class="dot"></span>PRIVATE · UNCENSORED · 100% LOCAL</span>
+        <h1>Your own AI.<br>No cloud. No login. <span class="glow">No limits.</span></h1>
+        <p class="subhead">Characters, roleplay, branching stories, and a private assistant — powered by AI models that run on your own GPU, not the cloud. One download sizes itself to your hardware, then works fully offline: no setup, no account, nothing phoning home.</p>
         <div class="cta-row">
           <a class="btn-primary" href="https://github.com/penpro/Aphelion/releases/latest">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 11l5 5 5-5M5 21h14"/></svg>
-            <span class="pblock">Download<span class="sub">Free · Windows · macOS · Linux</span></span>
+            <span class="pblock">Download<span class="sub">Free &amp; open source</span></span>
           </a>
           <a class="btn-ghost" href="https://github.com/penpro/Aphelion"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2A10 10 0 0 0 8.8 21.5c.5.1.7-.2.7-.5v-1.7c-2.8.6-3.4-1.3-3.4-1.3-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.3 1.1 2.9.8.1-.6.3-1.1.6-1.4-2.2-.300-4.6-1.1-4.6-4.9 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.7 1a9.4 9.4 0 0 1 5 0c1.9-1.3 2.7-1 2.7-1 .5 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.8-2.4 4.6-4.6 4.9.3.3.6.9.6 1.9v2.8c0 .3.2.6.7.5A10 10 0 0 0 12 2Z"/></svg>View on GitHub</a>
         </div>
-        <div class="trust"><span><b>No account.</b> No cloud.</span><span><b>No telemetry.</b> Ever.</span><span><b>Open source.</b></span></div>
+        <div class="platnote"><span class="ok2">●</span> Windows, ready to go &nbsp;·&nbsp; <span class="beta">macOS &amp; Linux are experimental</span> — built but not yet tested on real hardware. <a href="#faq">Why?</a></div>
+        <div class="trust"><span><b>No account.</b> No cloud.</span><span><b>No telemetry.</b> Ever.</span><span><b>Open source.</b> MIT.</span></div>
       </div>
 
       <div class="stage">
@@ -321,36 +363,38 @@
               <svg class="mk" viewBox="0 0 256 256" aria-hidden="true"><circle cx="128" cy="128" r="60" fill="none" stroke="url(#nv-r)" stroke-width="16"/><circle cx="128" cy="128" r="54" fill="#000"/></svg>
               Aphelion
             </span>
-            <span class="pill">Model: llama3.1-8b-instruct ▾</span>
-            <span class="pill vram"><span class="ok">●</span> Auto-Fit · 11.2 / 12 GB VRAM</span>
+            <nav class="wtabs">
+              <span class="wtab on">Chat</span>
+              <span class="wtab">Story</span>
+              <span class="wtab">Trees</span>
+              <span class="wtab">Ask</span>
+            </nav>
+            <span class="pill vram"><span class="ok">●</span> llama3.1-8b · 11 / 12 GB</span>
             <span class="winctl">— ▢ ✕</span>
           </div>
           <div class="body">
             <aside class="side">
-              <div class="newchat"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" style="color:#07021A"><path d="M12 5v14M5 12h14"/></svg>New Chat</div>
-              <div class="lbl">LIBRARY</div>
-              <div class="item on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/></svg>Characters</div>
-              <div class="item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v14H4z M8 5v14"/></svg>Stories</div>
-              <div class="item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h14v16l-7-3-7 3z"/></svg>Prompts</div>
-              <div class="lbl">TOOLS</div>
-              <div class="item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="19" r="2"/><path d="M12 7v4M12 11l-6 6M12 11l6 6"/></svg>Dialogue Tree</div>
-              <div class="item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>World Builder</div>
-              <div class="item"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>Settings</div>
+              <div class="slbl">CHARACTERS <span class="plus">+</span></div>
+              <div class="crow"><span class="cav gm">🎲</span>Game Master</div>
+              <div class="crow"><span class="cav sph"></span>Seraphina</div>
+              <div class="crow"><span class="cav any"></span>Anya Kovac</div>
+              <div class="slbl" style="margin-top:11px">CHATS</div>
+              <div class="chrow"><span class="cav any"></span><span class="cmeta"><b>Anya Kovac</b><i>29m · 29 msgs</i></span></div>
+              <div class="chrow on"><span class="cav sph"></span><span class="cmeta"><b>Seraphina</b><i>12h · 17 msgs</i></span></div>
+              <div class="tipbox">💡 It's all local — once a model's downloaded, Aphelion keeps working with the internet unplugged.</div>
+              <div class="navbtns"><span>◍ Quick tour</span><span>⚙ Settings</span></div>
             </aside>
 
             <section class="chat">
-              <div class="head">Story · The Last Ember</div>
-              <div class="msg user"><div class="who">YOU</div><div class="bubble">Continue the story. The protagonist enters the ancient ruin and discovers a hidden chamber.</div></div>
-              <div class="msg ai"><div class="who">ARIA NYX</div><div class="bubble">The air grows colder as you descend the worn stone steps, footsteps echoing in the silence. At the heart of the ruin a chamber opens — vast and circular, a pedestal cradling a faintly glowing crystal at its center.</div></div>
-              <div class="composer">Continue the story…<span class="send"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 11 21 3l-8 18-2-7z"/></svg></span></div>
+              <div class="head"><span class="cav sph"></span>Seraphina · 17 messages</div>
+              <div class="msg ai"><div class="who">SERAPHINA</div><div class="bubble"><em>She lowers her bow, shoulders easing.</em> “You came back. I wasn't sure you would.” <em>A wry, knowing smile.</em></div></div>
+              <div class="msg user"><div class="who">YOU</div><div class="bubble">I said I'd find the trail. Lead the way.</div></div>
+              <div class="composer">Write a message…<span class="send"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 11 21 3l-8 18-2-7z"/></svg></span></div>
             </section>
 
-            <aside class="panel">
-              <div class="tabs"><span class="t on">Model</span><span class="t">Settings</span></div>
-              <div class="field"><div class="k"><span>VRAM</span><span style="color:var(--corona)">11.2/12 GB</span></div><div class="vbar"><i></i></div></div>
-              <div class="field"><div class="k"><span>CONTEXT</span><span>8,192</span></div></div>
-              <div class="field"><div class="k"><span>TEMPERATURE</span><span>0.7</span></div><div class="track"><i style="width:35%"></i></div></div>
-              <div class="field"><div class="k"><span>TOP P</span><span>0.95</span></div><div class="track"><i style="width:90%"></i></div></div>
+            <aside class="lp">
+              <div class="lpframe"><div class="lpfig"></div></div>
+              <div class="lpemotion"><span class="ok">●</span> affectionate · live portrait</div>
             </aside>
           </div>
           <div class="statusbar"><span class="live"><span class="dot"></span>LIVE</span> 100% OFFLINE · YOUR GPU · TOTAL PRIVACY <span style="margin-left:auto;color:var(--violet)">Your data never leaves your machine 🔒</span></div>
