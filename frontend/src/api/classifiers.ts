@@ -180,8 +180,10 @@ export async function tagPortrait(baseUrl: string, dataUrl: string, name: string
  * Pick the best portrait from a character's analyzed smart folder for the current scene — one
  * deterministic text call over the stored keyword index (no vision, no model swap at runtime).
  * `sceneText` is ideally the tracked scene state (exact outfit/emotion/pose), falling back to
- * recent story text. Sticky on outfit; expressive on emotion. Returns the chosen filename, or
- * null to keep what's showing.
+ * recent story text. The criteria are RANKED — emotion, then outfit (which must also be
+ * plausible for the setting: no lingerie at a public dinner unless the story earned it), then
+ * details, with pose dead last — so a matching pose can never drag in the wrong outfit.
+ * Returns the chosen filename, or null to keep what's showing.
  */
 export async function pickPortrait(
   baseUrl: string,
@@ -200,11 +202,18 @@ export async function pickPortrait(
     `CHARACTER: ${name}\n\nPORTRAITS:\n${list}\n\n` +
     (curIdx >= 0 ? `CURRENTLY SHOWING: ${curIdx + 1} (${entries[curIdx].file})\n\n` : '') +
     `Scene right now:\n"""\n${sceneText.slice(-1600)}\n"""\n\n` +
-    `Pick the portrait that best matches ${name}'s emotion, outfit, and pose RIGHT NOW — match the ` +
-    `outfit's COLOR and type exactly when stated. Keep the current outfit unless the scene clearly ` +
-    `shows them changing clothes or appearance. The expression should match what ${name} is actually ` +
-    `FEELING — read the subtext and their personality, not the writing style: a dry, guarded, or ` +
-    `teasing voice is not anger.\n\n` +
+    `Choose by these rules IN ORDER — a higher rule always beats a lower one:\n` +
+    `1. EMOTION — the expression must match what ${name} is actually FEELING (read subtext and ` +
+    `personality, not writing style: a dry, guarded, or teasing voice is not anger).\n` +
+    `2. OUTFIT — match what ${name} is wearing RIGHT NOW, color and type exactly when stated; keep ` +
+    `the current outfit unless the scene clearly shows a change. The outfit must also MAKE SENSE for ` +
+    `the location and situation: never intimate or revealing wear in a public or formal setting ` +
+    `unless the story has explicitly established it (the venue calls for it, or it was deliberately ` +
+    `agreed to in the story).\n` +
+    `3. DETAILS — hair, props, setting hints.\n` +
+    `4. POSE — last and least. NEVER pick a portrait because the pose matches if its outfit or ` +
+    `emotion is wrong; a right-outfit portrait with the wrong pose always beats a wrong-outfit ` +
+    `portrait with the right pose.\n\n` +
     `Answer with ONLY the number of the portrait.`
   try {
     const out = await textShot(baseUrl, 'intent', prompt, 6, signal)

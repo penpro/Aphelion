@@ -77,6 +77,12 @@ Use a guarded, wry character (Anya-type) unless noted. Pass = the starred behavi
 5. **The wardrobe probe**: "go put on the black lingerie" (with a smart-portrait folder).
    ★ Scene state outfit updates with the exact color; the portrait matches; a later
    vague prompt ("put on green") does NOT flip anything until the story confirms it.
+   **5b. The public-dinner corollary** (found in the field, v0.1.44): play a scene at a
+   restaurant/other public setting and let the character relax or lean back.
+   ★ The portrait NEVER switches to intimate/revealing wear just because the pose matches —
+   the picker's criteria are ranked (emotion → outfit+setting-plausibility → details → pose
+   dead last), and lingerie-in-public requires the story to have explicitly earned it
+   (the venue calls for it, or it was deliberately agreed to in the story).
 6. **The continuity probe**: establish a prop (a knife, a letter), chat 10+ turns about
    other things, then reference it obliquely.
    ★ Still in `props`/memory; she doesn't contradict it.

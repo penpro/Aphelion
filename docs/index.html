@@ -509,7 +509,13 @@
     </div>
     <div id="changelog" style="display:flex;flex-direction:column;gap:22px;max-width:780px">
       <article style="border-left:2px solid var(--corona);padding-left:16px">
-        <h3 style="margin:0 0 8px">v0.1.44 <span style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--corona)">LATEST</span></h3>
+        <h3 style="margin:0 0 8px">v0.1.45 <span style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--corona)">LATEST</span></h3>
+        <ul style="margin:0;padding-left:18px;line-height:1.75">
+          <li><b>Portrait picking, in the right order.</b> The smart-portrait picker now weighs its criteria strictly ranked: emotion first, then outfit, then details — with pose dead last, so a matching pose can never drag in the wrong outfit. And the outfit has to make sense for the setting: no intimate wear at a public dinner unless the story has explicitly earned it (the venue calls for it, or it was deliberately agreed to in the story).</li>
+        </ul>
+      </article>
+      <article style="border-left:2px solid var(--border);padding-left:16px">
+        <h3 style="margin:0 0 8px">v0.1.44</h3>
         <ul style="margin:0;padding-left:18px;line-height:1.75">
           <li><b>Character stats: feelings that must be earned.</b> Every chat now carries ten live levers for the character — arousal, affection, trust, anger, fear, joy, sadness, confidence, openness, energy — updated each reply and fed back into the prompt (“arousal 65% · anger 10% · …”). Moods shift gradually with cause instead of teleporting, intimacy has to be built, and a guarded character hides warmth instead of not having it. Visible as sliders in the chat dials — drag to steer.</li>
           <li><b>Earned actions (anti-puppeting).</b> A new per-chat toggle: when on, your messages can't act <em>for</em> the character — writing “she takes off her clothes” is treated as a wish, not an event. The character responds as themselves: comply, resist, deflect, or call it out, based on who they are and what the moment has actually earned. Off by default (director mode still works).</li>

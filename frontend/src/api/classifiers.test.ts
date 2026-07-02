@@ -173,6 +173,21 @@ describe('pickPortrait', () => {
     expect(prompt).toContain('CURRENTLY SHOWING: 2 (red-dress.png)')
   })
 
+  it('ranks the criteria — emotion, then outfit (with the setting sanity check), pose dead last', async () => {
+    const f = stub('1')
+    await pickPortrait('http://x/v1', { name: 'Mara' }, entries, undefined, 'dinner in public')
+    const [, init] = f.mock.calls[0] as unknown as [string, RequestInit]
+    const prompt = JSON.parse(init.body as string).messages[0].content as string
+    expect(prompt).toContain('IN ORDER')
+    expect(prompt).toContain('1. EMOTION')
+    expect(prompt).toContain('2. OUTFIT')
+    expect(prompt).toContain('MAKE SENSE for the location')
+    expect(prompt).toContain('4. POSE — last and least')
+    // the rules must appear in priority order
+    expect(prompt.indexOf('1. EMOTION')).toBeLessThan(prompt.indexOf('2. OUTFIT'))
+    expect(prompt.indexOf('2. OUTFIT')).toBeLessThan(prompt.indexOf('4. POSE'))
+  })
+
   it('returns null on a non-ok response (caller keeps the current portrait)', async () => {
     stub('2', false)
     expect(await pickPortrait('http://x/v1', { name: 'A' }, entries, undefined, 't')).toBeNull()
