@@ -24,6 +24,7 @@ export default function App() {
   const theme = useStore((s) => s.settings.theme)
   const reduceMotion = useStore((s) => s.settings.reduceMotion)
   const highContrast = useStore((s) => s.settings.highContrast)
+  const sidebarCollapsed = useStore((s) => !!s.settings.sidebarCollapsed)
   const [editingChar, setEditingChar] = useState<Character | 'new' | null>(null)
   const [showPersona, setShowPersona] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
@@ -79,6 +80,7 @@ export default function App() {
         Skip to content
       </a>
       <Sidebar
+        collapsed={sidebarCollapsed}
         onEditCharacter={(c) => setEditingChar(c)}
         onNewCharacter={() => setEditingChar('new')}
         onOpenPersona={() => setShowPersona(true)}
@@ -86,6 +88,16 @@ export default function App() {
         onOpenTutorial={() => setShowTutorial(true)}
         onOpenWelcome={() => setShowWelcome(true)}
       />
+      <button
+        type="button"
+        className="dock-strip"
+        title={sidebarCollapsed ? 'Show the sidebar' : 'Hide the sidebar'}
+        aria-label={sidebarCollapsed ? 'Show the sidebar' : 'Hide the sidebar'}
+        aria-expanded={!sidebarCollapsed}
+        onClick={() => updateSettings({ sidebarCollapsed: !sidebarCollapsed })}
+      >
+        <span className="dock-chev">{sidebarCollapsed ? '▸' : '◂'}</span>
+      </button>
 
       <main id="main-view" className="view-region">
         {view === 'chat' && <ChatView onEditCharacter={(c) => setEditingChar(c)} />}

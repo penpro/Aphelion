@@ -1,6 +1,7 @@
 import { useStore } from '../store'
 import { SourcesPanel } from './SourcesPanel'
 import { CharAvatar } from './CharAvatar'
+import { TipLabel } from './InfoTip'
 import { cx } from '../util'
 import { useConfirm } from './ConfirmDialog'
 import { EMPTY_SCENE, DEFAULT_STATS, STAT_KEYS } from '../api/classifiers'
@@ -15,6 +16,9 @@ const LENGTHS: { id: ResponseLength; label: string }[] = [
 ]
 const INTENSITY = ['', 'Wholesome', 'Mild', 'Suggestive', 'Steamy', 'Explicit']
 
+/** The right-hand chat panel, grouped by concern: Cast · Sources · Style · Portrait · Scene.
+ *  Each group folds; helper prose lives behind ⓘ tips so the panel stays scannable. The whole
+ *  panel docks away via the edge handle in ChatView (settings.dialsCollapsed). */
 export function ChatDials({ chat }: { chat: Chat }) {
   const characters = useStore((s) => s.characters)
   const updateChat = useStore((s) => s.updateChat)
@@ -28,11 +32,12 @@ export function ChatDials({ chat }: { chat: Chat }) {
   const cast = chat.castIds.map((id) => characters.find((c) => c.id === id)).filter(Boolean) as Character[]
   const primary = cast[0] // the character shown on the live-portrait stage
   const primarySets = primary?.portraitSets ?? []
+  const who = primary?.name || 'the character'
 
   return (
-    <aside className="chat-dials">
-      <div className="dials-section">
-        <div className="dials-title">Cast · {cast.length}</div>
+    <aside className={cx('chat-dials', settings.dialsCollapsed && 'is-docked')}>
+      <details className="dials-sec" open>
+        <summary className="dials-title">Cast · {cast.length}</summary>
         <div className="cast-list">
           {cast.map((c) => {
             const muted = chat.mutedIds.includes(c.id)
@@ -63,20 +68,20 @@ export function ChatDials({ chat }: { chat: Chat }) {
           })}
         </div>
         <div className="muted xs">Add more with ＋＋ on a character in the sidebar.</div>
-      </div>
+      </details>
 
-      <div className="dials-section">
-        <div className="dials-title">Sources</div>
+      <details className="dials-sec">
+        <summary className="dials-title">Sources{chat.sources.length || chat.knowledgeFolder ? ` · ${chat.sources.length + (chat.knowledgeFolder ? 1 : 0)}` : ''}</summary>
         <SourcesPanel
           sources={chat.sources}
           onChange={(s) => updateChat(chat.id, { sources: s })}
           folder={chat.knowledgeFolder}
           onSetFolder={(p) => updateChat(chat.id, { knowledgeFolder: p ?? undefined })}
         />
-      </div>
+      </details>
 
-      <div className="dials-section">
-        <div className="dials-title">Tuning</div>
+      <details className="dials-sec" open>
+        <summary className="dials-title">Style</summary>
 
         <div className="field">
           <span>Dialogue ↔ Prose</span>
@@ -123,7 +128,10 @@ export function ChatDials({ chat }: { chat: Chat }) {
         </div>
 
         <div className="field">
-          <span>Thinking</span>
+          <TipLabel
+            text="Thinking"
+            tip="Off = no reasoning — fast, and stays snappy as the chat grows. Full = the model reasons before each reply; can help on tricky moments, but slows down a lot in long chats."
+          />
           <div className="seg fill">
             {(['off', 'full'] as ThinkMode[]).map((m) => (
               <button
@@ -136,15 +144,17 @@ export function ChatDials({ chat }: { chat: Chat }) {
               </button>
             ))}
           </div>
-          <span className="muted xs">
-            {t.think === 'off'
-              ? 'No reasoning — fast, and stays snappy as the chat grows.'
-              : 'Full reasoning — can help on tricky moments, but slows down a lot in long chats.'}
-          </span>
         </div>
+      </details>
+
+      <details className="dials-sec" open>
+        <summary className="dials-title">Portrait</summary>
 
         <div className="field">
-          <span>Live portrait</span>
+          <TipLabel
+            text="Live portrait"
+            tip={`Reads each reply's mood and shows ${who}'s matching portrait, enlarged, above the chat. Needs a portrait set (or an analyzed smart-portrait folder) on the character.`}
+          />
           <div className="seg fill">
             {[false, true].map((on) => (
               <button
@@ -157,10 +167,6 @@ export function ChatDials({ chat }: { chat: Chat }) {
               </button>
             ))}
           </div>
-          <span className="muted xs">
-            Reads each reply's mood and shows the character's matching portrait, enlarged, above the chat. Needs a
-            portrait set on the character.
-          </span>
         </div>
 
         {settings.livePortraits && (
@@ -184,15 +190,17 @@ export function ChatDials({ chat }: { chat: Chat }) {
         {settings.livePortraits && !!primary?.portraitIndex?.length && (
           <div className="field">
             <span className="muted xs">
-              ✨ Smart portraits — {primary?.name || 'the character'} auto-picks from their analyzed folder (
-              {primary.portraitIndex.length} indexed). Manage it in the character editor.
+              ✨ Smart portraits — auto-picking from {who}’s analyzed folder ({primary.portraitIndex.length} indexed).
             </span>
           </div>
         )}
 
         {settings.livePortraits && !primary?.portraitIndex?.length && primarySets.length > 1 && (
           <div className="field">
-            <span>Portrait set</span>
+            <TipLabel
+              text="Portrait set"
+              tip={`Which of ${who}’s looks the live portrait shows. Auto-switch lets the story pick the look as it moves (each set needs a description — type one or use “Describe looks” in the character editor).`}
+            />
             <select
               className="set-select"
               value={primarySets.some((s) => s.id === chat.portraitSetId) ? chat.portraitSetId : primarySets[0].id}
@@ -204,20 +212,26 @@ export function ChatDials({ chat }: { chat: Chat }) {
                 </option>
               ))}
             </select>
-            <span className="muted xs">Which of {primary?.name || 'the character'}’s looks the live portrait shows.</span>
             <label className="row gap" style={{ marginTop: 8, alignItems: 'center' }}>
               <input
                 type="checkbox"
                 checked={!!chat.autoPortraitSet}
                 onChange={(e) => updateChat(chat.id, { autoPortraitSet: e.target.checked })}
               />
-              <span className="muted xs">Auto-switch — let the story pick the look (needs a description on each set).</span>
+              <span className="muted xs">Auto-switch looks</span>
             </label>
           </div>
         )}
+      </details>
+
+      <details className="dials-sec" open>
+        <summary className="dials-title">Scene</summary>
 
         <div className="field">
-          <span>Scene memory</span>
+          <TipLabel
+            text="Scene memory"
+            tip={`Deliberately carries the scene (outfit, hair, pose, props, location) AND ${who}'s internal stats (arousal, trust, anger, …) from turn to turn — anchors attitude, keeps the story consistent, and gives the live portrait exact tags to match. One small model call per reply.`}
+          />
           <div className="seg fill">
             {[false, true].map((on) => (
               <button
@@ -230,16 +244,14 @@ export function ChatDials({ chat }: { chat: Chat }) {
               </button>
             ))}
           </div>
-          <span className="muted xs">
-            Deliberately carries the scene (outfit, hair, pose, props, location) AND {primary?.name || 'the character'}
-            ’s internal stats (arousal, trust, anger, …) from turn to turn — anchors attitude, keeps the story
-            consistent, and gives the live portrait exact tags to match. One small model call per reply.
-          </span>
         </div>
 
         {chat.sceneTracking !== false && (
           <div className="field">
-            <span>Current scene{chat.sceneState ? '' : ' — fills in after the next reply'}</span>
+            <TipLabel
+              text={`Current scene${chat.sceneState ? '' : ' — fills in after the next reply'}`}
+              tip="Live — the model updates these each reply, the next reply and portrait pick use them. Edit any field to correct or steer."
+            />
             {chat.sceneState && (
               <>
                 {SCENE_KEYS.map((k) => (
@@ -254,12 +266,11 @@ export function ChatDials({ chat }: { chat: Chat }) {
                     />
                   </label>
                 ))}
-                <span className="muted xs">Live — edit to correct or steer; the next reply and portrait pick use it.</span>
               </>
             )}
             {chat.characterStats && (
               <details className="stats-view">
-                <summary className="muted xs">{primary?.name || 'Character'}’s stats</summary>
+                <summary className="muted xs">{who}’s stats</summary>
                 {STAT_KEYS.map((k) => (
                   <label key={k} className="stat-row">
                     <span className="stat-k">{k}</span>
@@ -278,17 +289,16 @@ export function ChatDials({ chat }: { chat: Chat }) {
                     <span className="stat-v">{chat.characterStats![k]}</span>
                   </label>
                 ))}
-                <span className="muted xs">
-                  What {primary?.name || 'the character'} truly feels (0-100) — the model updates these each reply and
-                  anchors behavior to them. Drag to steer.
-                </span>
               </details>
             )}
           </div>
         )}
 
         <div className="field">
-          <span>Earned actions</span>
+          <TipLabel
+            text="Earned actions"
+            tip={`On — your messages can't act for ${who}: writing “she takes off her dress” is treated as a wish, not an event; their actions must be earned. Off — your prose can narrate ${who}'s actions directly (director mode).`}
+          />
           <div className="seg fill">
             {[false, true].map((on) => (
               <button
@@ -301,13 +311,8 @@ export function ChatDials({ chat }: { chat: Chat }) {
               </button>
             ))}
           </div>
-          <span className="muted xs">
-            {chat.autonomy
-              ? `On — your messages can't act for ${primary?.name || 'the character'}: writing “she takes off her dress” is treated as a wish, not an event. Their actions must be earned.`
-              : `Off — your prose can narrate ${primary?.name || 'the character'}’s actions directly (director mode).`}
-          </span>
         </div>
-      </div>
+      </details>
     </aside>
   )
 }

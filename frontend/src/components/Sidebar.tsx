@@ -8,6 +8,7 @@ import { cx, timeAgo } from '../util'
 import type { Character } from '../types'
 
 export function Sidebar({
+  collapsed,
   onEditCharacter,
   onNewCharacter,
   onOpenPersona,
@@ -15,6 +16,7 @@ export function Sidebar({
   onOpenTutorial,
   onOpenWelcome,
 }: {
+  collapsed?: boolean
   onEditCharacter: (c: Character) => void
   onNewCharacter: () => void
   onOpenPersona: () => void
@@ -63,7 +65,7 @@ export function Sidebar({
   const activeChat = chats.find((c) => c.id === activeChatId) ?? null
 
   return (
-    <aside className="sidebar">
+    <aside className={cx('sidebar', collapsed && 'is-docked')}>
 
       <div className="side-section">
         <div className="side-head">
@@ -273,19 +275,25 @@ export function Sidebar({
       <TipRotator />
 
       <div className="side-foot">
-        <button className="btn ghost block foot-btn" onClick={onOpenWelcome}>
-          <img src={UI_ICONS.how} alt="" aria-hidden="true" /> Quick tour
-        </button>
-        <button className="btn ghost block foot-btn" onClick={onOpenTutorial}>
-          <img src={UI_ICONS.how} alt="" aria-hidden="true" /> How it works
-        </button>
-        <button className="btn ghost block foot-btn" onClick={onOpenPersona}>
-          <img src={UI_ICONS.persona} alt="" aria-hidden="true" /> Persona: {persona.name}
-        </button>
         <DownloadIndicator />
-        <button className="btn ghost block foot-btn" onClick={onOpenSettings}>
-          <img src={UI_ICONS.settings} alt="" aria-hidden="true" /> Settings
-        </button>
+        <div className="foot-row">
+          <button className="foot-icon" title="Quick tour — replay the feature tour" onClick={onOpenWelcome}>
+            <img src={UI_ICONS.how} alt="" aria-hidden="true" />
+            <span>Tour</span>
+          </button>
+          <button className="foot-icon" title="How it works — the architecture, in plain terms" onClick={onOpenTutorial}>
+            <img src={UI_ICONS.how} alt="" aria-hidden="true" />
+            <span>How</span>
+          </button>
+          <button className="foot-icon" title={`Persona: ${persona.name} — who YOU are in the story`} onClick={onOpenPersona}>
+            <img src={UI_ICONS.persona} alt="" aria-hidden="true" />
+            <span>Persona</span>
+          </button>
+          <button className="foot-icon" title="Settings" onClick={onOpenSettings}>
+            <img src={UI_ICONS.settings} alt="" aria-hidden="true" />
+            <span>Settings</span>
+          </button>
+        </div>
       </div>
     </aside>
   )

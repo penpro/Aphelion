@@ -155,6 +155,8 @@ export interface Settings {
   highContrast: boolean // accessibility: full-strength secondary text + stronger borders
   livePortraits?: boolean // show a large emotion-reactive character portrait above the chat
   livePortraitSize?: 'small' | 'medium' | 'large' // how big the live portrait stage is
+  sidebarCollapsed?: boolean // dock the left navigator away for an immersive play area
+  dialsCollapsed?: boolean // dock the right chat-dials panel away
   // advanced sampling — defaults match llama.cpp, so behavior is unchanged until tuned
   topK: number
   minP: number

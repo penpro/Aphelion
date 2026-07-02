@@ -136,6 +136,7 @@ code, pre, kbd, .mono, .xs, .hint, .model-name, .estimate, .num-input, .field-la
   flex: 0 0 290px;
   background: var(--panel);
   border-right: 1px solid var(--border);
+  transition: flex-basis 0.18s ease, width 0.18s ease;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -225,6 +226,36 @@ code, pre, kbd, .mono, .xs, .hint, .model-name, .estimate, .num-input, .field-la
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+/* Compact footer: one row of icon buttons instead of four stacked bars. */
+.foot-row {
+  display: flex;
+  gap: 6px;
+}
+.foot-icon {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 7px 2px 6px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 8px);
+  color: var(--muted);
+  font-size: 9.5px;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.foot-icon img {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+.foot-icon:hover {
+  color: var(--text);
+  border-color: var(--accent);
 }
 
 /* Rotating helper tip above the footer menu */
@@ -1465,15 +1496,56 @@ select:focus {
   min-height: 0; /* bound to the viewport so the chat column's messages scroll, not the whole shell */
 }
 .chat-dials {
-  flex: 0 0 212px;
-  width: 212px;
+  flex: 0 0 236px;
+  width: 236px;
   border-left: 1px solid var(--border);
   background: var(--panel);
   padding: 14px 12px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   overflow-y: auto;
+  transition: flex-basis 0.18s ease, width 0.18s ease, padding 0.18s ease;
+}
+/* Docked panels collapse to nothing — the dock-strip handle stays to bring them back.
+   NOTE: no !important here — Blink won't apply !important values to properties that are
+   mid-transition (width/flex-basis animate), leaving the panel stuck at full width. */
+.chat-dials.is-docked,
+.sidebar.is-docked {
+  flex-basis: 0;
+  width: 0;
+  min-width: 0;
+  padding-left: 0;
+  padding-right: 0;
+  border-width: 0;
+  overflow: hidden;
+}
+[data-reduce-motion='true'] .chat-dials,
+[data-reduce-motion='true'] .sidebar {
+  transition: none;
+}
+/* The slim always-visible handle on a dockable border. */
+.dock-strip {
+  flex: 0 0 13px;
+  width: 13px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.dock-strip:hover {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent);
+}
+.dock-strip .dock-chev {
+  font-size: 10px;
+  line-height: 1;
+  opacity: 0.85;
 }
 .dials-title {
   font-size: 11px;
@@ -1481,6 +1553,37 @@ select:focus {
   letter-spacing: 1px;
   color: var(--muted);
   font-weight: 700;
+}
+/* Foldable dials sections: the title doubles as the fold toggle. */
+.dials-sec {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.dials-sec > summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+.dials-sec > summary::-webkit-details-marker {
+  display: none;
+}
+.dials-sec > summary::before {
+  content: '▸';
+  display: inline-block;
+  width: 1em;
+  color: var(--accent);
+  opacity: 0.7;
+}
+.dials-sec[open] > summary::before {
+  content: '▾';
+}
+/* Label row with a click-to-open ⓘ explainer (InfoTip). */
+.tip-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
 }
 .range-ends {
   display: flex;
@@ -1527,11 +1630,6 @@ select:focus {
 }
 
 /* ---------- chat cast (side panel) ---------- */
-.dials-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
 .cast-list {
   display: flex;
   flex-direction: column;

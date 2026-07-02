@@ -321,19 +321,6 @@ select:focus {
   cursor: nesw-resize;
 }
 
-/* ── Sidebar footer buttons with line icons ──────────────────────────────────── */
-.foot-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  justify-content: flex-start;
-}
-.foot-btn img {
-  width: 18px;
-  height: 18px;
-  opacity: 0.85;
-}
-
 /* ── Live stat chips in the menu bar (status · model · VRAM · context) ────────── */
 .topbar-stats {
   display: flex;

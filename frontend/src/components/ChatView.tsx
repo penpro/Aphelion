@@ -22,6 +22,7 @@ export function ChatView({ onEditCharacter }: { onEditCharacter: (c: Character) 
   const persona = useStore((s) => s.persona)
   const activeChatId = useStore((s) => s.activeChatId)
   const settings = useStore((s) => s.settings)
+  const updateSettings = useStore((s) => s.updateSettings)
   const startChat = useStore((s) => s.startChat)
   const updateMessage = useStore((s) => s.updateMessage)
   const deleteMessage = useStore((s) => s.deleteMessage)
@@ -212,6 +213,16 @@ export function ChatView({ onEditCharacter }: { onEditCharacter: (c: Character) 
           onContinue={() => continueScene(chat.id)}
         />
       </div>
+      <button
+        type="button"
+        className="dock-strip"
+        title={settings.dialsCollapsed ? 'Show the chat panel' : 'Hide the chat panel'}
+        aria-label={settings.dialsCollapsed ? 'Show the chat panel' : 'Hide the chat panel'}
+        aria-expanded={!settings.dialsCollapsed}
+        onClick={() => updateSettings({ dialsCollapsed: !settings.dialsCollapsed })}
+      >
+        <span className="dock-chev">{settings.dialsCollapsed ? '◂' : '▸'}</span>
+      </button>
       <ChatDials chat={chat} />
       {docModal}
       {showMemory && (
