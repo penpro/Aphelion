@@ -3,7 +3,7 @@
 // the streaming/health/sampler plumbing). Every function here is temperature-0 and either
 // returns a safe fallback (null/'') or throws for callers that handle errors themselves.
 import { extractJSON } from '../json'
-import type { SceneState, CharacterStats } from '../types'
+import type { SceneState, CharacterStats, Expression } from '../types'
 
 /** Shared plumbing: one non-streaming completion; returns the raw content. Throws on HTTP errors. */
 async function oneShot(baseUrl: string, body: Record<string, unknown>, signal?: AbortSignal): Promise<string> {
@@ -145,13 +145,41 @@ export async function describePortrait(baseUrl: string, dataUrl: string, name: s
   }
 }
 
+const clampAxis = (v: unknown): number | null => {
+  const n = typeof v === 'string' ? parseInt(v, 10) : typeof v === 'number' ? v : NaN
+  return Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : null
+}
+
+/** Parse a trailing "P:62 E:81 D:74" axis rating out of a tag string. */
+function splitTagsAndExpression(raw: string): { tags: string; expression?: Expression } {
+  const m = raw.match(/P\s*:?\s*(\d{1,3})[,\s|]*E\s*:?\s*(\d{1,3})[,\s|]*D\s*:?\s*(\d{1,3})/i)
+  const tags = (m ? raw.slice(0, m.index) : raw)
+    .replace(/[\n\r]+/g, ', ')
+    .replace(/[|]+\s*$/g, '')
+    .replace(/^["'\s,]+|["'\s,|]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .replace(/(, )+/g, ', ')
+    .slice(0, 300)
+  if (!m) return { tags }
+  const p = clampAxis(m[1])
+  const e = clampAxis(m[2])
+  const d = clampAxis(m[3])
+  if (p === null || e === null || d === null) return { tags }
+  return { tags, expression: { pleasure: p, energy: e, dominance: d } }
+}
+
 /**
- * Vision: tag one smart-folder portrait with short keywords for the character's portrait index.
- * COLOR is the make-or-break signal for the runtime picker ("black lingerie" vs "white lingerie"),
- * so the prompt demands the exact color of every clothing item, the hair, and any props.
- * Returns a cleaned comma-keyword string, or '' if unusable.
+ * Vision: tag one smart-folder portrait for the character's index — color-first keywords PLUS a
+ * PAD rating of the face (pleasure/energy/dominance, see PORTRAIT-ENGINE.md). COLOR is the
+ * make-or-break signal for outfits; the PAD axes are what separate "intense" from "angry".
+ * Returns { tags, expression? }; tags '' if unusable.
  */
-export async function tagPortrait(baseUrl: string, dataUrl: string, name: string, signal?: AbortSignal): Promise<string> {
+export async function tagPortrait(
+  baseUrl: string,
+  dataUrl: string,
+  name: string,
+  signal?: AbortSignal,
+): Promise<{ tags: string; expression?: Expression }> {
   const who = name?.trim() || 'the character'
   try {
     const out = await visionShot(
@@ -160,66 +188,96 @@ export async function tagPortrait(baseUrl: string, dataUrl: string, name: string
         `image of ${who}. COLOR IS CRITICAL: name the exact color of every clothing item, the hair, and ` +
         `any props — e.g. "black lace lingerie", "emerald green dress", "silver sword". Cover: ` +
         `emotion/expression, each clothing item (with its color), hair color and style, pose, ` +
-        `props/weapons, and any striking details. Lowercase keywords only — no sentences, no numbering.`,
+        `props/weapons, and any striking details. Lowercase keywords only — no sentences, no numbering.\n\n` +
+        `Then rate the FACIAL EXPRESSION on three 0-100 axes: P = pleasure (0 miserable, 50 neutral, ` +
+        `100 delighted), E = energy (0 calm, 100 charged), D = dominance (0 submissive/afraid, 100 ` +
+        `commanding). End your answer with exactly: | P:<n> E:<n> D:<n>`,
       dataUrl,
-      110,
+      140,
       signal,
     )
-    return out
-      .replace(/[\n\r]+/g, ', ')
-      .replace(/^["'\s,]+|["'\s,]+$/g, '')
-      .replace(/\s+/g, ' ')
-      .replace(/(, )+/g, ', ')
-      .slice(0, 300)
+    return splitTagsAndExpression(out)
   } catch {
-    return ''
+    return { tags: '' }
   }
 }
 
+export interface PortraitRank {
+  files: string[] // ranked best-first (up to 3) — [0] shows, the rest are the inspector's alternates
+  drivers: string[] // the tags that drove the top choice — what 👍/👎 feedback re-weights
+}
+
 /**
- * Pick the best portrait from a character's analyzed smart folder for the current scene — one
- * deterministic text call over the stored keyword index (no vision, no model swap at runtime).
- * `sceneText` is ideally the tracked scene state (exact outfit/emotion/pose), falling back to
- * recent story text. The criteria are RANKED — emotion, then outfit (which must also be
- * plausible for the setting: no lingerie at a public dinner unless the story earned it), then
- * details, with pose dead last — so a matching pose can never drag in the wrong outfit.
- * Returns the chosen filename, or null to keep what's showing.
+ * Rank the best portraits from a character's analyzed smart folder for the current scene — one
+ * deterministic text call over the stored keyword index (no vision at runtime). Criteria are
+ * RANKED: expression AXES first (PAD — pleasure/energy/dominance; "intense" has mid pleasure,
+ * anger requires LOW pleasure), then outfit (exact color/type + plausible for the setting), then
+ * details, pose dead last. User-trained tag bias (PORTRAIT-ENGINE.md) enters as AVOID/FAVOR
+ * guidance — evidence is re-weighted, never hidden. Returns a ranked top-3 plus the tags that
+ * drove the choice, or null to keep what's showing.
  */
-export async function pickPortrait(
+export async function rankPortraits(
   baseUrl: string,
   character: { name?: string },
-  entries: { file: string; tags: string }[],
+  entries: { file: string; tags: string; expression?: Expression }[],
   currentFile: string | undefined,
   sceneText: string,
+  moment: Expression | undefined,
+  bias: { avoid: string[]; favor: string[] } | undefined,
   signal?: AbortSignal,
-): Promise<string | null> {
+): Promise<PortraitRank | null> {
   if (entries.length < 2) return null
   const name = character.name?.trim() || 'the character'
-  const list = entries.map((e, i) => `${i + 1}. ${e.file} — ${e.tags}`).join('\n')
+  const axes = (x?: Expression) => (x ? ` [P:${x.pleasure} E:${x.energy} D:${x.dominance}]` : '')
+  const list = entries.map((e, i) => `${i + 1}. ${e.file}${axes(e.expression)} — ${e.tags}`).join('\n')
   const curIdx = currentFile ? entries.findIndex((e) => e.file === currentFile) : -1
   const prompt =
-    `You choose the best portrait of a roleplay character for the current scene.\n\n` +
-    `CHARACTER: ${name}\n\nPORTRAITS:\n${list}\n\n` +
+    `You choose the best portraits of a roleplay character for the current scene.\n\n` +
+    `CHARACTER: ${name}\n\nPORTRAITS (P=pleasure E=energy D=dominance, 0-100):\n${list}\n\n` +
     (curIdx >= 0 ? `CURRENTLY SHOWING: ${curIdx + 1} (${entries[curIdx].file})\n\n` : '') +
-    `Scene right now:\n"""\n${sceneText.slice(-1600)}\n"""\n\n` +
+    `Scene right now:\n"""\n${sceneText.slice(-1400)}\n"""\n\n` +
+    (moment
+      ? `${name}'s expression RIGHT NOW: pleasure ${moment.pleasure}, energy ${moment.energy}, dominance ${moment.dominance}.\n\n`
+      : '') +
+    (bias?.avoid.length
+      ? `USER-TRAINED — DO NOT let these tags drive the choice (they have misled before): ${bias.avoid.join(', ')}.\n`
+      : '') +
+    (bias?.favor.length ? `USER-TRAINED — favor portraits whose match rests on: ${bias.favor.join(', ')}.\n` : '') +
+    (bias?.avoid.length || bias?.favor.length ? '\n' : '') +
     `Choose by these rules IN ORDER — a higher rule always beats a lower one:\n` +
-    `1. EMOTION — the expression must match what ${name} is actually FEELING (read subtext and ` +
-    `personality, not writing style: a dry, guarded, or teasing voice is not anger).\n` +
+    `1. EXPRESSION AXES — match the P/E/D numbers to ${name}'s expression right now. High energy + ` +
+    `high dominance with MID pleasure is intensity or command, NOT anger — anger requires LOW ` +
+    `pleasure. Read subtext, not writing style: a dry, guarded, or teasing voice is not anger.\n` +
     `2. OUTFIT — match what ${name} is wearing RIGHT NOW, color and type exactly when stated; keep ` +
     `the current outfit unless the scene clearly shows a change. The outfit must also MAKE SENSE for ` +
     `the location and situation: never intimate or revealing wear in a public or formal setting ` +
-    `unless the story has explicitly established it (the venue calls for it, or it was deliberately ` +
-    `agreed to in the story).\n` +
+    `unless the story has explicitly established it.\n` +
     `3. DETAILS — hair, props, setting hints.\n` +
-    `4. POSE — last and least. NEVER pick a portrait because the pose matches if its outfit or ` +
-    `emotion is wrong; a right-outfit portrait with the wrong pose always beats a wrong-outfit ` +
-    `portrait with the right pose.\n\n` +
-    `Answer with ONLY the number of the portrait.`
+    `4. POSE — last and least; a right-outfit portrait with the wrong pose always beats a ` +
+    `wrong-outfit portrait with the right pose.\n\n` +
+    `Answer with EXACTLY this format and nothing else:\n` +
+    `<numbers of the best portraits, best first, up to 3, comma-separated> | <the 2-4 tags that drove your top choice>\n` +
+    `Example: 3,1,7 | red evening gown, wry smile`
   try {
-    const out = await textShot(baseUrl, 'intent', prompt, 6, signal)
-    const n = parseInt(out.match(/\d+/)?.[0] ?? '', 10)
-    if (!Number.isFinite(n) || n < 1 || n > entries.length) return null
-    return entries[n - 1].file
+    const out = await textShot(baseUrl, 'intent', prompt, 48, signal)
+    const [numsPart, driversPart] = out.split('|')
+    const seen = new Set<number>()
+    const files: string[] = []
+    for (const m of numsPart.matchAll(/\d+/g)) {
+      const n = parseInt(m[0], 10)
+      if (n >= 1 && n <= entries.length && !seen.has(n)) {
+        seen.add(n)
+        files.push(entries[n - 1].file)
+        if (files.length === 3) break
+      }
+    }
+    if (!files.length) return null
+    const drivers = (driversPart ?? '')
+      .split(',')
+      .map((s) => s.trim().toLowerCase().replace(/[."']+$/g, ''))
+      .filter((s) => s && s.length <= 48)
+      .slice(0, 5)
+    return { files, drivers }
   } catch {
     return null
   }
@@ -275,7 +333,7 @@ export async function trackTurn(
   userText: string,
   replyText: string,
   signal?: AbortSignal,
-): Promise<{ scene: SceneState; stats: CharacterStats } | null> {
+): Promise<{ scene: SceneState; stats: CharacterStats; expression?: Expression } | null> {
   const name = character.name?.trim() || 'the character'
   const persona = character.personality?.trim().slice(0, 400)
   const curScene = prevScene ?? EMPTY_SCENE
@@ -298,11 +356,15 @@ export async function trackTurn(
     `- stats: integers 0-100 — what ${name} TRULY feels right now, judged by their personality and ` +
     `what has actually been earned in the story. Move each stat gradually (usually within ±15 of its ` +
     `previous value) unless something genuinely significant just happened. Low openness or trust ` +
-    `means feelings are hidden behind the personality — not absent.\n\n` +
+    `means feelings are hidden behind the personality — not absent.\n` +
+    `- expression: the look on ${name}'s FACE right now, on three 0-100 axes — pleasure (0 miserable, ` +
+    `50 neutral, 100 delighted), energy (0 calm, 100 charged), dominance (0 submissive/afraid, 100 ` +
+    `commanding). An intense or fierce moment with no hostility = high energy + high dominance + MID ` +
+    `pleasure, NOT low pleasure.\n\n` +
     `Return ONLY a JSON object: {"scene": {outfit, hair, emotion, pose, props, location}, ` +
-    `"stats": {${STAT_KEYS.join(', ')}}}.`
+    `"stats": {${STAT_KEYS.join(', ')}}, "expression": {pleasure, energy, dominance}}.`
   try {
-    const out = await textShot(baseUrl, 'scene', prompt, 360, signal)
+    const out = await textShot(baseUrl, 'scene', prompt, 420, signal)
     const j = extractJSON(out) as Record<string, unknown> | null
     if (!j || typeof j !== 'object') return null
     const js = (j.scene ?? j) as Record<string, unknown> // tolerate a flat answer
@@ -318,7 +380,12 @@ export async function trackTurn(
     }
     const jt = (j.stats ?? {}) as Record<string, unknown>
     const stats = Object.fromEntries(STAT_KEYS.map((k) => [k, clampStat(jt[k], curStats[k])])) as unknown as CharacterStats
-    return { scene, stats }
+    const jx = (j.expression ?? {}) as Record<string, unknown>
+    const p = clampAxis(jx.pleasure)
+    const e = clampAxis(jx.energy)
+    const d = clampAxis(jx.dominance)
+    const expression = p !== null && e !== null && d !== null ? { pleasure: p, energy: e, dominance: d } : undefined
+    return { scene, stats, expression }
   } catch {
     return null
   }

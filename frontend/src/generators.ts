@@ -268,6 +268,50 @@ Output ONLY the JSON object.`
 
 const cleanText = (s: string): string => s.trim().replace(/^["']+|["']+$/g, '').trim()
 
+/**
+ * ADVANCED portrait prompts (PORTRAIT-ENGINE.md): one model call that reads the character's card
+ * and writes a CHARACTER-SPECIFIC expression range — 12-16 image prompts tuned to who they are
+ * (a wry, guarded character gets "guarded amusement — one brow raised" instead of a generic
+ * "happy"), each annotated with its PAD target (pleasure/energy/dominance) so the analyzed index
+ * lands where the runtime picker expects it. The basic 8-emotion set (emotion.ts) stays for
+ * quick deterministic sets; this is the nuanced range.
+ */
+export async function generateAdvancedPortraitPrompts(opts: {
+  character: Partial<Character>
+  setName?: string
+  settings: Settings
+  signal?: AbortSignal
+}): Promise<string> {
+  const c = opts.character
+  const name = (c.name || 'the character').trim()
+  const variant = (opts.setName || '').trim()
+  const persona = [c.personality, c.description, c.scenario].filter(Boolean).join('\n').slice(0, 1200)
+  const system =
+    `You write image-generation prompt sets for roleplay character portraits. The goal is a ` +
+    `CONSISTENT set of 12-16 portraits of ONE character that covers their believable expressive ` +
+    `range — not generic emotions, but THIS character's versions of them, derived from their ` +
+    `personality (a guarded character's "warmth" is subtle; a proud one's "hurt" is masked).\n\n` +
+    `Output format, EXACTLY:\n` +
+    `1) A CHARACTER block: one paragraph locking the appearance — face, hair, build, clothing` +
+    `${variant ? ` (this set is the "${variant}" look)` : ''}, art style — to repeat in every image. ` +
+    `Instruct: generate the first image, then reuse it as the reference so all others match.\n` +
+    `2) A numbered list of 12-16 expressions. Each line: a short NAME, then an em-dash, then a ` +
+    `vivid one-sentence description of the face and body language IN CHARACTER, then the target ` +
+    `axes in the form (P:n E:n D:n) where P=pleasure 0-100, E=energy 0-100, D=dominance 0-100. ` +
+    `Cover the full PAD space: at least two low-pleasure looks, two high-dominance looks, two ` +
+    `low-energy looks, one high-E high-D MID-P "intense" look that is clearly NOT anger, and the ` +
+    `signature guarded/subtle looks this specific character would actually wear.\n` +
+    `3) A final line: file naming instruction ("save as <slug>-<expression-name>.png").\n\n` +
+    `Bust/upper-body framing, facing forward, clean background, consistent style, square 1024x1024. ` +
+    `No commentary outside the format.`
+  const user = `CHARACTER: ${name}\n${persona || '(little defined — invent a coherent, distinctive character)'}\n\nWrite the advanced portrait prompt set now.`
+  const text = await complete(opts.settings, [
+    { role: 'system', content: system },
+    { role: 'user', content: user },
+  ], opts.signal)
+  return text.trim()
+}
+
 /** Expand/deepen a single character-card field, using the rest of the card as context. */
 export async function expandCharacterField(opts: {
   field: string

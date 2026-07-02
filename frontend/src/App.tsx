@@ -90,7 +90,7 @@ export default function App() {
       />
       <button
         type="button"
-        className="dock-strip"
+        className={'dock-strip' + (sidebarCollapsed ? ' is-closed' : '')}
         title={sidebarCollapsed ? 'Show the sidebar' : 'Hide the sidebar'}
         aria-label={sidebarCollapsed ? 'Show the sidebar' : 'Hide the sidebar'}
         aria-expanded={!sidebarCollapsed}

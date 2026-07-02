@@ -182,7 +182,7 @@ export function useGeneration() {
       useStore.getState().updateChat(
         chatId,
         next
-          ? { sceneState: next.scene, characterStats: next.stats, sceneStateFor: assistantId }
+          ? { sceneState: next.scene, characterStats: next.stats, expression: next.expression ?? chat.expression, sceneStateFor: assistantId }
           : { sceneStateFor: assistantId },
       )
     } catch {

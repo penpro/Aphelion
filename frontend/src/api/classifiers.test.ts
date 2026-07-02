@@ -3,7 +3,7 @@ import {
   classifyImage,
   classifyPortraitSet,
   describePortrait,
-  pickPortrait,
+  rankPortraits,
   tagPortrait,
   trackTurn,
   sceneStateLine,
@@ -111,86 +111,106 @@ describe('describePortrait', () => {
 describe('tagPortrait', () => {
   it('flattens newline-separated keywords into one comma list', async () => {
     stub('smiling\nred dress\n  hair down ')
-    expect(await tagPortrait('http://x/v1', 'data:image/png;base64,AAA', 'Mara')).toBe('smiling, red dress, hair down')
+    expect((await tagPortrait('http://x/v1', 'data:image/png;base64,AAA', 'Mara')).tags).toBe('smiling, red dress, hair down')
   })
 
-  it('uses the vision model, demands colors, and attaches the image', async () => {
-    const f = stub('calm, cloak')
+  it('parses the trailing PAD rating into an expression and strips it from the tags', async () => {
+    stub('wry smile, black gown, hair up | P:62 E:41 D:74')
+    const r = await tagPortrait('http://x/v1', 'data:image/png;base64,AAA', 'Mara')
+    expect(r.tags).toBe('wry smile, black gown, hair up')
+    expect(r.expression).toEqual({ pleasure: 62, energy: 41, dominance: 74 })
+  })
+
+  it('tolerates a missing PAD rating (expression undefined)', async () => {
+    stub('calm, cloak')
+    const r = await tagPortrait('http://x/v1', 'data:image/png;base64,AAA', 'Mara')
+    expect(r.tags).toBe('calm, cloak')
+    expect(r.expression).toBeUndefined()
+  })
+
+  it('uses the vision model, demands colors + PAD axes, and attaches the image', async () => {
+    const f = stub('calm, cloak | P:50 E:20 D:50')
     await tagPortrait('http://x/v1', 'data:image/png;base64,ZZZ', 'Mara')
     const [, init] = f.mock.calls[0] as unknown as [string, RequestInit]
     const body = JSON.parse(init.body as string)
     expect(body.model).toBe('vision')
     const parts = body.messages[0].content as Array<{ type: string; text?: string; image_url?: { url: string } }>
     expect(parts.find((p) => p.type === 'text')?.text).toContain('COLOR IS CRITICAL')
+    expect(parts.find((p) => p.type === 'text')?.text).toContain('P:<n> E:<n> D:<n>')
     expect(parts.find((p) => p.type === 'image_url')?.image_url?.url).toBe('data:image/png;base64,ZZZ')
   })
 
-  it('returns empty string on a non-ok response', async () => {
+  it('returns empty tags on a non-ok response', async () => {
     stub('x', false)
-    expect(await tagPortrait('http://x/v1', 'data:image/png;base64,AAA', 'Mara')).toBe('')
+    expect((await tagPortrait('http://x/v1', 'data:image/png;base64,AAA', 'Mara')).tags).toBe('')
   })
 })
 
-describe('pickPortrait', () => {
+describe('rankPortraits', () => {
   const entries = [
-    { file: 'casual.png', tags: 'relaxed, jeans, t-shirt' },
-    { file: 'red-dress.png', tags: 'elegant, red evening gown' },
+    { file: 'casual.png', tags: 'relaxed, jeans, t-shirt', expression: { pleasure: 55, energy: 30, dominance: 45 } },
+    { file: 'red-dress.png', tags: 'elegant, red evening gown', expression: { pleasure: 65, energy: 50, dominance: 60 } },
     { file: 'armor.png', tags: 'fierce, steel plate armor' },
   ]
 
   it('returns null without calling the model when there are fewer than 2 entries', async () => {
-    const f = stub('1')
-    expect(await pickPortrait('http://x/v1', { name: 'A' }, [entries[0]], undefined, 'text')).toBeNull()
+    const f = stub('1 | relaxed')
+    expect(await rankPortraits('http://x/v1', { name: 'A' }, [entries[0]], undefined, 'text', undefined, undefined)).toBeNull()
     expect(f).not.toHaveBeenCalled()
   })
 
-  it('maps the answered number to that file', async () => {
-    stub('2')
-    expect(await pickPortrait('http://x/v1', { name: 'A' }, entries, 'casual.png', 'she slips into the red dress')).toBe('red-dress.png')
+  it('parses the ranked answer into ordered files + driving tags', async () => {
+    stub('2,3,1 | red evening gown, elegant')
+    const r = await rankPortraits('http://x/v1', { name: 'A' }, entries, 'casual.png', 'she slips into the red dress', undefined, undefined)
+    expect(r!.files).toEqual(['red-dress.png', 'armor.png', 'casual.png'])
+    expect(r!.drivers).toEqual(['red evening gown', 'elegant'])
   })
 
-  it('parses a number out of stray prose', async () => {
-    stub('Portrait 3 fits best.')
-    expect(await pickPortrait('http://x/v1', { name: 'A' }, entries, undefined, 'battle')).toBe('armor.png')
+  it('dedupes repeats, drops out-of-range numbers, tolerates a missing drivers part', async () => {
+    stub('2, 2, 9, 3')
+    const r = await rankPortraits('http://x/v1', { name: 'A' }, entries, undefined, 't', undefined, undefined)
+    expect(r!.files).toEqual(['red-dress.png', 'armor.png'])
+    expect(r!.drivers).toEqual([])
   })
 
-  it('returns null on an out-of-range or unparseable answer', async () => {
-    stub('9')
-    expect(await pickPortrait('http://x/v1', { name: 'A' }, entries, undefined, 't')).toBeNull()
-    stub('none of these')
-    expect(await pickPortrait('http://x/v1', { name: 'A' }, entries, undefined, 't')).toBeNull()
+  it('returns null when no valid number appears', async () => {
+    stub('none of these fit')
+    expect(await rankPortraits('http://x/v1', { name: 'A' }, entries, undefined, 't', undefined, undefined)).toBeNull()
   })
 
-  it('sends the index + current file + scene text to the intent model', async () => {
-    const f = stub('1')
-    await pickPortrait('http://x/v1', { name: 'Mara' }, entries, 'red-dress.png', 'RECENT-MARKER')
+  it('sends PAD axes, the moment expression, trained bias, and the ranked rules', async () => {
+    const f = stub('1 | relaxed')
+    await rankPortraits(
+      'http://x/v1',
+      { name: 'Mara' },
+      entries,
+      'red-dress.png',
+      'RECENT-MARKER',
+      { pleasure: 50, energy: 85, dominance: 80 },
+      { avoid: ['fierce'], favor: ['wry smile'] },
+    )
     const [, init] = f.mock.calls[0] as unknown as [string, RequestInit]
     const body = JSON.parse(init.body as string)
     expect(body.model).toBe('intent')
     const prompt = body.messages[0].content as string
-    expect(prompt).toContain('red evening gown')
-    expect(prompt).toContain('RECENT-MARKER')
+    expect(prompt).toContain('[P:65 E:50 D:60]') // per-portrait axes
+    expect(prompt).toContain('pleasure 50, energy 85, dominance 80') // the moment
+    expect(prompt).toContain('DO NOT let these tags drive the choice')
+    expect(prompt).toContain('fierce')
+    expect(prompt).toContain('favor portraits whose match rests on: wry smile')
     expect(prompt).toContain('CURRENTLY SHOWING: 2 (red-dress.png)')
-  })
-
-  it('ranks the criteria — emotion, then outfit (with the setting sanity check), pose dead last', async () => {
-    const f = stub('1')
-    await pickPortrait('http://x/v1', { name: 'Mara' }, entries, undefined, 'dinner in public')
-    const [, init] = f.mock.calls[0] as unknown as [string, RequestInit]
-    const prompt = JSON.parse(init.body as string).messages[0].content as string
-    expect(prompt).toContain('IN ORDER')
-    expect(prompt).toContain('1. EMOTION')
-    expect(prompt).toContain('2. OUTFIT')
+    expect(prompt).toContain('RECENT-MARKER')
+    // ranked rules, in priority order, axes-first
+    expect(prompt).toContain('1. EXPRESSION AXES')
+    expect(prompt).toContain('anger requires LOW')
     expect(prompt).toContain('MAKE SENSE for the location')
-    expect(prompt).toContain('4. POSE — last and least')
-    // the rules must appear in priority order
-    expect(prompt.indexOf('1. EMOTION')).toBeLessThan(prompt.indexOf('2. OUTFIT'))
+    expect(prompt.indexOf('1. EXPRESSION AXES')).toBeLessThan(prompt.indexOf('2. OUTFIT'))
     expect(prompt.indexOf('2. OUTFIT')).toBeLessThan(prompt.indexOf('4. POSE'))
   })
 
   it('returns null on a non-ok response (caller keeps the current portrait)', async () => {
-    stub('2', false)
-    expect(await pickPortrait('http://x/v1', { name: 'A' }, entries, undefined, 't')).toBeNull()
+    stub('2 | x', false)
+    expect(await rankPortraits('http://x/v1', { name: 'A' }, entries, undefined, 't', undefined, undefined)).toBeNull()
   })
 })
 
@@ -226,6 +246,15 @@ describe('trackTurn', () => {
     expect(r!.stats.arousal).toBe(100)
     expect(r!.stats.anger).toBe(0)
     expect(r!.stats.joy).toBe(34)
+  })
+
+  it('parses the moment expression (PAD), leaving it undefined when absent or partial', async () => {
+    stub('{"scene":{},"stats":{},"expression":{"pleasure":48,"energy":85,"dominance":77}}')
+    const r = await trackTurn('http://x/v1', { name: 'A' }, prevScene, prevStats, 'u', 'r')
+    expect(r!.expression).toEqual({ pleasure: 48, energy: 85, dominance: 77 })
+    stub('{"scene":{},"stats":{},"expression":{"pleasure":48}}')
+    const r2 = await trackTurn('http://x/v1', { name: 'A' }, prevScene, prevStats, 'u', 'r')
+    expect(r2!.expression).toBeUndefined()
   })
 
   it('sends personality, both previous states, the exchange, and the anti-puppeting rule', async () => {

@@ -509,7 +509,16 @@
     </div>
     <div id="changelog" style="display:flex;flex-direction:column;gap:22px;max-width:780px">
       <article style="border-left:2px solid var(--corona);padding-left:16px">
-        <h3 style="margin:0 0 8px">v0.1.46 <span style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--corona)">LATEST</span></h3>
+        <h3 style="margin:0 0 8px">v0.1.47 <span style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--corona)">LATEST</span></h3>
+        <ul style="margin:0;padding-left:18px;line-height:1.75">
+          <li><b>The portrait engine: multi-axis expression matching.</b> Portraits are now matched on three expression axes — pleasure, energy, dominance (the research-standard PAD model) — on top of tags, so an <em>intense</em> moment stops landing on the <em>angry</em> portrait: same energy, same command, but anger needs low pleasure. Analyze rates every image's face on the axes; the scene tracker rates the moment; the picker matches them first, then outfit and setting, with pose dead last.</li>
+          <li><b>Train it yourself: the WHY tab.</b> A little tab on the live portrait slides out the inspector — see exactly which tags drove the pick, 👍/👎 the choice (a 👎 cools those tags off and immediately tries the next-ranked portrait), click any tag to demote it, add your own tags, and cycle through the ranked alternates. Your feedback re-weights the evidence the model sees; the model keeps doing the judging.</li>
+          <li><b>Advanced art prompts.</b> Next to the basic 8-emotion prompt set there's now an ✨ Advanced mode: the model reads the whole character card and writes a 12-16 look expression range in that character's voice — a guarded character gets "guarded amusement, one brow raised," not a generic smile — each annotated with its axis targets.</li>
+          <li><b>Quality of life:</b> checking for updates is now a bright hero card at the top of Settings, and docked side panels leave a glowing pull-tab so they're easy to find and reopen.</li>
+        </ul>
+      </article>
+      <article style="border-left:2px solid var(--border);padding-left:16px">
+        <h3 style="margin:0 0 8px">v0.1.46</h3>
         <ul style="margin:0;padding-left:18px;line-height:1.75">
           <li><b>Dockable panels — let the story fill the screen.</b> Both side panels now collapse away: click the slim handle on either edge and the sidebar or the chat panel folds shut, leaving the portrait and the conversation to dominate. Click again to bring it back; the app remembers your choice.</li>
           <li><b>A much tidier chat panel.</b> The right panel is now grouped into foldable sections — Cast, Sources, Style, Portrait, Scene — and all the explainer paragraphs moved behind little ⓘ buttons, so the panel is scannable instead of a wall of text. The sidebar footer also slimmed down to a compact icon row.</li>

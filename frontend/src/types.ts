@@ -18,12 +18,22 @@ export interface PortraitSet {
   portraits: Partial<Record<EmotionKey, string>>
 }
 
+/** A point in PAD expression space (Mehrabian/Russell), 0-100 per axis — see PORTRAIT-ENGINE.md.
+ *  pleasure: miserable↔delighted · energy: calm↔charged · dominance: submissive↔commanding.
+ *  This is what separates "intense" (mid pleasure) from "angry" (low pleasure). */
+export interface Expression {
+  pleasure: number
+  energy: number
+  dominance: number
+}
+
 /** One analyzed image in a character's smart-portrait folder: filename + the vision model's keyword
- *  tags (emotion, outfit, pose, details). The index is what lets the model pick the best portrait
- *  at runtime without ever re-reading the images. */
+ *  tags (emotion, outfit, pose, details) + the face's PAD rating. The index is what lets the model
+ *  pick the best portrait at runtime without ever re-reading the images. */
 export interface PortraitIndexEntry {
   file: string
   tags: string
+  expression?: Expression // PAD of the FACE, rated once at Analyze time
 }
 
 /** The deliberately-carried visual state of a chat's scene: what the character looks like RIGHT
@@ -72,6 +82,7 @@ export interface Character {
   portraitSets?: PortraitSet[] // named portrait sets (outfits/looks), each with up to the 8 emotion portraits
   portraitFolder?: string // smart portraits: a user-picked folder of portrait images (any outfits/poses/expressions)
   portraitIndex?: PortraitIndexEntry[] // vision-built keyword index of portraitFolder; when present, the live portrait auto-picks from it
+  tagBias?: Record<string, number> // portrait-engine training: tag → −100..100, from 👍/👎/demote feedback (PORTRAIT-ENGINE.md)
   createdAt: number
 }
 
@@ -125,6 +136,7 @@ export interface Chat {
   sceneTracking?: boolean // carry structured scene + character state across turns (undefined = on)
   sceneState?: SceneState // the carried visual state — outfit/hair/emotion/pose/props/location
   characterStats?: CharacterStats // the carried internal state — the ten 0-100 attitude levers
+  expression?: Expression // PAD of the MOMENT (from the turn tracker) — the picker matches portraits against it
   sceneStateFor?: string // id of the assistant message the state was last updated for (freshness marker)
   autonomy?: boolean // when on, user messages can't author the character's actions — they must be earned (default off)
   sources: Source[] // reference docs injected into context

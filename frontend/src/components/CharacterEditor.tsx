@@ -3,7 +3,7 @@ import { open } from '@tauri-apps/plugin-dialog'
 import { Modal } from './Modal'
 import { useStore } from '../store'
 import { useConfirm } from './ConfirmDialog'
-import { generateCharacter, expandCharacterField } from '../generators'
+import { generateCharacter, expandCharacterField, generateAdvancedPortraitPrompts } from '../generators'
 import { cx, uid } from '../util'
 import { CharAvatar } from './CharAvatar'
 import { fileToPortrait, GENERIC_PORTRAITS } from '../image'
@@ -75,8 +75,25 @@ export function CharacterEditor({ editing, onClose }: { editing: Character | 'ne
   }
 
   const [showPrompts, setShowPrompts] = useState(false)
+  const [promptMode, setPromptMode] = useState<'basic' | 'advanced'>('basic')
+  const [advPrompts, setAdvPrompts] = useState('')
+  const [advBusy, setAdvBusy] = useState(false)
   const [emotionBusy, setEmotionBusy] = useState<string | null>(null) // "setId:emotion"
   const [emotionErr, setEmotionErr] = useState('')
+
+  // The advanced set reads the whole character card — nuanced, character-specific expression
+  // range with PAD targets (PORTRAIT-ENGINE.md) vs. the basic deterministic 8 emotions.
+  const makeAdvanced = async (setName?: string) => {
+    if (advBusy) return
+    setAdvBusy(true)
+    try {
+      setAdvPrompts(await generateAdvancedPortraitPrompts({ character: c, setName, settings }))
+    } catch (e) {
+      setAdvPrompts(`Generation failed: ${(e as { message?: string })?.message ?? 'the model is not reachable.'}`)
+    } finally {
+      setAdvBusy(false)
+    }
+  }
 
   const sets = c.portraitSets ?? []
   const [activeSetId, setActiveSetId] = useState<string | null>(sets[0]?.id ?? null)
@@ -216,8 +233,8 @@ export function CharacterEditor({ editing, onClose }: { editing: Character | 'ne
         setAnalyzePhase(`Analyzing ${names[i]} (${i + 1}/${names.length})…`)
         try {
           const dataUrl = await readImageData(folder, names[i])
-          const tags = await tagPortrait(settings.baseUrl, dataUrl, c.name)
-          if (tags) entries.push({ file: names[i], tags })
+          const { tags, expression } = await tagPortrait(settings.baseUrl, dataUrl, c.name)
+          if (tags) entries.push({ file: names[i], tags, expression })
         } catch {
           /* skip an unreadable image */
         }
@@ -461,21 +478,58 @@ export function CharacterEditor({ editing, onClose }: { editing: Character | 'ne
                   </label>
                   {showPrompts && (
                     <div className="prompt-block">
+                      <div className="row gap" style={{ alignItems: 'center' }}>
+                        <div className="seg">
+                          <button
+                            type="button"
+                            className={cx('seg-btn', promptMode === 'basic' && 'sel')}
+                            onClick={() => setPromptMode('basic')}
+                          >
+                            Basic · 8
+                          </button>
+                          <button
+                            type="button"
+                            className={cx('seg-btn', promptMode === 'advanced' && 'sel')}
+                            onClick={() => {
+                              setPromptMode('advanced')
+                              if (!advPrompts && !advBusy) makeAdvanced(activeSet.name)
+                            }}
+                          >
+                            ✨ Advanced
+                          </button>
+                        </div>
+                        {promptMode === 'advanced' && (
+                          <button type="button" className="btn xs ghost" disabled={advBusy} onClick={() => makeAdvanced(activeSet.name)}>
+                            {advBusy ? 'Writing…' : '↻ Regenerate'}
+                          </button>
+                        )}
+                      </div>
                       <div className="muted xs">
-                        Paste into an image generator to make a matched set for {c.name || 'this character'}
-                        {activeSet.name?.trim() ? ` (${activeSet.name.trim()})` : ''} — generate Neutral first, then
-                        reuse it as a reference so the rest stay consistent.
+                        {promptMode === 'basic'
+                          ? `The deterministic 8-emotion set for ${c.name || 'this character'}${activeSet.name?.trim() ? ` (${activeSet.name.trim()})` : ''} — generate Neutral first, then reuse it as the reference so the rest stay consistent.`
+                          : `A character-specific expression range (12-16 looks) written from the whole card, each with its P/E/D target — richer raw material for the smart-portrait picker.`}
                       </div>
                       <textarea
                         className="prompt-out"
                         readOnly
                         rows={12}
-                        value={buildEmotionArtPrompts(c, activeSet.name)}
+                        value={
+                          promptMode === 'basic'
+                            ? buildEmotionArtPrompts(c, activeSet.name)
+                            : advBusy
+                              ? 'Writing the advanced set…'
+                              : advPrompts || 'Click ✨ Advanced to generate.'
+                        }
                       />
                       <button
                         type="button"
                         className="btn sm"
-                        onClick={() => navigator.clipboard?.writeText(buildEmotionArtPrompts(c, activeSet.name))}
+                        disabled={promptMode === 'advanced' && (advBusy || !advPrompts)}
+                        onClick={() =>
+                          navigator.clipboard?.writeText(
+                            promptMode === 'basic' ? buildEmotionArtPrompts(c, activeSet.name) : advPrompts,
+                          )
+                        }
                       >
                         Copy prompts
                       </button>

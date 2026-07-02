@@ -74,15 +74,15 @@ export function UpdateCheck() {
   }
 
   return (
-    <div className="field">
-      <span>Updates</span>
+    <div className="field update-hero">
+      <span className="update-hero-title">⬆ Updates</span>
       <div className="row gap" style={{ alignItems: 'center' }}>
         <span className="muted" style={{ flex: 1, fontSize: 13 }}>
-          You're running <b>Aphelion {version || '—'}</b>.
+          You're running <b>Aphelion {version || '—'}</b>. New versions ship often.
         </span>
         {(phase === 'idle' || phase === 'none' || phase === 'error') && (
-          <button className="btn sm ghost" onClick={() => setPhase('disclose')}>
-            Check for updates
+          <button className="btn sm update-hero-btn" onClick={() => setPhase('disclose')}>
+            ⟳ Check for updates
           </button>
         )}
       </div>

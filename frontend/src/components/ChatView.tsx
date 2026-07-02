@@ -215,7 +215,7 @@ export function ChatView({ onEditCharacter }: { onEditCharacter: (c: Character) 
       </div>
       <button
         type="button"
-        className="dock-strip"
+        className={'dock-strip' + (settings.dialsCollapsed ? ' is-closed' : '')}
         title={settings.dialsCollapsed ? 'Show the chat panel' : 'Hide the chat panel'}
         aria-label={settings.dialsCollapsed ? 'Show the chat panel' : 'Hide the chat panel'}
         aria-expanded={!settings.dialsCollapsed}

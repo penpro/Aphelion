@@ -1547,6 +1547,164 @@ select:focus {
   line-height: 1;
   opacity: 0.85;
 }
+/* When the panel is docked, the strip grows a bright PULL TAB — unmissable, easy to hit. */
+.dock-strip.is-closed {
+  flex-basis: 22px;
+  width: 22px;
+}
+.dock-strip.is-closed .dock-chev {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 96px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 1;
+  color: var(--void-900, #07021a);
+  background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 55%, #c084fc));
+  box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 55%, transparent), 0 0 0 1px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+.dock-strip.is-closed:hover .dock-chev {
+  box-shadow: 0 0 24px color-mix(in srgb, var(--accent) 80%, transparent), 0 0 0 1px var(--accent);
+}
+
+/* ---------- portrait engine: inspector + hero update card ---------- */
+.live-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  max-width: 100%;
+}
+.live-frame {
+  position: relative;
+}
+.lp-why {
+  position: absolute;
+  right: -16px;
+  top: 50%;
+  transform: translateY(-50%);
+  writing-mode: vertical-rl;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  padding: 9px 3px;
+  border: 1px solid var(--border);
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+  background: var(--panel);
+  color: var(--muted);
+  cursor: pointer;
+}
+.lp-why:hover,
+.lp-why.on {
+  color: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.lp-inspector {
+  width: 230px;
+  max-height: min(440px, 52vh);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  margin: 14px 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  text-align: left;
+}
+.lp-insp-file {
+  font-family: var(--font-mono, monospace);
+  font-size: 10.5px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lp-insp-sec {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.lp-insp-k {
+  font-family: var(--font-mono, monospace);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.lp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.lp-chip {
+  font-size: 10.5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.lp-chip:hover {
+  border-color: #ff6b8b;
+  color: #ff6b8b;
+}
+.lp-chip.driver {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  color: var(--accent);
+}
+.lp-chip.cooled {
+  opacity: 0.42;
+  text-decoration: line-through;
+}
+.lp-fb {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+.lp-fb .fb-on {
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.lp-cycle {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.lp-addtag {
+  display: flex;
+  gap: 5px;
+}
+.lp-addtag input {
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+}
+.update-hero {
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, transparent), transparent 60%);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.update-hero-title {
+  color: var(--accent);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.update-hero-btn {
+  border-color: var(--accent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 35%, transparent);
+}
 .dials-title {
   font-size: 11px;
   text-transform: uppercase;
