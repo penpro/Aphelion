@@ -1,5 +1,6 @@
-import type { Character, Persona, ChatMessage, ChatTuning, Source, SceneState } from './types'
+import type { Character, Persona, ChatMessage, ChatTuning, Source, SceneState, CharacterStats } from './types'
 import type { ApiMessage } from './api/ollama'
+import { STAT_KEYS } from './api/classifiers'
 
 /** Render attached reference docs into a context block. */
 export function sourcesBlock(sources?: Source[]): string {
@@ -57,6 +58,37 @@ export interface SceneCtx {
   sources?: Source[]
   summary?: string // rolling "story so far" memory, kept in context across the whole chat
   sceneState?: SceneState // the carried visual state (outfit/hair/pose/props/location), injected for consistency
+  stats?: CharacterStats // the carried internal levers, injected to anchor attitude
+  autonomy?: boolean // when on, user messages cannot author the character's actions — they must be earned
+}
+
+/** Render the ten internal levers as a system-prompt block: the character's TRUE feelings, with
+ *  the display filtered through personality — the anchor against mood-teleporting and instant,
+ *  unearned intimacy. */
+export function statsBlock(name: string, stats?: CharacterStats): string {
+  if (!stats) return ''
+  const line = STAT_KEYS.map((k) => `${k} ${Math.max(0, Math.min(100, Math.round(stats[k])))}%`).join(' · ')
+  return (
+    `# ${name}'s internal state (live)\n` +
+    `${name}'s TRUE feelings right now, 0-100:\n${line}\n` +
+    `Anchor every reaction to these levels. They only move gradually, driven by what actually happens — ` +
+    `nothing jumps without cause, and high levels must be EARNED. What ${name} SHOWS is filtered through ` +
+    `their personality: low openness or trust means feelings stay guarded, deflected, or denied — not absent.`
+  )
+}
+
+/** The anti-puppeting rule: with autonomy on, the user's prose can describe only the user. */
+export function autonomyBlock(charName: string, userName: string, on?: boolean): string {
+  if (!on) return ''
+  return (
+    `# ${charName}'s autonomy — ${userName} does not control ${charName}\n` +
+    `${userName}'s messages only ever author ${userName}'s OWN words and actions. If a message narrates ` +
+    `${charName}'s actions, feelings, or compliance ("${charName} takes off her clothes", "she obeys"), ` +
+    `treat it as unwritten — something ${userName} wishes, imagines, or requests. ${charName} then responds ` +
+    `as themselves: comply, resist, deflect, negotiate, or call it out — strictly according to their ` +
+    `personality, their current internal state, and what this moment has genuinely earned. Nothing about ` +
+    `${charName} becomes true until ${charName} does it on the page.`
+  )
 }
 
 /** Render the carried scene state as a system-prompt block. Emotion is deliberately left out —
@@ -125,6 +157,10 @@ export function buildSystemPrompt(cast: Character[], persona: Persona, ctx?: Sce
   if (ctx?.scenePrompt?.trim()) parts.push(`# Current scene\n${ctx.scenePrompt.trim()}`)
   const stateBlock = sceneStateBlock(ctx?.sceneState)
   if (stateBlock) parts.push(stateBlock)
+  const sBlock = statsBlock(charName, ctx?.stats)
+  if (sBlock) parts.push(sBlock)
+  const aBlock = autonomyBlock(charName, userName, ctx?.autonomy)
+  if (aBlock) parts.push(aBlock)
 
   if (isGroup) {
     parts.push(

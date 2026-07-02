@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react'
 import { useStore } from './store'
 import { retrieveContext } from './tauri'
 import { streamChatNative, reloadModel, proofread, samplerFromSettings } from './api/ollama'
-import { updateSceneState } from './api/classifiers'
+import { trackTurn } from './api/classifiers'
 import { buildApiMessages, estTokens } from './prompt'
 import { distillMessages, compactSummary, LIVE_WINDOW_TOKENS, KEEP_RECENT_TOKENS, SUMMARY_CAP_TOKENS } from './memory'
 import type { Character } from './types'
@@ -77,6 +77,8 @@ export function useGeneration() {
         sources,
         summary: chat.summary,
         sceneState: chat.sceneTracking === false ? undefined : chat.sceneState,
+        stats: chat.sceneTracking === false ? undefined : chat.characterStats,
+        autonomy: chat.autonomy,
       },
       { maxContextTokens: numCtx, reserveTokens: reserve },
     )
@@ -154,11 +156,11 @@ export function useGeneration() {
     }
   }, [])
 
-  // After a reply, update the carried SCENE STATE: one small deterministic call that tracks what
-  // the character looks like right now (outfit/hair/emotion/pose/props/location), changing only
-  // what the exchange changed. The state is injected into the next turn's system prompt (keeps
-  // the scene consistent) and drives the live portrait's pick. sceneStateFor is ALWAYS stamped —
-  // success or not — so the portrait never waits on a state that isn't coming.
+  // After a reply, run the TURN TRACKER: one small deterministic call that maintains both carried
+  // states — the scene (what the character looks like) and the stats (the ten internal levers that
+  // anchor attitude). Both are injected into the next turn's system prompt and the scene drives the
+  // live portrait's pick. sceneStateFor is ALWAYS stamped — success or not — so the portrait never
+  // waits on a state that isn't coming.
   const maintainScene = useCallback(async (chatId: string, assistantId: string) => {
     const st = useStore.getState()
     const chat = st.chats.find((c) => c.id === chatId)
@@ -169,8 +171,20 @@ export function useGeneration() {
     const lastUser = [...chat.messages.slice(0, Math.max(0, idx))].reverse().find((m) => m.role === 'user')?.content ?? ''
     const character = st.characters.find((c) => c.id === chat.characterId)
     try {
-      const next = await updateSceneState(st.settings.baseUrl, character ?? {}, chat.sceneState, lastUser, reply.content)
-      useStore.getState().updateChat(chatId, next ? { sceneState: next, sceneStateFor: assistantId } : { sceneStateFor: assistantId })
+      const next = await trackTurn(
+        st.settings.baseUrl,
+        character ?? {},
+        chat.sceneState,
+        chat.characterStats,
+        lastUser,
+        reply.content,
+      )
+      useStore.getState().updateChat(
+        chatId,
+        next
+          ? { sceneState: next.scene, characterStats: next.stats, sceneStateFor: assistantId }
+          : { sceneStateFor: assistantId },
+      )
     } catch {
       useStore.getState().updateChat(chatId, { sceneStateFor: assistantId })
     }

@@ -5,9 +5,10 @@ import {
   describePortrait,
   pickPortrait,
   tagPortrait,
-  updateSceneState,
+  trackTurn,
   sceneStateLine,
   EMPTY_SCENE,
+  DEFAULT_STATS,
 } from './classifiers'
 
 afterEach(() => vi.unstubAllGlobals())
@@ -178,45 +179,58 @@ describe('pickPortrait', () => {
   })
 })
 
-describe('updateSceneState', () => {
-  const prev = { outfit: 'white lingerie', hair: 'hair down', emotion: 'affectionate', pose: 'lounging', props: '', location: 'bedroom' }
+describe('trackTurn', () => {
+  const prevScene = { outfit: 'white lingerie', hair: 'hair down', emotion: 'affectionate', pose: 'lounging', props: '', location: 'bedroom' }
+  const prevStats = { ...DEFAULT_STATS, arousal: 40, trust: 60 }
 
-  it('parses the returned JSON into a state', async () => {
-    stub('{"outfit":"black lace lingerie","hair":"hair down","emotion":"affectionate","pose":"standing","props":"","location":"bedroom"}')
-    const s = await updateSceneState('http://x/v1', { name: 'Anya' }, prev, 'put on the black lingerie', '*she changes*')
-    expect(s).toEqual({ outfit: 'black lace lingerie', hair: 'hair down', emotion: 'affectionate', pose: 'standing', props: '', location: 'bedroom' })
+  it('parses the combined JSON into scene + stats', async () => {
+    stub(
+      '{"scene":{"outfit":"black lace lingerie","hair":"hair down","emotion":"affectionate","pose":"standing","props":"","location":"bedroom"},' +
+        '"stats":{"arousal":55,"affection":50,"trust":60,"anger":0,"fear":5,"joy":45,"sadness":0,"confidence":60,"openness":35,"energy":60}}',
+    )
+    const r = await trackTurn('http://x/v1', { name: 'Anya' }, prevScene, prevStats, 'put on the black lingerie', '*she changes*')
+    expect(r!.scene.outfit).toBe('black lace lingerie')
+    expect(r!.scene.pose).toBe('standing')
+    expect(r!.stats.arousal).toBe(55)
+    expect(r!.stats.openness).toBe(35)
   })
 
-  it('keeps previous values for missing/non-string fields', async () => {
-    stub('{"outfit":"red dress","emotion":"happy"}')
-    const s = await updateSceneState('http://x/v1', { name: 'A' }, prev, 'u', 'r')
-    expect(s!.outfit).toBe('red dress')
-    expect(s!.emotion).toBe('happy')
-    expect(s!.hair).toBe('hair down') // carried
-    expect(s!.location).toBe('bedroom') // carried
+  it('carries previous values for missing scene fields and missing stats', async () => {
+    stub('{"scene":{"outfit":"red dress","emotion":"happy"},"stats":{"arousal":70}}')
+    const r = await trackTurn('http://x/v1', { name: 'A' }, prevScene, prevStats, 'u', 'r')
+    expect(r!.scene.outfit).toBe('red dress')
+    expect(r!.scene.hair).toBe('hair down') // carried
+    expect(r!.stats.arousal).toBe(70)
+    expect(r!.stats.trust).toBe(60) // carried
   })
 
-  it('constrains emotion to the 8 labels, keeping the previous one otherwise', async () => {
-    stub('{"outfit":"x","emotion":"wry amusement"}')
-    const s = await updateSceneState('http://x/v1', { name: 'A' }, prev, 'u', 'r')
-    expect(s!.emotion).toBe('affectionate') // "wry amusement" isn't a label → carry previous
+  it('clamps stats to 0-100 integers and constrains emotion to the 8 labels', async () => {
+    stub('{"scene":{"emotion":"wry amusement"},"stats":{"arousal":250,"anger":-5,"joy":33.7}}')
+    const r = await trackTurn('http://x/v1', { name: 'A' }, prevScene, prevStats, 'u', 'r')
+    expect(r!.scene.emotion).toBe('affectionate') // not a label → carry previous
+    expect(r!.stats.arousal).toBe(100)
+    expect(r!.stats.anger).toBe(0)
+    expect(r!.stats.joy).toBe(34)
   })
 
-  it('sends the previous state and the exchange in the prompt', async () => {
+  it('sends personality, both previous states, the exchange, and the anti-puppeting rule', async () => {
     const f = stub('{}')
-    await updateSceneState('http://x/v1', { name: 'Anya' }, prev, 'USER-MARKER', 'REPLY-MARKER')
+    await trackTurn('http://x/v1', { name: 'Anya', personality: 'PERSONA-MARKER' }, prevScene, prevStats, 'USER-MARKER', 'REPLY-MARKER')
     const [, init] = f.mock.calls[0] as unknown as [string, RequestInit]
     const prompt = JSON.parse(init.body as string).messages[0].content as string
+    expect(prompt).toContain('PERSONA-MARKER')
     expect(prompt).toContain('white lingerie')
+    expect(prompt).toContain('"trust":60')
     expect(prompt).toContain('USER-MARKER')
     expect(prompt).toContain('REPLY-MARKER')
+    expect(prompt).toContain('ground truth')
   })
 
   it('returns null on garbage or a non-ok response', async () => {
     stub('no json here at all')
-    expect(await updateSceneState('http://x/v1', { name: 'A' }, prev, 'u', 'r')).toBeNull()
+    expect(await trackTurn('http://x/v1', { name: 'A' }, prevScene, prevStats, 'u', 'r')).toBeNull()
     stub('{}', false)
-    expect(await updateSceneState('http://x/v1', { name: 'A' }, prev, 'u', 'r')).toBeNull()
+    expect(await trackTurn('http://x/v1', { name: 'A' }, prevScene, prevStats, 'u', 'r')).toBeNull()
   })
 })
 

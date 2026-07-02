@@ -3,7 +3,7 @@ import { SourcesPanel } from './SourcesPanel'
 import { CharAvatar } from './CharAvatar'
 import { cx } from '../util'
 import { useConfirm } from './ConfirmDialog'
-import { EMPTY_SCENE } from '../api/classifiers'
+import { EMPTY_SCENE, DEFAULT_STATS, STAT_KEYS } from '../api/classifiers'
 import type { Chat, Character, ResponseLength, ThinkMode } from '../types'
 
 const SCENE_KEYS = ['outfit', 'hair', 'emotion', 'pose', 'props', 'location'] as const
@@ -231,8 +231,9 @@ export function ChatDials({ chat }: { chat: Chat }) {
             ))}
           </div>
           <span className="muted xs">
-            Deliberately carries outfit, hair, pose, props, and location from turn to turn — keeps the scene consistent
-            and gives the live portrait exact tags to match. One small model call per reply.
+            Deliberately carries the scene (outfit, hair, pose, props, location) AND {primary?.name || 'the character'}
+            ’s internal stats (arousal, trust, anger, …) from turn to turn — anchors attitude, keeps the story
+            consistent, and gives the live portrait exact tags to match. One small model call per reply.
           </span>
         </div>
 
@@ -256,8 +257,56 @@ export function ChatDials({ chat }: { chat: Chat }) {
                 <span className="muted xs">Live — edit to correct or steer; the next reply and portrait pick use it.</span>
               </>
             )}
+            {chat.characterStats && (
+              <details className="stats-view">
+                <summary className="muted xs">{primary?.name || 'Character'}’s stats</summary>
+                {STAT_KEYS.map((k) => (
+                  <label key={k} className="stat-row">
+                    <span className="stat-k">{k}</span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      step={1}
+                      value={chat.characterStats![k]}
+                      onChange={(e) =>
+                        updateChat(chat.id, {
+                          characterStats: { ...(chat.characterStats ?? DEFAULT_STATS), [k]: Number(e.target.value) },
+                        })
+                      }
+                    />
+                    <span className="stat-v">{chat.characterStats![k]}</span>
+                  </label>
+                ))}
+                <span className="muted xs">
+                  What {primary?.name || 'the character'} truly feels (0-100) — the model updates these each reply and
+                  anchors behavior to them. Drag to steer.
+                </span>
+              </details>
+            )}
           </div>
         )}
+
+        <div className="field">
+          <span>Earned actions</span>
+          <div className="seg fill">
+            {[false, true].map((on) => (
+              <button
+                key={String(on)}
+                type="button"
+                className={cx('seg-btn', !!chat.autonomy === on && 'sel')}
+                onClick={() => updateChat(chat.id, { autonomy: on })}
+              >
+                {on ? 'On' : 'Off'}
+              </button>
+            ))}
+          </div>
+          <span className="muted xs">
+            {chat.autonomy
+              ? `On — your messages can't act for ${primary?.name || 'the character'}: writing “she takes off her dress” is treated as a wish, not an event. Their actions must be earned.`
+              : `Off — your prose can narrate ${primary?.name || 'the character'}’s actions directly (director mode).`}
+          </span>
+        </div>
       </div>
     </aside>
   )

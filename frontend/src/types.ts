@@ -39,6 +39,24 @@ export interface SceneState {
   location: string
 }
 
+/** The character's carried INTERNAL state — ten 0-100 levers that anchor attitude and make
+ *  behavior consistent and earned instead of mood-teleporting. Updated by the same per-reply
+ *  tracker call as SceneState, injected into the system prompt ("arousal 65% · anger 10% · …"),
+ *  and editable live in the chat dials. These are what the character truly FEELS; what they show
+ *  is filtered through personality (low openness/trust = feelings hidden, not absent). */
+export interface CharacterStats {
+  arousal: number
+  affection: number // warmth toward the user
+  trust: number
+  anger: number
+  fear: number
+  joy: number
+  sadness: number
+  confidence: number // dominance/assurance in the moment
+  openness: number // guarded ↔ unguarded (the "wry deflector" lever)
+  energy: number // drained ↔ energized
+}
+
 export interface Character {
   id: string
   name: string
@@ -104,9 +122,11 @@ export interface Chat {
   tuning: ChatTuning
   portraitSetId?: string // which of the primary character's portrait sets the live portrait shows
   autoPortraitSet?: boolean // let the model pick the active look each reply (matches the scene to a set's description)
-  sceneTracking?: boolean // carry a structured scene state across turns (undefined = on)
-  sceneState?: SceneState // the carried state itself — outfit/hair/emotion/pose/props/location
+  sceneTracking?: boolean // carry structured scene + character state across turns (undefined = on)
+  sceneState?: SceneState // the carried visual state — outfit/hair/emotion/pose/props/location
+  characterStats?: CharacterStats // the carried internal state — the ten 0-100 attitude levers
   sceneStateFor?: string // id of the assistant message the state was last updated for (freshness marker)
+  autonomy?: boolean // when on, user messages can't author the character's actions — they must be earned (default off)
   sources: Source[] // reference docs injected into context
   knowledgeFolder?: string // path to a user-granted folder; relevant chunks retrieved into context per message
   summary: string // rolling distilled "story so far" memory of older, summarized-out messages

@@ -515,6 +515,38 @@ code, pre, kbd, .mono, .xs, .hint, .model-name, .estimate, .num-input, .field-la
 }
 
 /* carried scene-state editor (ChatDials) */
+.stats-view {
+  margin-top: 6px;
+}
+.stats-view > summary {
+  cursor: pointer;
+}
+.stat-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 3px 0;
+}
+.stat-row .stat-k {
+  font-family: var(--mono, monospace);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  color: var(--text-dim, #9aa);
+  flex: none;
+  width: 66px;
+}
+.stat-row input[type='range'] {
+  flex: 1;
+  min-width: 0;
+}
+.stat-row .stat-v {
+  font-family: var(--mono, monospace);
+  font-size: 10.5px;
+  color: var(--text-dim, #9aa);
+  flex: none;
+  width: 24px;
+  text-align: right;
+}
 .scene-row {
   display: flex;
   gap: 6px;

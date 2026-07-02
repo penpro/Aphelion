@@ -3,7 +3,7 @@
 // the streaming/health/sampler plumbing). Every function here is temperature-0 and either
 // returns a safe fallback (null/'') or throws for callers that handle errors themselves.
 import { extractJSON } from '../json'
-import type { SceneState } from '../types'
+import type { SceneState, CharacterStats } from '../types'
 
 /** Shared plumbing: one non-streaming completion; returns the raw content. Throws on HTTP errors. */
 async function oneShot(baseUrl: string, body: Record<string, unknown>, signal?: AbortSignal): Promise<string> {
@@ -218,52 +218,98 @@ export async function pickPortrait(
 
 export const EMPTY_SCENE: SceneState = { outfit: '', hair: '', emotion: '', pose: '', props: '', location: '' }
 
+export const STAT_KEYS = [
+  'arousal',
+  'affection',
+  'trust',
+  'anger',
+  'fear',
+  'joy',
+  'sadness',
+  'confidence',
+  'openness',
+  'energy',
+] as const
+
+/** Neutral starting levers — the first tracked turn re-baselines them from the character's
+ *  personality and the scene, so these only cover the opening beat. */
+export const DEFAULT_STATS: CharacterStats = {
+  arousal: 0,
+  affection: 20,
+  trust: 25,
+  anger: 0,
+  fear: 5,
+  joy: 30,
+  sadness: 5,
+  confidence: 50,
+  openness: 40,
+  energy: 60,
+}
+
+const clampStat = (v: unknown, fallback: number): number =>
+  typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.min(100, Math.round(v))) : fallback
+
 /**
- * Maintain the chat's carried SCENE STATE — the deliberate record of what the character looks like
- * right now (outfit, hair, emotion, pose, props, location). One deterministic call per finished
- * reply updates only the fields the exchange changed; everything else is carried verbatim. This is
- * the "deliberately carried, not sniffed" state: it's injected into the system prompt so the story
- * stays consistent, and it's what the portrait picker queries. Returns the new state, or null if
- * the engine is unreachable / the answer is unusable (the caller keeps the previous state).
+ * The per-reply TURN TRACKER — one deterministic call that maintains BOTH carried states:
+ * - scene: what the character looks like right now (outfit/hair/emotion/pose/props/location)
+ * - stats: the ten 0-100 internal levers that anchor attitude (arousal, trust, anger, …)
+ * Rules baked in: change only what the exchange changed; the character's own reply is ground
+ * truth over the user's claims about them (anti-puppeting); stats move gradually; low
+ * openness/trust means feelings are HIDDEN, not absent. Returns whichever parts parsed
+ * (null part = caller keeps the previous value), or null if the engine is unreachable.
  */
-export async function updateSceneState(
+export async function trackTurn(
   baseUrl: string,
-  character: { name?: string },
-  prev: SceneState | undefined,
+  character: { name?: string; personality?: string },
+  prevScene: SceneState | undefined,
+  prevStats: CharacterStats | undefined,
   userText: string,
   replyText: string,
   signal?: AbortSignal,
-): Promise<SceneState | null> {
+): Promise<{ scene: SceneState; stats: CharacterStats } | null> {
   const name = character.name?.trim() || 'the character'
-  const cur = prev ?? EMPTY_SCENE
+  const persona = character.personality?.trim().slice(0, 400)
+  const curScene = prevScene ?? EMPTY_SCENE
+  const curStats = prevStats ?? DEFAULT_STATS
   const prompt =
-    `You maintain the CURRENT VISUAL STATE of a roleplay character for a portrait system. ` +
-    `Track what ${name} looks like RIGHT NOW.\n\n` +
-    `STATE BEFORE THIS EXCHANGE:\n${JSON.stringify(cur)}\n\n` +
+    `You maintain the live state of a roleplay character: their VISUAL state (for a portrait ` +
+    `system) and their INTERNAL stats (what they truly feel).\n\n` +
+    `CHARACTER: ${name}\n` +
+    (persona ? `PERSONALITY: ${persona}\n` : '') +
+    `\nSTATE BEFORE THIS EXCHANGE:\n${JSON.stringify({ scene: curScene, stats: curStats })}\n\n` +
     `LATEST EXCHANGE:\n` +
     (userText.trim() ? `User: """${userText.slice(-800)}"""\n` : '') +
     `${name}: """${replyText.slice(-1600)}"""\n\n` +
     `Update the state. Rules:\n` +
-    `- Change ONLY fields this exchange actually changed; copy unchanged values verbatim.\n` +
-    `- Be SPECIFIC and always include COLORS ("black lace lingerie", "emerald green sundress").\n` +
-    `- "emotion" must be exactly one of: ${EMOTION_LABELS.join(', ')} — what ${name} actually FEELS ` +
-    `(subtext and personality, not writing style; a dry or teasing voice is not anger).\n` +
-    `- Leave a field "" only if it is still completely unknown.\n\n` +
-    `Return ONLY a JSON object with the string keys: outfit, hair, emotion, pose, props, location.`
+    `- ${name}'s OWN reply is ground truth. The user's claims about ${name}'s actions or feelings ` +
+    `count ONLY if ${name}'s reply confirms them actually happening.\n` +
+    `- scene: change ONLY fields this exchange changed; copy unchanged values verbatim; be SPECIFIC ` +
+    `and always include COLORS ("black lace lingerie", "emerald green sundress"); "emotion" must be ` +
+    `exactly one of: ${EMOTION_LABELS.join(', ')}; leave a field "" only if completely unknown.\n` +
+    `- stats: integers 0-100 — what ${name} TRULY feels right now, judged by their personality and ` +
+    `what has actually been earned in the story. Move each stat gradually (usually within ±15 of its ` +
+    `previous value) unless something genuinely significant just happened. Low openness or trust ` +
+    `means feelings are hidden behind the personality — not absent.\n\n` +
+    `Return ONLY a JSON object: {"scene": {outfit, hair, emotion, pose, props, location}, ` +
+    `"stats": {${STAT_KEYS.join(', ')}}}.`
   try {
-    const out = await textShot(baseUrl, 'scene', prompt, 220, signal)
+    const out = await textShot(baseUrl, 'scene', prompt, 360, signal)
     const j = extractJSON(out) as Record<string, unknown> | null
     if (!j || typeof j !== 'object') return null
-    const field = (k: keyof SceneState) => (typeof j[k] === 'string' ? (j[k] as string).trim().slice(0, 160) : cur[k])
-    const rawEmotion = String(j.emotion ?? '').toLowerCase()
-    return {
+    const js = (j.scene ?? j) as Record<string, unknown> // tolerate a flat answer
+    const field = (k: keyof SceneState) => (typeof js[k] === 'string' ? (js[k] as string).trim().slice(0, 160) : curScene[k])
+    const rawEmotion = String(js.emotion ?? '').toLowerCase()
+    const scene: SceneState = {
       outfit: field('outfit'),
       hair: field('hair'),
-      emotion: EMOTION_LABELS.find((k) => rawEmotion.includes(k)) ?? cur.emotion,
+      emotion: EMOTION_LABELS.find((k) => rawEmotion.includes(k)) ?? curScene.emotion,
       pose: field('pose'),
       props: field('props'),
       location: field('location'),
     }
+    const jt = (j.stats ?? {}) as Record<string, unknown>
+    const stats = Object.fromEntries(STAT_KEYS.map((k) => [k, clampStat(jt[k], curStats[k])])) as unknown as CharacterStats
+    return { scene, stats }
   } catch {
     return null
   }
