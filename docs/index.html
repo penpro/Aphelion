@@ -823,12 +823,50 @@
       // own version pinned to the parent's viewport, so the embedded one
       // would be a confusing duplicate.  Detected via window.top check;
       // standalone visitors still see the floating button.
-      try {
-        if (window.top !== window.self) {
-          var f = document.querySelector('.donate-float');
-          if (f) f.style.display = 'none';
+      var isEmbedded = false;
+      try { isEmbedded = window.top !== window.self; } catch (e) { /* cross-origin parent access can throw */ }
+      if (isEmbedded) {
+        var f = document.querySelector('.donate-float');
+        if (f) f.style.display = 'none';
+      }
+
+      // When embedded, post our body height to the parent so it can size
+      // its <iframe> to fit the whole page instead of clipping at a fixed
+      // 3600px.  This kills the mid-line slice at the bottom AND the
+      // "wheel over frame scrolls only the frame" trap — with no inner
+      // overflow, the parent page scrolls naturally through everything.
+      // rAF-debounced because ResizeObserver can fire on every layout
+      // tick during a font/image load.
+      if (isEmbedded) {
+        var lastPosted = 0;
+        var pending = false;
+        function postHeight() {
+          if (pending) return;
+          pending = true;
+          requestAnimationFrame(function () {
+            pending = false;
+            var h = document.documentElement.scrollHeight;
+            if (h === lastPosted) return;
+            lastPosted = h;
+            try {
+              window.parent.postMessage(
+                { type: 'aphelion-height', height: h },
+                'https://penumbra-tech.com'
+              );
+            } catch (e) { /* parent gone / origin mismatch — nothing to do */ }
+          });
         }
-      } catch (e) { /* cross-origin parent access can throw — leave button as-is */ }
+        window.addEventListener('load', postHeight);
+        window.addEventListener('resize', postHeight);
+        // Accordion expands (FAQ <details>), changelog tile toggles, and
+        // late-arriving images all mutate the body height — observe the
+        // document element so every one of those triggers a re-post.
+        if (typeof ResizeObserver === 'function') {
+          new ResizeObserver(postHeight).observe(document.documentElement);
+        }
+        // First post: after the DOM is parsed but before all images load.
+        postHeight();
+      }
 
       // Tidy the changelog: the latest release stays featured; every older version becomes a
       // compact tile (version + one-line hook) in a grid. Clicking a tile expands its full notes
