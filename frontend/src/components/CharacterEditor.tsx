@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { open } from '@tauri-apps/plugin-dialog'
 import { Modal } from './Modal'
 import { useStore } from '../store'
 import { useConfirm } from './ConfirmDialog'
@@ -8,10 +9,12 @@ import { CharAvatar } from './CharAvatar'
 import { fileToPortrait, GENERIC_PORTRAITS } from '../image'
 import { persistPortrait, portraitDataUrl } from '../portraits'
 import { EMOTIONS, buildEmotionArtPrompts } from '../emotion'
-import { describePortrait, getEngineStatus } from '../api/ollama'
-import { setVisionMode } from '../tauri'
+import { describePortrait, tagPortrait, getEngineStatus } from '../api/ollama'
+import { setVisionMode, listImages, readImageData } from '../tauri'
 import { findVisionModel } from '../visionModels'
-import type { Character, EmotionKey, PortraitSet } from '../types'
+import type { Character, EmotionKey, PortraitSet, PortraitIndexEntry } from '../types'
+
+const baseName = (p: string) => p.split(/[\\/]/).filter(Boolean).pop() || p
 
 const COLORS = ['#7c5cff', '#3fb6a8', '#ff6b8b', '#f5a623', '#4a90e2', '#9b59b6', '#2ecc71', '#e74c3c']
 
@@ -174,6 +177,67 @@ export function CharacterEditor({ editing, onClose }: { editing: Character | 'ne
     }
   }
 
+  // ---- Smart portraits: point at a folder, Analyze once, and the model handles the rest ----
+  const [analyzePhase, setAnalyzePhase] = useState('')
+  const [analyzeErr, setAnalyzeErr] = useState('')
+  const stopAnalyzeRef = useRef(false)
+  const visionBusy = !!scanPhase || !!analyzePhase // one vision job at a time (they swap the loaded model)
+
+  const pickPortraitFolder = async () => {
+    try {
+      const d = await open({ directory: true, multiple: false, title: "Choose this character's portrait folder" })
+      if (typeof d === 'string') setC((prev) => ({ ...prev, portraitFolder: d, portraitIndex: undefined }))
+    } catch {
+      /* cancelled */
+    }
+  }
+  const clearSmartPortraits = () => setC((prev) => ({ ...prev, portraitFolder: undefined, portraitIndex: undefined }))
+
+  // Load the vision model once, tag EVERY image in the folder with keywords (emotion/outfit/pose),
+  // store the index on the character, then restore the main model. The user never types a
+  // description — that's the model's job. Stop keeps whatever's been indexed so far.
+  const analyzeFolder = async () => {
+    if (visionBusy) return
+    setAnalyzeErr('')
+    const folder = c.portraitFolder
+    if (!folder) return setAnalyzeErr('Choose a folder first.')
+    if (!vm) return setAnalyzeErr('Pick a vision model in Settings (the gear) first.')
+    stopAnalyzeRef.current = false
+    try {
+      setAnalyzePhase('Loading the vision model…')
+      await setVisionMode(true, vm.textFile, vm.mmprojFile)
+      await waitEngineReady()
+      const names = await listImages(folder)
+      if (!names.length) throw new Error('No images found in that folder.')
+      const entries: PortraitIndexEntry[] = []
+      for (let i = 0; i < names.length; i++) {
+        if (stopAnalyzeRef.current) break
+        setAnalyzePhase(`Analyzing ${names[i]} (${i + 1}/${names.length})…`)
+        try {
+          const dataUrl = await readImageData(folder, names[i])
+          const tags = await tagPortrait(settings.baseUrl, dataUrl, c.name)
+          if (tags) entries.push({ file: names[i], tags })
+        } catch {
+          /* skip an unreadable image */
+        }
+      }
+      setC((prev) => ({ ...prev, portraitIndex: entries }))
+      setAnalyzePhase('Restoring your main model…')
+      await setVisionMode(false, vm.textFile, vm.mmprojFile)
+      await waitEngineReady()
+      setAnalyzePhase('')
+    } catch (e) {
+      setAnalyzeErr((e as { message?: string })?.message ?? String(e))
+      try {
+        await setVisionMode(false, vm.textFile, vm.mmprojFile)
+        await waitEngineReady()
+      } catch {
+        /* best effort restore */
+      }
+      setAnalyzePhase('')
+    }
+  }
+
   const generate = async () => {
     if (!criteria.trim() || gen) return
     setGen(true)
@@ -329,7 +393,7 @@ export function CharacterEditor({ editing, onClose }: { editing: Character | 'ne
             </span>
             <span className="row gap">
               {sets.length > 0 && (
-                <button type="button" className="btn xs ghost" onClick={describeLooks} disabled={!!scanPhase} title="Use the vision model to describe each look — powers auto-switching in chat">
+                <button type="button" className="btn xs ghost" onClick={describeLooks} disabled={visionBusy} title="Use the vision model to describe each look — powers auto-switching in chat">
                   {scanPhase ? 'Scanning…' : '🔍 Describe looks'}
                 </button>
               )}
@@ -453,6 +517,57 @@ export function CharacterEditor({ editing, onClose }: { editing: Character | 'ne
               Tip: “Describe looks” needs a vision model (Settings → Vision). Or just type each look’s description above.
             </div>
           )}
+        </div>
+
+        <div className="field">
+          <span className="field-head">
+            <span>
+              Smart portraits{' '}
+              <span className="muted xs">optional — a folder of portraits the model picks from automatically</span>
+            </span>
+            {analyzePhase ? (
+              <button type="button" className="btn xs ghost" onClick={() => { stopAnalyzeRef.current = true }}>
+                ■ Stop
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn xs ghost"
+                onClick={analyzeFolder}
+                disabled={visionBusy || !c.portraitFolder}
+                title="Vision-scan every image in the folder and index it — no typing required"
+              >
+                ✨ Analyze
+              </button>
+            )}
+          </span>
+          <div className="row gap" style={{ alignItems: 'center', flexWrap: 'wrap' }}>
+            {c.portraitFolder ? (
+              <span className="muted sm" title={c.portraitFolder}>📁 {baseName(c.portraitFolder)}</span>
+            ) : (
+              <span className="muted sm">No folder chosen.</span>
+            )}
+            <button type="button" className="btn xs ghost" onClick={pickPortraitFolder} disabled={visionBusy}>
+              {c.portraitFolder ? 'Change folder' : '📁 Choose folder'}
+            </button>
+            {!!c.portraitIndex?.length && (
+              <span className="muted xs" style={{ color: 'var(--corona, #5EEAD4)' }}>
+                ✓ {c.portraitIndex.length} portrait{c.portraitIndex.length === 1 ? '' : 's'} indexed
+              </span>
+            )}
+            {(c.portraitFolder || c.portraitIndex?.length) && (
+              <button type="button" className="btn xs ghost" onClick={clearSmartPortraits} disabled={visionBusy}>
+                Clear
+              </button>
+            )}
+          </div>
+          {analyzePhase && <div className="muted xs" style={{ marginTop: 6 }}>{analyzePhase}</div>}
+          {analyzeErr && <div className="error-line">{analyzeErr}</div>}
+          <span className="muted xs" style={{ marginTop: 4 }}>
+            Drop every look — outfits, poses, expressions — into one folder and hit Analyze. The vision model tags each
+            image (it loads once, then your main model comes back), and in chat the live portrait auto-picks the best
+            one as the story moves. Takes priority over portrait sets.
+          </span>
         </div>
 
         <label className="field">

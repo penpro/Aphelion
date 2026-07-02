@@ -18,6 +18,14 @@ export interface PortraitSet {
   portraits: Partial<Record<EmotionKey, string>>
 }
 
+/** One analyzed image in a character's smart-portrait folder: filename + the vision model's keyword
+ *  tags (emotion, outfit, pose, details). The index is what lets the model pick the best portrait
+ *  at runtime without ever re-reading the images. */
+export interface PortraitIndexEntry {
+  file: string
+  tags: string
+}
+
 export interface Character {
   id: string
   name: string
@@ -31,6 +39,8 @@ export interface Character {
   portrait?: string // optional image data URL; falls back to the avatar emoji + color tile
   portraits?: Partial<Record<EmotionKey, string>> // legacy single living set (migrated into portraitSets on edit)
   portraitSets?: PortraitSet[] // named portrait sets (outfits/looks), each with up to the 8 emotion portraits
+  portraitFolder?: string // smart portraits: a user-picked folder of portrait images (any outfits/poses/expressions)
+  portraitIndex?: PortraitIndexEntry[] // vision-built keyword index of portraitFolder; when present, the live portrait auto-picks from it
   createdAt: number
 }
 

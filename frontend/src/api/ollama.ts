@@ -266,6 +266,98 @@ export async function describePortrait(baseUrl: string, dataUrl: string, name: s
   }
 }
 
+/**
+ * Vision: tag one smart-folder portrait with short keywords (emotion, outfit, hair, pose, striking
+ * details) for the character's portrait index. Requires the vision model to be loaded
+ * (set_vision_mode(true) first). Returns a cleaned comma-keyword string, or '' if unusable.
+ */
+export async function tagPortrait(baseUrl: string, dataUrl: string, name: string, signal?: AbortSignal): Promise<string> {
+  const who = name?.trim() || 'the character'
+  try {
+    const resp = await fetch(`${baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'vision',
+        max_tokens: 80,
+        temperature: 0,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text:
+                  `You tag character portraits for an index. List 8-15 short comma-separated keywords for this ` +
+                  `image of ${who}: their emotion/expression, outfit/clothing, hair, pose, and any striking visual ` +
+                  `details. Lowercase keywords only — no sentences, no numbering.`,
+              },
+              { type: 'image_url', image_url: { url: dataUrl } },
+            ],
+          },
+        ],
+      }),
+      signal,
+    })
+    if (!resp.ok) return ''
+    const json = await resp.json()
+    return String(json.choices?.[0]?.message?.content ?? '')
+      .replace(/[\n\r]+/g, ', ')
+      .replace(/^["'\s,]+|["'\s,]+$/g, '')
+      .replace(/\s+/g, ' ')
+      .replace(/(, )+/g, ', ')
+      .slice(0, 240)
+  } catch {
+    return ''
+  }
+}
+
+/**
+ * Pick the best portrait from a character's analyzed smart folder for the current scene — one
+ * deterministic text call over the stored keyword index (no vision, no model swap at runtime).
+ * Covers emotion, outfit, AND pose in a single pick; told to keep the current outfit unless the
+ * story clearly changed it. Returns the chosen filename, or null to keep what's showing.
+ */
+export async function pickPortrait(
+  baseUrl: string,
+  character: { name?: string },
+  entries: { file: string; tags: string }[],
+  currentFile: string | undefined,
+  recentText: string,
+  signal?: AbortSignal,
+): Promise<string | null> {
+  if (entries.length < 2) return null
+  const name = character.name?.trim() || 'the character'
+  const list = entries.map((e, i) => `${i + 1}. ${e.file} — ${e.tags}`).join('\n')
+  const curIdx = currentFile ? entries.findIndex((e) => e.file === currentFile) : -1
+  const prompt =
+    `You choose the best portrait of a roleplay character for the current scene.\n\n` +
+    `CHARACTER: ${name}\n\nPORTRAITS:\n${list}\n\n` +
+    (curIdx >= 0 ? `CURRENTLY SHOWING: ${curIdx + 1} (${entries[curIdx].file})\n\n` : '') +
+    `Recent story:\n"""\n${recentText.slice(-1600)}\n"""\n\n` +
+    `Pick the portrait that best matches ${name}'s emotion, outfit, and pose RIGHT NOW. Keep the ` +
+    `current outfit unless the story clearly shows them changing clothes or appearance. The expression ` +
+    `should match what ${name} is actually FEELING — read the subtext and their personality, not the ` +
+    `writing style: a dry, guarded, or teasing voice is not anger.\n\n` +
+    `Answer with ONLY the number of the portrait.`
+  try {
+    const resp = await fetch(`${baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'intent', max_tokens: 6, temperature: 0, messages: [{ role: 'user', content: prompt }] }),
+      signal,
+    })
+    if (!resp.ok) return null
+    const json = await resp.json()
+    const out = String(json.choices?.[0]?.message?.content ?? '')
+    const n = parseInt(out.match(/\d+/)?.[0] ?? '', 10)
+    if (!Number.isFinite(n) || n < 1 || n > entries.length) return null
+    return entries[n - 1].file
+  } catch {
+    return null
+  }
+}
+
 /** Strip the trailing /v1 to reach Ollama's native API root. */
 function nativeRoot(baseUrl: string): string {
   return baseUrl.endsWith('/v1') ? baseUrl.slice(0, -3) : baseUrl

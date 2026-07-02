@@ -178,7 +178,16 @@ export function ChatDials({ chat }: { chat: Chat }) {
           </div>
         )}
 
-        {settings.livePortraits && primarySets.length > 1 && (
+        {settings.livePortraits && !!primary?.portraitIndex?.length && (
+          <div className="field">
+            <span className="muted xs">
+              ✨ Smart portraits — {primary?.name || 'the character'} auto-picks from their analyzed folder (
+              {primary.portraitIndex.length} indexed). Manage it in the character editor.
+            </span>
+          </div>
+        )}
+
+        {settings.livePortraits && !primary?.portraitIndex?.length && primarySets.length > 1 && (
           <div className="field">
             <span>Portrait set</span>
             <select

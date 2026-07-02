@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Aphelion — your own private AI for characters, roleplay &amp; stories</title>
+<title>Penumbra Aphelion — your own private AI for characters, roleplay &amp; stories</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -11,8 +11,8 @@
 <meta name="description" content="Aphelion is a free, open-source local-AI app by Penumbra — deep character roleplay, stories, and a private assistant, running entirely on your own GPU. One download, no setup, no cloud, no limits. Windows ready; macOS &amp; Linux in beta." />
 <!-- Open Graph / social link previews -->
 <meta property="og:type" content="website" />
-<meta property="og:site_name" content="Aphelion" />
-<meta property="og:title" content="Aphelion — your own private AI, fully offline" />
+<meta property="og:site_name" content="Penumbra Aphelion" />
+<meta property="og:title" content="Penumbra Aphelion — your own private AI, fully offline" />
 <meta property="og:description" content="Characters, roleplay, and stories powered by AI on your own GPU — not the cloud. Free &amp; open source by Penumbra. No setup, no account, no limits. Windows ready; macOS &amp; Linux in beta." />
 <meta property="og:url" content="https://penpro.github.io/Aphelion/" />
 <meta property="og:image" content="https://penpro.github.io/Aphelion/og-image.png" />
@@ -20,7 +20,7 @@
 <meta property="og:image:height" content="630" />
 <meta property="og:image:alt" content="Aphelion — your own AI, on your machine" />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="Aphelion — your own private AI, fully offline" />
+<meta name="twitter:title" content="Penumbra Aphelion — your own private AI, fully offline" />
 <meta name="twitter:description" content="Characters, roleplay &amp; stories powered by local AI on your own GPU — free, private, offline, no limits. Windows ready; macOS &amp; Linux in beta." />
 <meta name="twitter:image" content="https://penpro.github.io/Aphelion/og-image.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -277,20 +277,25 @@
   .donate-float{position:fixed;right:clamp(16px,3vw,28px);bottom:clamp(16px,3vw,28px);z-index:60;font-family:var(--head);font-weight:500;font-size:14px;color:var(--void-900);background:linear-gradient(100deg,var(--corona),var(--flare));padding:12px 20px;border-radius:999px;box-shadow:0 0 0 1px rgba(94,234,212,.4),0 10px 30px rgba(34,211,238,.4);transition:transform .15s ease,box-shadow .15s ease}
   .donate-float:hover{transform:translateY(-2px);box-shadow:0 0 0 1px rgba(94,234,212,.65),0 16px 44px rgba(34,211,238,.55)}
 
-  /* ── changelog: latest open, older versions collapse to the version number ── */
-  #changelog details.pn-item{ border-left:2px solid var(--border); padding-left:16px }
-  #changelog details.pn-item>summary{
-    cursor:pointer; list-style:none; font-family:var(--head); font-weight:600;
-    font-size:1.02rem; color:var(--dim); padding:1px 0; transition:color .15s ease;
+  /* ── changelog: latest release stays featured; older versions become compact tiles (~5 across)
+       that expand into one shared detail panel ── */
+  .vgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; margin-top:4px}
+  .vtile{
+    display:flex; flex-direction:column; gap:5px; text-align:left; border:1px solid var(--border);
+    border-radius:10px; background:rgba(7,2,26,.4); padding:11px 12px; cursor:pointer; color:inherit;
+    font:inherit; transition:border-color .15s ease, background .15s ease;
   }
-  #changelog details.pn-item>summary::-webkit-details-marker{ display:none }
-  #changelog details.pn-item>summary::before{
-    content:'▸'; display:inline-block; width:1.1em; color:var(--corona); opacity:.7;
+  .vtile:hover{border-color:rgba(94,234,212,.5)}
+  .vtile.on{border-color:var(--corona); background:rgba(94,234,212,.07)}
+  .vtile .vver{font-family:var(--mono); font-size:12px; letter-spacing:.08em; color:var(--corona)}
+  .vtile .vhook{font-size:11.5px; line-height:1.4; color:var(--dim); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+  .vpanel{
+    border:1px solid rgba(94,234,212,.3); border-radius:12px; padding:16px 18px; margin-top:12px;
+    background:linear-gradient(180deg,rgba(94,234,212,.05),rgba(12,4,38,.4));
   }
-  #changelog details.pn-item[open]>summary::before{ content:'▾' }
-  #changelog details.pn-item>summary:hover{ color:var(--text) }
-  #changelog details.pn-item[open]>summary{ color:var(--text); margin-bottom:8px }
-  #changelog details.pn-item ul{ margin:0 }
+  .vpanel h4{font-family:var(--mono); font-size:13px; letter-spacing:.08em; color:var(--corona); margin:0 0 10px}
+  .vpanel ul{margin:0; padding-left:18px; line-height:1.7; font-size:14px; color:var(--dim)}
+  .vpanel b{color:var(--text)}
 </style>
 </head>
 <body>
@@ -504,7 +509,13 @@
     </div>
     <div id="changelog" style="display:flex;flex-direction:column;gap:22px;max-width:780px">
       <article style="border-left:2px solid var(--corona);padding-left:16px">
-        <h3 style="margin:0 0 8px">v0.1.40 <span style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--corona)">LATEST</span></h3>
+        <h3 style="margin:0 0 8px">v0.1.41 <span style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--corona)">LATEST</span></h3>
+        <ul style="margin:0;padding-left:18px;line-height:1.75">
+          <li><b>Smart portraits: point at a folder, hit Analyze, done.</b> Drop every portrait of a character — outfits, poses, expressions — into one folder and click <em>Analyze</em> in the character editor. The vision model tags each image once, and from then on the live portrait picks the best one automatically as the story moves: emotion, outfit, and pose in a single read. No typing descriptions, no sorting images into slots — that's the model's job.</li>
+        </ul>
+      </article>
+      <article style="border-left:2px solid var(--border);padding-left:16px">
+        <h3 style="margin:0 0 8px">v0.1.40</h3>
         <ul style="margin:0;padding-left:18px;line-height:1.75">
           <li><b>Portraits change outfits with the story.</b> Give a character more than one look (a portrait set per outfit), add a short description to each — or let the vision model write it for you with <em>“Describe looks”</em> — and turn on <em>Auto-switch</em> in a chat. When the story has them change clothes (“she slips into the red dress”), the live portrait follows. The mood read also lands in one clean switch now, instead of a double-flicker.</li>
         </ul>
@@ -819,25 +830,45 @@
         }
       } catch (e) { /* cross-origin parent access can throw — leave button as-is */ }
 
-      // Tidy the changelog: keep the latest entry open; collapse every older one
-      // into a click-to-expand <details> showing just its version number.
+      // Tidy the changelog: the latest release stays featured; every older version becomes a
+      // compact tile (version + one-line hook) in a grid. Clicking a tile expands its full notes
+      // into one shared panel below the grid; clicking it again (or another tile) closes/swaps.
       var log = document.getElementById('changelog');
       if (log) {
-        Array.prototype.filter
-          .call(log.children, function (el) { return el.tagName === 'ARTICLE'; })
-          .forEach(function (art, i) {
-            if (i === 0) return; // newest stays expanded
-            var h3 = art.querySelector('h3');
-            if (!h3) return;
-            var det = document.createElement('details');
-            det.className = 'pn-item';
-            var sum = document.createElement('summary');
-            sum.textContent = (h3.textContent || '').trim();
-            h3.parentNode.removeChild(h3);
-            det.appendChild(sum);
-            while (art.firstChild) det.appendChild(art.firstChild);
-            art.parentNode.replaceChild(det, art);
+        var arts = Array.prototype.filter.call(log.children, function (el) { return el.tagName === 'ARTICLE'; });
+        if (arts.length > 1) {
+          var grid = document.createElement('div');
+          grid.className = 'vgrid';
+          var panel = document.createElement('div');
+          panel.className = 'vpanel';
+          panel.hidden = true;
+          var openTile = null;
+          arts.slice(1).forEach(function (art) {
+            var ver = ((art.querySelector('h3') || {}).textContent || '').trim().split(/\s+/)[0];
+            var boldEl = art.querySelector('li b');
+            var liEl = art.querySelector('li');
+            var hook = ((boldEl ? boldEl.textContent : liEl ? liEl.textContent : '') || '').trim().replace(/[.:]\s*$/, '');
+            var tile = document.createElement('button');
+            tile.type = 'button';
+            tile.className = 'vtile';
+            var vv = document.createElement('span'); vv.className = 'vver'; vv.textContent = ver;
+            var vh = document.createElement('span'); vh.className = 'vhook'; vh.textContent = hook;
+            tile.appendChild(vv); tile.appendChild(vh);
+            tile.addEventListener('click', function () {
+              if (openTile === tile) { panel.hidden = true; tile.classList.remove('on'); openTile = null; return; }
+              if (openTile) openTile.classList.remove('on');
+              openTile = tile;
+              tile.classList.add('on');
+              var ul = art.querySelector('ul');
+              panel.innerHTML = '<h4>' + ver + '</h4>' + (ul ? ul.outerHTML : '');
+              panel.hidden = false;
+            });
+            grid.appendChild(tile);
+            art.parentNode.removeChild(art); // content lives on via the closure over `art`
           });
+          log.appendChild(grid);
+          log.appendChild(panel);
+        }
       }
     })();
   </script>

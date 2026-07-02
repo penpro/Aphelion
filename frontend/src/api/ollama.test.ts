@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { classifyImage, classifyPortraitSet, describePortrait, samplerBody, samplerFromSettings } from './ollama'
+import { classifyImage, classifyPortraitSet, describePortrait, pickPortrait, tagPortrait, samplerBody, samplerFromSettings } from './ollama'
 import { defaultSettings } from '../seed'
 
 describe('samplerBody', () => {
@@ -135,5 +135,88 @@ describe('describePortrait', () => {
   it('returns empty string on a non-ok response', async () => {
     stub('x', false)
     expect(await describePortrait('http://x/v1', 'data:image/png;base64,AAA', 'Mara')).toBe('')
+  })
+})
+
+describe('tagPortrait', () => {
+  afterEach(() => vi.unstubAllGlobals())
+  const stub = (content: string, ok = true) => {
+    const f = vi.fn(async () => ({ ok, status: ok ? 200 : 500, json: async () => ({ choices: [{ message: { content } }] }) }))
+    vi.stubGlobal('fetch', f)
+    return f
+  }
+
+  it('flattens newline-separated keywords into one comma list', async () => {
+    stub('smiling\nred dress\n  hair down ')
+    expect(await tagPortrait('http://x/v1', 'data:image/png;base64,AAA', 'Mara')).toBe('smiling, red dress, hair down')
+  })
+
+  it('uses the vision model with the image attached', async () => {
+    const f = stub('calm, cloak')
+    await tagPortrait('http://x/v1', 'data:image/png;base64,ZZZ', 'Mara')
+    const [, init] = f.mock.calls[0] as unknown as [string, RequestInit]
+    const body = JSON.parse(init.body as string)
+    expect(body.model).toBe('vision')
+    const parts = body.messages[0].content as Array<{ type: string; image_url?: { url: string } }>
+    expect(parts.find((p) => p.type === 'image_url')?.image_url?.url).toBe('data:image/png;base64,ZZZ')
+  })
+
+  it('returns empty string on a non-ok response', async () => {
+    stub('x', false)
+    expect(await tagPortrait('http://x/v1', 'data:image/png;base64,AAA', 'Mara')).toBe('')
+  })
+})
+
+describe('pickPortrait', () => {
+  afterEach(() => vi.unstubAllGlobals())
+  const stub = (content: string, ok = true) => {
+    const f = vi.fn(async () => ({ ok, status: ok ? 200 : 500, json: async () => ({ choices: [{ message: { content } }] }) }))
+    vi.stubGlobal('fetch', f)
+    return f
+  }
+  const entries = [
+    { file: 'casual.png', tags: 'relaxed, jeans, t-shirt' },
+    { file: 'red-dress.png', tags: 'elegant, red evening gown' },
+    { file: 'armor.png', tags: 'fierce, steel plate armor' },
+  ]
+
+  it('returns null without calling the model when there are fewer than 2 entries', async () => {
+    const f = stub('1')
+    expect(await pickPortrait('http://x/v1', { name: 'A' }, [entries[0]], undefined, 'text')).toBeNull()
+    expect(f).not.toHaveBeenCalled()
+  })
+
+  it('maps the answered number to that file', async () => {
+    stub('2')
+    expect(await pickPortrait('http://x/v1', { name: 'A' }, entries, 'casual.png', 'she slips into the red dress')).toBe('red-dress.png')
+  })
+
+  it('parses a number out of stray prose', async () => {
+    stub('Portrait 3 fits best.')
+    expect(await pickPortrait('http://x/v1', { name: 'A' }, entries, undefined, 'battle')).toBe('armor.png')
+  })
+
+  it('returns null on an out-of-range or unparseable answer', async () => {
+    stub('9')
+    expect(await pickPortrait('http://x/v1', { name: 'A' }, entries, undefined, 't')).toBeNull()
+    stub('none of these')
+    expect(await pickPortrait('http://x/v1', { name: 'A' }, entries, undefined, 't')).toBeNull()
+  })
+
+  it('sends the index + current file + recent text to the intent model', async () => {
+    const f = stub('1')
+    await pickPortrait('http://x/v1', { name: 'Mara' }, entries, 'red-dress.png', 'RECENT-MARKER')
+    const [, init] = f.mock.calls[0] as unknown as [string, RequestInit]
+    const body = JSON.parse(init.body as string)
+    expect(body.model).toBe('intent')
+    const prompt = body.messages[0].content as string
+    expect(prompt).toContain('red evening gown')
+    expect(prompt).toContain('RECENT-MARKER')
+    expect(prompt).toContain('CURRENTLY SHOWING: 2 (red-dress.png)')
+  })
+
+  it('returns null on a non-ok response (caller keeps the current portrait)', async () => {
+    stub('2', false)
+    expect(await pickPortrait('http://x/v1', { name: 'A' }, entries, undefined, 't')).toBeNull()
   })
 })
