@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { STORE_KEY, exportData } from '../storage'
+import { reportCrash } from '../crashReports'
 import { saveTextFile } from '../tauri'
 
 // Last line of defence: if any render throws (e.g. a corrupt rehydrated state slips through),
@@ -14,6 +15,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('Aphelion crashed:', error, info)
+    reportCrash(error) // no-op unless the user opted into crash reports
   }
 
   private reset = () => {

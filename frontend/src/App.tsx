@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { listModels } from './tauri'
 import { migrateCharacterPortraits } from './portraits'
+import { startCrashReports, crashReportsAvailable } from './crashReports'
 import { useStore } from './store'
 import { Sidebar } from './components/Sidebar'
 import { ChatView } from './components/ChatView'
@@ -32,6 +33,12 @@ export default function App() {
   const [showTutorial, setShowTutorial] = useState(false)
   const [showWelcome, setShowWelcome] = useState(false)
   const updateSettings = useStore((s) => s.updateSettings)
+
+  // Opt-in crash reporting: only when the user has flipped the Settings toggle (and a DSN is
+  // baked in) does the Sentry module even load. Default state sends nothing, ever.
+  useEffect(() => {
+    if (crashReportsAvailable && useStore.getState().settings.crashReports) startCrashReports()
+  }, [])
 
   // First run: if no model has been downloaded yet, show the setup wizard.
   // Once a model exists, run the welcome tour until it's dismissed with "don't show again".

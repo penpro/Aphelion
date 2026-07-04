@@ -170,6 +170,7 @@ export interface Settings {
   sidebarCollapsed?: boolean // dock the left navigator away for an immersive play area
   dialsCollapsed?: boolean // dock the right chat-dials panel away
   dialsWidth?: number // user-resized width of the chat-dials panel (drag the dock strip); default 236
+  crashReports?: boolean // opt-in anonymous crash reports (Sentry, errors only) — default OFF, disclosed in Settings
   // advanced sampling — defaults match llama.cpp, so behavior is unchanged until tuned
   topK: number
   minP: number

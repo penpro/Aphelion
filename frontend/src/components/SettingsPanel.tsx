@@ -6,6 +6,7 @@ import { defaultSettings } from '../seed'
 import { VisionSettings } from './VisionSettings'
 import { ModelsModal } from './ModelsModal'
 import { UpdateCheck } from './UpdateCheck'
+import { crashReportsAvailable, startCrashReports, stopCrashReports } from '../crashReports'
 import { useConfirm } from './ConfirmDialog'
 import { STORE_KEY, exportData } from '../storage'
 import { cx } from '../util'
@@ -245,6 +246,33 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
             storage fills up.
           </em>
         </div>
+
+        {crashReportsAvailable && (
+          <div className="field">
+            <span>Crash reports</span>
+            <div className="seg fill" style={{ maxWidth: 220 }}>
+              {[false, true].map((on) => (
+                <button
+                  key={String(on)}
+                  type="button"
+                  className={cx('seg-btn', !!settings.crashReports === on && 'sel')}
+                  onClick={() => {
+                    updateSettings({ crashReports: on })
+                    if (on) startCrashReports()
+                    else stopCrashReports()
+                  }}
+                >
+                  {on ? 'On' : 'Off'}
+                </button>
+              ))}
+            </div>
+            <em className="hint">
+              Off by default. When on, an unexpected error sends an anonymous report to sentry.io so it can be fixed:
+              the error and stack trace, app version, and OS — <b>never</b> your chats, characters, prompts, or files.
+              This and the update check are the only times Aphelion touches the internet, and both are your call.
+            </em>
+          </div>
+        )}
 
         <label className="field">
           <span>Engine API URL (bundled llama.cpp server)</span>
