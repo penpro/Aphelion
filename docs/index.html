@@ -340,7 +340,7 @@
           <a class="btn-ghost" href="https://github.com/penpro/Aphelion"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2A10 10 0 0 0 8.8 21.5c.5.1.7-.2.7-.5v-1.7c-2.8.6-3.4-1.3-3.4-1.3-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.3 1.1 2.9.8.1-.6.3-1.1.6-1.4-2.2-.300-4.6-1.1-4.6-4.9 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.7 1a9.4 9.4 0 0 1 5 0c1.9-1.3 2.7-1 2.7-1 .5 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.8-2.4 4.6-4.6 4.9.3.3.6.9.6 1.9v2.8c0 .3.2.6.7.5A10 10 0 0 0 12 2Z"/></svg>View on GitHub</a>
         </div>
         <div class="platnote"><span class="ok2">●</span> Windows, ready to go &nbsp;·&nbsp; <span class="beta">macOS &amp; Linux are experimental</span> — built but not yet tested on real hardware. <a href="#faq">Why?</a></div>
-        <div class="trust"><span><b>No account.</b> No cloud.</span><span><b>No telemetry.</b> Ever.</span><span><b>Open source.</b> MIT.</span></div>
+        <div class="trust"><span><b>No account.</b> No cloud.</span><span><b>No telemetry.</b> Crash reports only if you opt in.</span><span><b>Open source.</b> MIT.</span></div>
       </div>
 
       <div class="stage">
@@ -492,6 +492,7 @@
     <div class="faq">
       <details><summary>Is it really free?</summary><p>Yes — completely. MIT open source, no account, no trial, no upsell.</p></details>
       <details><summary>Does it send my conversations anywhere?</summary><p>No, never. The AI runs on your own computer. Disconnect from the internet and it keeps working.</p></details>
+      <details><summary>What about telemetry and crash reports?</summary><p>There is no telemetry by default — nothing is collected, nothing is sent. If you want to help squash bugs, <b>Settings → Crash reports</b> is an opt-in switch (off until you flip it): when the app hits an unexpected error, an anonymous report goes to sentry.io containing the error, stack trace, app version, and OS — <span class="hl">never your chats, characters, prompts, or files</span>. The reporting code isn't even loaded until you opt in, and you can turn it off any time. All told, Aphelion touches the internet only when you tell it to: downloading a model, checking for updates, or crash reports if you opted in.</p></details>
       <details><summary>Is this an "AI agent"? Can it do things to my computer?</summary><p>No. The model only generates text — it has no autonomy. The app reads files only from folders you explicitly point it at, and saves documents you ask it to create; it never runs commands, browses the web, or goes through your files on its own. Unlike autonomous agents, it has <span class="hl">no free rein over your system</span>. See <a href="#safe">"It's a model, not an agent"</a> above.</p></details>
       <details><summary>What's a "model"?</summary><p>The AI's "brain" — a file the app downloads once. Setup picks a good one for your hardware; you can change it in Settings.</p></details>
       <details><summary>Windows says it "protected my PC" — is that bad?</summary><p>No — it just means the app isn't code-signed yet, and that certificate is a <b>recurring monthly cost</b>, so while Aphelion is free I haven't bought one. Click <b>More info → Run anyway</b> (the source is all public). If enough folks <a href="#support">chip in</a>, I can sign it and the warning goes away.</p></details>
@@ -509,7 +510,13 @@
     </div>
     <div id="changelog" style="display:flex;flex-direction:column;gap:22px;max-width:780px">
       <article style="border-left:2px solid var(--corona);padding-left:16px">
-        <h3 style="margin:0 0 8px">v0.1.48 <span style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--corona)">LATEST</span></h3>
+        <h3 style="margin:0 0 8px">v0.1.49 <span style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--corona)">LATEST</span></h3>
+        <ul style="margin:0;padding-left:18px;line-height:1.75">
+          <li><b>Opt-in crash reports.</b> A new switch in Settings (off by default) can send anonymous crash reports when something breaks — the error, stack trace, app version, and OS. <em>Never</em> your chats, characters, prompts, or files: no breadcrumbs, no session replay, no tracing, and the reporting code isn't even loaded into the app until you opt in. Flip it on if you want field bugs to actually get fixed; flip it off any time. The site's privacy copy is updated to say exactly this.</li>
+        </ul>
+      </article>
+      <article style="border-left:2px solid var(--border);padding-left:16px">
+        <h3 style="margin:0 0 8px">v0.1.48</h3>
         <ul style="margin:0;padding-left:18px;line-height:1.75">
           <li><b>Resizable chat panel.</b> The right panel's handle is now a splitter — drag it to widen the panel and read long scene fields in full (the width sticks); a plain click still tucks it away.</li>
           <li><b>Readable delete buttons.</b> Destructive buttons now use a deep red with white text, readable on every theme — including the red-accent presets where they used to blend in.</li>

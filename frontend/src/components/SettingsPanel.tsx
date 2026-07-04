@@ -269,7 +269,8 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
             <em className="hint">
               Off by default. When on, an unexpected error sends an anonymous report to sentry.io so it can be fixed:
               the error and stack trace, app version, and OS — <b>never</b> your chats, characters, prompts, or files.
-              This and the update check are the only times Aphelion touches the internet, and both are your call.
+              Like model downloads and the update check, it only touches the internet at your say-so. Turn it off any
+              time.
             </em>
           </div>
         )}

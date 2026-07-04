@@ -16,9 +16,9 @@ describe('crash reports privacy', () => {
     expect(out.exception.values[0].value).toBe('boom')
   })
 
-  it('the feature is disabled (and hidden) while no DSN is baked in', () => {
-    // Flipping this to true requires pasting a real DSN into crashReports.ts —
-    // the test documents that shipping without one means zero telemetry paths.
-    expect(crashReportsAvailable).toBe(false)
+  it('crash reporting is available (DSN baked in) — site copy must disclose the opt-in', () => {
+    // This flipped to true in v0.1.49 when the DSN landed. If it ever goes back to false
+    // (DSN removed), hide the Settings toggle claims from the site copy again.
+    expect(crashReportsAvailable).toBe(true)
   })
 })

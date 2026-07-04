@@ -9,9 +9,9 @@
 // characters, prompts, files, or paths the app has touched.
 import { appVersion } from './tauri'
 
-// Wes: paste the project DSN here (sentry.io → Settings → Projects → Client Keys).
-// The DSN is public, not a secret. Empty string = the feature is disabled AND hidden in Settings.
-const SENTRY_DSN = ''
+// The project DSN (sentry.io → Settings → Projects → Client Keys). A DSN is public by design —
+// it can only ingest events, not read anything. Empty string = feature disabled AND hidden.
+const SENTRY_DSN: string = 'https://33ff82ffd3b807f3a96bdfa03a915294@o4511678138089472.ingest.us.sentry.io/4511678143266816'
 
 /** Whether the app was built with crash reporting available (a DSN is baked in). */
 export const crashReportsAvailable = SENTRY_DSN !== ''
