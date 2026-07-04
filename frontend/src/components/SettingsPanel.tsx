@@ -267,10 +267,11 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
               ))}
             </div>
             <em className="hint">
-              Off by default. When on, an unexpected error sends an anonymous report to sentry.io so it can be fixed:
-              the error and stack trace, app version, and OS — <b>never</b> your chats, characters, prompts, or files.
-              Like model downloads and the update check, it only touches the internet at your say-so. Turn it off any
-              time.
+              Off by default and <b>never required for anything</b> — this exists purely to help discover crashes and
+              vulnerabilities in the wild, together with fellow developers. The average user who never hits a crash has
+              no reason to turn it on. When on, an unexpected error sends an anonymous report to sentry.io: the error
+              and stack trace, app version, and OS — <b>never</b> your chats, characters, prompts, or files. Like model
+              downloads and the update check, it only touches the internet at your say-so.
             </em>
           </div>
         )}
