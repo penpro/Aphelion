@@ -11,11 +11,13 @@
 </p>
 
 <p align="center">
-  <a href="https://youtu.be/CjzuCgxyU4A"><img src="https://img.youtube.com/vi/CjzuCgxyU4A/maxresdefault.jpg" alt="Watch the Aphelion deep-dive demo" width="75%" /></a>
+  <a href="https://youtu.be/hFPpbvSV1LM"><img src="https://img.youtube.com/vi/hFPpbvSV1LM/maxresdefault.jpg" alt="Watch: how a law firm might use Aphelion" width="75%" /></a>
 </p>
-<p align="center"><em>▶️ <a href="https://youtu.be/CjzuCgxyU4A"><strong>Watch the full deep-dive demo</strong></a> (~35 min)</em></p>
+<p align="center"><em>▶️ <a href="https://youtu.be/hFPpbvSV1LM"><strong>Watch: how a law firm might use Aphelion</strong></a></em></p>
 
 ---
+
+# Aphelion
 
 **Aphelion** is an all-in-one desktop app that runs powerful AI models entirely on your own PC — Windows, macOS, or Linux — with no servers, no cloud, no setup. Chat with characters, write stories, build branching dialogue, draft and analyze code, or ask an expert assistant. **Everything you type stays on your machine,** and once it's set up it works with the internet unplugged.
 

@@ -20,3 +20,6 @@ models/
 # Bundled engine binaries (fetched, not committed)
 frontend/src-tauri/bin/
 src-tauri/bin/
+
+# Demo corpus for the "target a folder, ask what the files are about" video (generated)
+demo-files/

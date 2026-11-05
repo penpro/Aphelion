@@ -49,6 +49,23 @@ jobs:
       - name: Fetch llama.cpp engine (per-OS)
         run: node scripts/fetch-engine.mjs
 
+      # The AppImage catalog runs the app under firejail as a non-owner user. Tauri caches
+      # AppRun-x86_64 at mode 0770 and copies it into the bundle as AppRun.wrapped, so that
+      # user hits "Permission denied" and no window ever appears. Seeding the cache with a
+      # 0755 copy makes the bundler reuse ours — fixed before signing, so the updater .sig
+      # and latest.json stay valid (no repackaging needed).
+      - name: Pre-seed Tauri's AppRun so the AppImage runs for any user (Linux)
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          set -euo pipefail
+          cache="${XDG_CACHE_HOME:-$HOME/.cache}/tauri"
+          mkdir -p "$cache"
+          curl --proto '=https' --tlsv1.2 -fsSL --retry 3 \
+            -o "$cache/AppRun-x86_64" \
+            https://github.com/tauri-apps/binary-releases/releases/download/apprun-old/AppRun-x86_64
+          chmod 0755 "$cache/AppRun-x86_64"
+          ls -l "$cache/AppRun-x86_64"
+
       - name: Build app + publish to release
         uses: tauri-apps/tauri-action@v0
         env:
@@ -68,3 +85,25 @@ jobs:
             macOS builds are not yet notarized; right-click → Open the first time. Windows: More info → Run anyway.
           releaseDraft: false
           prerelease: false
+
+      # Catch the AppRun permission regression here instead of burning a catalog /retest cycle.
+      - name: Verify the Linux AppImage launcher is world-executable
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          set -euo pipefail
+          app=$(ls frontend/src-tauri/target/release/bundle/appimage/*.AppImage | head -1)
+          echo "Inspecting $app"
+          chmod +x "$app"
+          "$app" --appimage-extract >/dev/null
+          fail=0
+          for f in squashfs-root/AppRun squashfs-root/AppRun.wrapped; do
+            [ -e "$f" ] || continue
+            perm=$(stat -c '%A' "$f")
+            case "$perm" in
+              *x) echo "OK   $f ($perm)" ;;
+              *)  echo "FAIL $f ($perm) — not executable by other users"; fail=1 ;;
+            esac
+          done
+          rm -rf squashfs-root
+          [ "$fail" = 0 ] || { echo "::error::AppImage launcher is not world-executable — firejail will reject it"; exit 1; }
+          echo "Verified: AppImage launcher is world-executable."

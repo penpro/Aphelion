@@ -30,8 +30,191 @@ fn chunk_text(t: &str) -> Vec<String> {
     out
 }
 
-/// Read every supported file under `path` into (filename, chunk) pairs. Text/markdown/
-/// code read directly; PDFs via text extraction (scanned/image PDFs yield nothing).
+/// Strip `<...>` tags, keeping the text between them.
+fn strip_tags(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut in_tag = false;
+    for c in s.chars() {
+        match c {
+            '<' => in_tag = true,
+            '>' => in_tag = false,
+            _ if !in_tag => out.push(c),
+            _ => {}
+        }
+    }
+    out
+}
+
+/// Decode the handful of entities our documents actually contain.
+fn decode_entities(s: &str) -> String {
+    s.replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .replace("&apos;", "'")
+        .replace("&nbsp;", " ")
+        .replace("&amp;", "&") // last, so "&amp;lt;" stays literal
+}
+
+/// Collapse inline whitespace within each paragraph; paragraphs stay split on blank lines,
+/// which is what `chunk_text` keys on.
+fn tidy(s: &str) -> String {
+    s.split("\n\n")
+        .map(|para| para.split_whitespace().collect::<Vec<_>>().join(" "))
+        .filter(|para| !para.is_empty())
+        .collect::<Vec<_>>()
+        .join("\n\n")
+}
+
+/// Remove `<tag ...>...</tag>` blocks entirely (case-insensitive), content included.
+fn remove_block(s: &str, tag: &str) -> String {
+    let open = format!("<{tag}");
+    let close = format!("</{tag}>");
+    let lower = s.to_ascii_lowercase(); // byte-length stable, so offsets map back to `s`
+    let mut out = String::new();
+    let mut i = 0usize;
+    while i < s.len() {
+        match lower[i..].find(open.as_str()) {
+            Some(rel) => {
+                let start = i + rel;
+                out.push_str(&s[i..start]);
+                match lower[start..].find(close.as_str()) {
+                    Some(crel) => i = start + crel + close.len(),
+                    None => break, // unterminated — drop the remainder
+                }
+            }
+            None => {
+                out.push_str(&s[i..]);
+                break;
+            }
+        }
+    }
+    out
+}
+
+/// Best-effort HTML -> text: drop script/style, turn block-level ends into paragraph
+/// breaks, strip the rest.
+fn strip_html(s: &str) -> String {
+    let mut s = remove_block(&remove_block(s, "script"), "style");
+    for close in ["</p>", "</div>", "</h1>", "</h2>", "</h3>", "</h4>", "</li>", "</tr>", "</section>"] {
+        s = s.replace(close, "\n\n");
+    }
+    for br in ["<br>", "<br/>", "<br />"] {
+        s = s.replace(br, "\n");
+    }
+    tidy(&decode_entities(&strip_tags(&s)))
+}
+
+/// Best-effort RTF -> text: honor \par/\line/\tab, skip header/ignorable groups, drop
+/// other control words and braces.
+fn de_rtf(s: &str) -> String {
+    let mut out = String::new();
+    let mut chars = s.chars().peekable();
+    let mut depth: i32 = 0;
+    let mut skip_to: i32 = -1; // when >=0, skip text until depth drops below it
+    while let Some(c) = chars.next() {
+        match c {
+            '{' => depth += 1,
+            '}' => {
+                depth -= 1;
+                if skip_to >= 0 && depth < skip_to {
+                    skip_to = -1;
+                }
+            }
+            '\\' => match chars.peek().copied() {
+                Some('*') => {
+                    chars.next();
+                    if skip_to < 0 {
+                        skip_to = depth;
+                    }
+                }
+                Some('\'') => {
+                    chars.next();
+                    let hex: String = (0..2).filter_map(|_| chars.next()).collect();
+                    if skip_to < 0 {
+                        if let Ok(b) = u8::from_str_radix(&hex, 16) {
+                            out.push(b as char);
+                        }
+                    }
+                }
+                Some(n) if !n.is_ascii_alphabetic() => {
+                    chars.next();
+                    if skip_to < 0 && matches!(n, '\\' | '{' | '}') {
+                        out.push(n);
+                    }
+                }
+                Some(_) => {
+                    let mut word = String::new();
+                    while let Some(&m) = chars.peek() {
+                        if m.is_ascii_alphabetic() {
+                            word.push(m);
+                            chars.next();
+                        } else {
+                            break;
+                        }
+                    }
+                    if let Some(&m) = chars.peek() {
+                        if m == '-' || m.is_ascii_digit() {
+                            chars.next();
+                            while let Some(&d) = chars.peek() {
+                                if d.is_ascii_digit() {
+                                    chars.next();
+                                } else {
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if chars.peek() == Some(&' ') {
+                        chars.next();
+                    }
+                    if matches!(
+                        word.as_str(),
+                        "fonttbl" | "colortbl" | "stylesheet" | "info" | "filetbl" | "listtable" | "listoverridetable"
+                    ) {
+                        if skip_to < 0 {
+                            skip_to = depth;
+                        }
+                    } else if skip_to < 0 {
+                        match word.as_str() {
+                            "par" | "line" | "sect" => out.push('\n'),
+                            "tab" => out.push('\t'),
+                            _ => {}
+                        }
+                    }
+                }
+                None => {}
+            },
+            _ => {
+                if skip_to < 0 {
+                    out.push(c);
+                }
+            }
+        }
+    }
+    tidy(&out)
+}
+
+/// Extract visible text from a .docx: unzip `word/document.xml`, turn paragraph ends into
+/// blank lines, strip tags, decode entities.
+fn read_docx_text(path: &std::path::Path) -> Option<String> {
+    use std::io::Read;
+    let file = std::fs::File::open(path).ok()?;
+    let mut archive = zip::ZipArchive::new(file).ok()?;
+    let mut xml = String::new();
+    archive.by_name("word/document.xml").ok()?.read_to_string(&mut xml).ok()?;
+    let xml = xml
+        .replace("</w:p>", "\n\n")
+        .replace("<w:br/>", "\n")
+        .replace("<w:br />", "\n")
+        .replace("<w:tab/>", "\t");
+    let text = tidy(&decode_entities(&strip_tags(&xml)));
+    (!text.trim().is_empty()).then_some(text)
+}
+
+/// Read every supported file under `path` into (filename, chunk) pairs. Text, markdown,
+/// code, CSV and JSON read directly; PDFs via text extraction; Word (.docx), HTML and RTF
+/// via lightweight converters (scanned/image PDFs yield nothing).
 fn ingest_folder(path: &str) -> Vec<(String, String)> {
     let mut chunks = Vec::new();
     let mut stack = vec![PathBuf::from(path)];
@@ -51,6 +234,9 @@ fn ingest_folder(path: &str) -> Vec<(String, String)> {
                 "txt" | "md" | "markdown" | "text" | "csv" | "json" | "rs" | "py" | "js" | "ts" => {
                     std::fs::read_to_string(&p).ok()
                 }
+                "html" | "htm" => std::fs::read_to_string(&p).ok().map(|s| strip_html(&s)),
+                "rtf" => std::fs::read_to_string(&p).ok().map(|s| de_rtf(&s)),
+                "docx" => read_docx_text(&p),
                 // pdf-extract can panic on malformed PDFs — contain it so one bad file can't crash ingest.
                 "pdf" => std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| pdf_extract::extract_text(&p).ok()))
                     .ok()
@@ -149,6 +335,44 @@ pub fn extract_pdf(data: Vec<u8>) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn html_strips_to_readable_text() {
+        let t = strip_html("<h1>Aphelion</h1><p>Local <b>AI</b> &amp; private.</p><script>var x=1</script>");
+        assert!(t.contains("Aphelion"));
+        assert!(t.contains("Local AI & private."), "got: {t}");
+        assert!(!t.contains("var x"));
+        assert!(!t.contains('<'));
+    }
+
+    #[test]
+    fn rtf_strips_to_readable_text() {
+        let t = de_rtf(r"{\rtf1\ansi\deff0{\fonttbl{\f0 Helvetica;}}\fs36\b Hello Aphelion\b0\fs24\par \par Second line\par }");
+        assert!(t.contains("Hello Aphelion"), "got: {t}");
+        assert!(t.contains("Second line"));
+        assert!(!t.contains("Helvetica"));
+        assert!(!t.contains("rtf1"));
+    }
+
+    #[test]
+    fn docx_extracts_paragraph_text() {
+        use std::io::Write;
+        let path = std::env::temp_dir().join(format!(
+            "aph-docx-{}.docx",
+            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0)
+        ));
+        {
+            let f = std::fs::File::create(&path).unwrap();
+            let mut z = zip::ZipWriter::new(f);
+            z.start_file("word/document.xml", zip::write::SimpleFileOptions::default()).unwrap();
+            z.write_all(br#"<w:document xmlns:w="x"><w:body><w:p><w:r><w:t>Hello Aphelion</w:t></w:r></w:p><w:p><w:r><w:t>Second line</w:t></w:r></w:p></w:body></w:document>"#).unwrap();
+            z.finish().unwrap();
+        }
+        let text = read_docx_text(&path).unwrap();
+        assert!(text.contains("Hello Aphelion"), "got: {text}");
+        assert!(text.contains("Second line"), "got: {text}");
+        let _ = std::fs::remove_file(&path);
+    }
 
     #[test]
     fn chunk_text_splits_large_text() {
